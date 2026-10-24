@@ -1,4 +1,4 @@
-// Package argex evaluates ArgEx expressions over JSON values
+// Package argex evaluates Argyll Expressions over JSON values
 package argex
 
 import "github.com/kode4food/argex/internal/engine"

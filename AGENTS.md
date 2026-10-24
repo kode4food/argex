@@ -89,6 +89,10 @@ For exported receiver types:
 
 ## Naming
 
+- Call the language **Argyll Expressions** in documentation and user-facing prose. Code identifiers may use **ArgEx**.
+- Prefer **Argyll Expressions** in doc comments unless referring to a literal, package, or file named `argex`. Keep the documented identifier at the start of Go doc comments.
+- Preserve literal package names, import paths, file names, URLs, and language keys.
+
 - Receiver names: short, lowercase, and derived from type name (`e *Engine`, `c *Compiler`).
 - Prefer short local names in tight scope (`i`, `n`, `ok`, `err`, `ctx`).
 - Use `ok` for map/type assertion booleans.
