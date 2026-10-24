@@ -19,7 +19,9 @@ jobs:
       - name: Run tests with coverage
         run: go test ./... -coverpkg=./... -coverprofile=cover.out
       - name: Upload coverage to Qlty
-        uses: qltysh/qlty-action/coverage@v1
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+        uses: qltysh/qlty-action/coverage@v2
         with:
           token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
           files: cover.out
+          strip-prefix: github.com/kode4food/argex
