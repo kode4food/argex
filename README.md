@@ -65,7 +65,7 @@ customers | map customer: {
 }
 ```
 
-The binding body is a complete expression. Parentheses end a collection expression before applying another operation to its result. Whitespace is used to format the expression. `| map` preserves order. `| filter` requires a boolean predicate and preserves the relative order of retained elements. Both require an array receiver and produce an array, including for empty inputs.
+The binding body is a complete expression. Parentheses end a collection expression before applying another operation to its result. `| map` preserves order. `| filter` requires a boolean predicate and preserves the relative order of retained elements. Both require an array receiver and produce an array, including for empty inputs.
 
 `.` and `?.` access properties. `|` introduces collection operations. `response.map`, `response.filter`, and `response.any` read properties with those names. `??` provides a fallback for missing or null values. Use `(response?.items ?? []) | map item: item.id` to map an optional array. `||` means boolean OR.
 
