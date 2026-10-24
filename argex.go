@@ -1,4 +1,4 @@
-// Package argex evaluates pure expressions over JSON values
+// Package argex evaluates ArgEx expressions over JSON values
 package argex
 
 import "github.com/kode4food/argex/internal/engine"
@@ -15,12 +15,12 @@ type (
 )
 
 var (
-	ErrSyntax     error = engine.SyntaxError
-	ErrType       error = engine.TypeError
-	ErrMissing    error = engine.MissingError
-	ErrArithmetic error = engine.ArithmeticError
-	ErrFunction   error = engine.FunctionError
-	ErrLimit      error = engine.LimitError
+	ErrSyntax     error = engine.ErrSyntax
+	ErrType       error = engine.ErrType
+	ErrMissing    error = engine.ErrMissing
+	ErrArithmetic error = engine.ErrArithmetic
+	ErrFunction   error = engine.ErrFunction
+	ErrLimit      error = engine.ErrLimit
 )
 
 // Parse parses a complete expression; whitespace never determines grouping

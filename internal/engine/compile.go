@@ -19,7 +19,7 @@ type (
 
 func (c *compiler) compile(n *node, depth int) error {
 	if depth > maxDepth {
-		return LimitError
+		return ErrLimit
 	}
 	switch n.kind {
 	case "literal":
@@ -34,11 +34,14 @@ func (c *compiler) compile(n *node, depth int) error {
 	case "case":
 		return c.branch(n, depth)
 
-	case "map", "filter":
+	case "map", "filter", "any", "all":
 		return c.collection(n, depth)
 
 	case "index":
 		return c.index(n, depth)
+
+	case "call":
+		return c.call(n, depth)
 
 	default:
 		return c.operation(n, depth)
@@ -47,9 +50,6 @@ func (c *compiler) compile(n *node, depth int) error {
 }
 
 func (c *compiler) operation(n *node, depth int) error {
-	if err := validateCall(n); err != nil {
-		return err
-	}
 	for _, child := range n.children {
 		if err := c.compile(child, depth+1); err != nil {
 			return err
@@ -84,24 +84,28 @@ func (c *compiler) operation(n *node, depth int) error {
 		keys := append([]string{}, n.keys...)
 		c.emit(isa.Object, c.constant(keys), stackChange(1-len(n.children)))
 
-	case "call":
-		op := isa.Length
-		switch n.text {
-		case "abs":
-			op = isa.Abs
-
-		case "min":
-			op = isa.Min
-
-		case "max":
-			op = isa.Max
-		}
-		arity := len(n.children)
-		c.emit(op, isa.Operand(arity), stackChange(1-arity))
-
 	default:
-		return fmt.Errorf("%w: unknown expression", SyntaxError)
+		return fmt.Errorf("%w: unknown expression", ErrSyntax)
 	}
+	return nil
+}
+
+func (c *compiler) call(n *node, depth int) error {
+	fn, ok := builtins[n.text]
+	if !ok {
+		return fmt.Errorf("%w: %s", ErrFunction, n.text)
+	}
+	arity := len(n.children)
+	if arity < fn.arity || !fn.variadic && arity != fn.arity {
+		return fmt.Errorf("%w: %s", ErrFunction, n.text)
+	}
+	for _, child := range n.children {
+		if err := c.compile(child, depth+1); err != nil {
+			return err
+		}
+	}
+	spec := callSpec{call: fn.call, arity: arity}
+	c.emit(isa.Call, c.constant(spec), stackChange(1-arity))
 	return nil
 }
 
@@ -196,14 +200,24 @@ func (c *compiler) collection(n *node, depth int) error {
 		c.program.iterations, iterationSpec{slot: slot},
 	)
 	op := isa.Map
-	if n.kind == "filter" {
+	next := isa.Next
+	switch n.kind {
+	case "filter":
 		op = isa.Filter
+
+	case "any":
+		op = isa.Any
+		next = isa.NextAny
+
+	case "all":
+		op = isa.All
+		next = isa.NextAll
 	}
 	c.emit(op, isa.Operand(index), -1)
 	if err := c.compile(n.children[1], depth+1); err != nil {
 		return err
 	}
-	c.emit(isa.Next, 0, 0)
+	c.emit(next, 0, 0)
 	c.program.iterations[index].end = len(c.program.code)
 	c.bindings = c.bindings[:slot]
 	return nil
@@ -212,7 +226,7 @@ func (c *compiler) collection(n *node, depth int) error {
 func (c *compiler) emit(
 	op isa.Opcode, operand isa.Operand, change stackChange,
 ) int {
-	if op >= isa.Pos && op <= isa.Max {
+	if op >= isa.Pos && op <= isa.Gte {
 		c.program.numeric = true
 	}
 	index := len(c.program.code)
@@ -280,22 +294,4 @@ func binaryOpcode(op string) isa.Opcode {
 	default:
 		return isa.Coalesce
 	}
-}
-
-func validateCall(n *node) error {
-	if n.kind != "call" {
-		return nil
-	}
-	switch n.text {
-	case "length", "abs":
-		if len(n.children) == 1 {
-			return nil
-		}
-
-	case "min", "max":
-		if len(n.children) > 0 {
-			return nil
-		}
-	}
-	return fmt.Errorf("%w: %s", FunctionError, n.text)
 }

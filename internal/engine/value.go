@@ -35,5 +35,5 @@ func nullish(value any) bool {
 }
 
 func operandError(operation string) error {
-	return fmt.Errorf("%w: %s", TypeError, operation)
+	return fmt.Errorf("%w: %s", ErrType, operation)
 }

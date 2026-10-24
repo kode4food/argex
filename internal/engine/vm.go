@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"reflect"
-	"unicode/utf8"
 
 	"github.com/kode4food/argex/internal/isa"
 )
@@ -16,11 +15,6 @@ type (
 	operands struct {
 		left  any
 		right any
-	}
-
-	iterationSpec struct {
-		slot int
-		end  int
 	}
 
 	iteration struct {
@@ -49,6 +43,7 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 	var values [inlineValues]any
 	memory := values[:]
 	var numbers []float64
+	var arguments []any
 	if size := p.stackSize + p.localCount; size > len(memory) {
 		memory = make([]any, size)
 	}
@@ -101,9 +96,7 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			value := stack[sp-1]
 			if nullish(value) {
 				if !optional {
-					return nil, fmt.Errorf(
-						"%w: access %v", MissingError, key,
-					)
+					return nil, fmt.Errorf("%w: access %v", ErrMissing, key)
 				}
 				stack[sp-1] = Missing{}
 				continue
@@ -138,7 +131,7 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 				return nil, operandError("access")
 			}
 			if !optional {
-				return nil, fmt.Errorf("%w: key %v", MissingError, key)
+				return nil, fmt.Errorf("%w: key %v", ErrMissing, key)
 			}
 			stack[sp-1] = Missing{}
 
@@ -203,7 +196,7 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			}
 			value := a + b
 			if math.IsNaN(value) || math.IsInf(value, 0) {
-				return nil, fmt.Errorf("%w: +", ArithmeticError)
+				return nil, fmt.Errorf("%w: +", ErrArithmetic)
 			}
 			sp--
 			numbers[sp-1] = value
@@ -226,7 +219,7 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			}
 			value := a - b
 			if math.IsNaN(value) || math.IsInf(value, 0) {
-				return nil, fmt.Errorf("%w: -", ArithmeticError)
+				return nil, fmt.Errorf("%w: -", ErrArithmetic)
 			}
 			sp--
 			numbers[sp-1] = value
@@ -249,7 +242,7 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			}
 			value := a * b
 			if math.IsNaN(value) || math.IsInf(value, 0) {
-				return nil, fmt.Errorf("%w: *", ArithmeticError)
+				return nil, fmt.Errorf("%w: *", ErrArithmetic)
 			}
 			sp--
 			numbers[sp-1] = value
@@ -272,7 +265,7 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			}
 			value := a / b
 			if math.IsNaN(value) || math.IsInf(value, 0) {
-				return nil, fmt.Errorf("%w: /", ArithmeticError)
+				return nil, fmt.Errorf("%w: /", ErrArithmetic)
 			}
 			sp--
 			numbers[sp-1] = value
@@ -294,7 +287,7 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 				return nil, operandError("%")
 			}
 			if b == 0 {
-				return nil, fmt.Errorf("%w: %%", ArithmeticError)
+				return nil, fmt.Errorf("%w: %%", ErrArithmetic)
 			}
 			value := a
 			x := math.Float64bits(a) &^ floatSignMask
@@ -622,89 +615,39 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			stack[base] = result
 			sp = base + 1
 
-		case isa.Length:
-			var count int
-			switch value := stack[sp-1].(type) {
-			case string:
-				count = utf8.RuneCountInString(value)
-
-			case []any:
-				count = len(value)
-
-			case map[string]any:
-				count = len(value)
-
-			default:
-				return nil, operandError("length")
+		case isa.Call:
+			spec := p.constants[operand].(callSpec)
+			base := sp - spec.arity
+			if cap(arguments) < spec.arity {
+				arguments = make([]any, spec.arity)
 			}
-			numbers[sp-1] = float64(count)
-			stack[sp-1] = numericValue{}
-
-		case isa.Abs:
-			value := numbers[sp-1]
-			if _, ok := stack[sp-1].(numericValue); !ok {
-				value = number(stack[sp-1])
-			}
-			if value-value != 0 {
-				return nil, operandError("abs")
-			}
-			numbers[sp-1] = math.Abs(value)
-			stack[sp-1] = numericValue{}
-
-		case isa.Min:
-			base := sp - operand
-			result := numbers[base]
-			if _, ok := stack[base].(numericValue); !ok {
-				result = number(stack[base])
-			}
-			if result-result != 0 {
-				return nil, operandError("min")
-			}
-			for i := base + 1; i < sp; i++ {
-				n := numbers[i]
-				if _, ok := stack[i].(numericValue); !ok {
-					n = number(stack[i])
+			args := arguments[:spec.arity]
+			for i := range args {
+				value := stack[base+i]
+				if _, ok := value.(numericValue); ok {
+					value = numbers[base+i]
 				}
-				if n-n != 0 {
-					return nil, operandError("min")
-				}
-				result = min(result, n)
+				args[i] = value
 			}
-			numbers[base] = result
-			stack[base] = numericValue{}
+			result, err := spec.call(args...)
+			if err != nil {
+				return nil, err
+			}
+			stack[base] = result
 			sp = base + 1
 
-		case isa.Max:
-			base := sp - operand
-			result := numbers[base]
-			if _, ok := stack[base].(numericValue); !ok {
-				result = number(stack[base])
-			}
-			if result-result != 0 {
-				return nil, operandError("max")
-			}
-			for i := base + 1; i < sp; i++ {
-				n := numbers[i]
-				if _, ok := stack[i].(numericValue); !ok {
-					n = number(stack[i])
-				}
-				if n-n != 0 {
-					return nil, operandError("max")
-				}
-				result = max(result, n)
-			}
-			numbers[base] = result
-			stack[base] = numericValue{}
-			sp = base + 1
-
-		case isa.Map, isa.Filter:
+		case isa.Map, isa.Filter, isa.Any, isa.All:
 			items, ok := stack[sp-1].([]any)
 			if !ok {
 				return nil, operandError("collection receiver")
 			}
 			spec := p.iterations[operand]
 			if len(items) == 0 {
-				stack[sp-1] = []any{}
+				if oc == isa.Any || oc == isa.All {
+					stack[sp-1] = oc == isa.All
+				} else {
+					stack[sp-1] = []any{}
+				}
 				pc = spec.end - 1
 				continue
 			}
@@ -717,6 +660,24 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			})
 			locals[spec.slot] = items[0]
 			sp--
+
+		case isa.NextAny, isa.NextAll:
+			frame := &loops[len(loops)-1]
+			sp--
+			value, ok := stack[sp].(bool)
+			if !ok {
+				return nil, operandError("collection predicate")
+			}
+			frame.index++
+			if value == (oc == isa.NextAny) ||
+				frame.index == len(frame.items) {
+				stack[sp] = value
+				sp++
+				loops = loops[:len(loops)-1]
+				continue
+			}
+			locals[frame.slot] = frame.items[frame.index]
+			pc = frame.start - 1
 
 		case isa.Next:
 			frame := &loops[len(loops)-1]

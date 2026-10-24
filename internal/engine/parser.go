@@ -21,7 +21,7 @@ func (p *parser) expression(minimum int) (*node, error) {
 	p.depth++
 	defer func() { p.depth-- }()
 	if p.depth > maxDepth {
-		return nil, LimitError
+		return nil, ErrLimit
 	}
 	left, err := p.primary()
 	if err != nil {
@@ -193,7 +193,9 @@ func (p *parser) collection(receiver *node) (*node, error) {
 	if err := p.expect("name"); err != nil {
 		return nil, err
 	}
-	if operation.text != "map" && operation.text != "filter" {
+	switch operation.text {
+	case "map", "filter", "any", "all":
+	default:
 		return nil, syntax(operation.pos, "unknown collection operation")
 	}
 	name := p.current()

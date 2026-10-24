@@ -15,7 +15,7 @@ access         = ".", identifier
                | "?.", "[", expression, "]" ;
 call           = "(", [ arguments ], ")" ;
 arguments      = expression, { ",", expression }, [ "," ] ;
-collection     = "|", ("map" | "filter"), binding ;
+collection     = "|", ("map" | "filter" | "any" | "all"), binding ;
 binding        = identifier, ":", expression ;
 
 primary        = literal | identifier | "(", expression, ")"

@@ -85,6 +85,9 @@ func BenchmarkWorkloads(b *testing.B) {
 		},
 		{name: "map256", source: "items | map item: item * rate + offset"},
 		{name: "filter256", source: "items | filter item: item > 128"},
+		{name: "any256", source: "items | any item: item > 128"},
+		{name: "all256", source: "items | all item: item >= 0"},
+		{name: "sum256", source: "sum(items)"},
 		{
 			name:   "nested",
 			source: `items | map item: [1,2,3,4] | map inner: item + inner`,
@@ -142,5 +145,36 @@ func BenchmarkMembership(b *testing.B) {
 				}
 			})
 		}
+	}
+}
+
+func BenchmarkFunctions(b *testing.B) {
+	variables := map[string]any{
+		"status": " APPROVED ",
+		"cost":   "0.025",
+		"object": map[string]any{"b": 2, "a": 1},
+	}
+	for _, source := range []string{
+		`startsWith(status, " ")`,
+		`lower(trim(status)) == "approved"`,
+		`number(cost) * 1000`,
+		`keys(object)`,
+	} {
+		b.Run(source, func(b *testing.B) {
+			expr, err := argex.Parse(source)
+			if err != nil {
+				b.Fatal(err)
+			}
+			program, err := argex.Compile(expr)
+			if err != nil {
+				b.Fatal(err)
+			}
+			b.ReportAllocs()
+			for b.Loop() {
+				if _, err := program(variables); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
 	}
 }

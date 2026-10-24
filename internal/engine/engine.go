@@ -15,6 +15,15 @@ type (
 	// Missing distinguishes absent data from an explicit JSON null
 	Missing struct{}
 
+	node struct {
+		kind     string
+		text     string
+		value    any
+		children []*node
+		keys     []string
+		optional bool
+	}
+
 	program struct {
 		code       isa.Instructions
 		constants  []any
@@ -24,13 +33,9 @@ type (
 		numeric    bool
 	}
 
-	node struct {
-		kind     string
-		text     string
-		value    any
-		children []*node
-		keys     []string
-		optional bool
+	iterationSpec struct {
+		slot int
+		end  int
 	}
 )
 
@@ -38,13 +43,13 @@ const maxDepth = 256
 
 // MarshalJSON rejects absent values instead of encoding them as null
 func (Missing) MarshalJSON() ([]byte, error) {
-	return nil, MissingError
+	return nil, ErrMissing
 }
 
 // Compile prepares an expression for repeated evaluation
 func Compile(expr *Expression) (func(map[string]any) (any, error), error) {
 	if expr == nil || expr.root == nil {
-		return nil, fmt.Errorf("%w: empty expression", SyntaxError)
+		return nil, fmt.Errorf("%w: empty expression", ErrSyntax)
 	}
 	c := &compiler{program: &program{}}
 	if err := c.compile(expr.root, 0); err != nil {

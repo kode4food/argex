@@ -28,7 +28,7 @@
     {"name":"bare pipe","expression":"[1]|","error":"syntax","phase":"parse"},
     {"name":"pipe before property dot","expression":"[1] | .map item: item","error":"syntax","phase":"parse"},
     {"name":"missing binding","expression":"[1] | map","error":"syntax","phase":"parse"},
-    {"name":"unknown empty operation","expression":"[] | any item: true","error":"syntax","phase":"parse"},
+    {"name":"unknown empty operation","expression":"[] | reduce item: true","error":"syntax","phase":"parse"},
     {"name":"question map rejected","expression":"[1]?map item: item","error":"syntax","phase":"parse"},
     {"name":"question filter rejected","expression":"[1]?filter item: true","error":"syntax","phase":"parse"},
     {"name":"OR is not a collection separator","expression":"[1] || map item: item","error":"syntax","phase":"parse"},

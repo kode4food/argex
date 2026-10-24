@@ -1,0 +1,15 @@
+{
+  "tests": [
+    {"name":"sorted keys","expression":"keys({z:1,a:2,m:3})","result":["a","m","z"]},
+    {"name":"sorted values","expression":"values({z:1,a:2,m:3})","result":[2,3,1]},
+    {"name":"lexical numeric keys","expression":"keys({\"2\":2,\"10\":10})","result":["10","2"]},
+    {"name":"empty keys","expression":"keys({})","result":[]},
+    {"name":"empty values","expression":"values({})","result":[]},
+    {"name":"values preserve null and objects","expression":"values({a:null,b:{x:1}})","result":[null,{"x":1}]},
+    {"name":"omitted field has no key","expression":"keys({a:absent,b:null})","result":["b"]},
+    {"name":"keys reject array","expression":"keys([])","error":"type","phase":"eval"},
+    {"name":"values reject null","expression":"values(null)","error":"type","phase":"eval"},
+    {"name":"keys arity","expression":"keys()","error":"function","phase":"compile"},
+    {"name":"values arity","expression":"values({}, {})","error":"function","phase":"compile"}
+  ]
+}

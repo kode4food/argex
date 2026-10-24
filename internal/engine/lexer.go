@@ -120,5 +120,5 @@ func isNamePart(r rune) bool {
 }
 
 func syntax(pos int, message string) error {
-	return fmt.Errorf("%w at character %d: %s", SyntaxError, pos, message)
+	return fmt.Errorf("%w at character %d: %s", ErrSyntax, pos, message)
 }

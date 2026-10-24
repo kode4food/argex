@@ -43,32 +43,35 @@ const (
 	Boolean  // Check Boolean operand (operand = error context index)
 
 	// Numeric operations
-	Pos    // Convert operand to a number
-	Neg    // Negate number
-	Add    // Pop two values, push numeric sum or string concatenation
-	Sub    // Pop two numbers, push difference
-	Mul    // Pop two numbers, push product
-	Div    // Pop two numbers, push quotient
-	Mod    // Pop two numbers, push remainder
-	Lt     // Pop two numbers or strings, push left < right
-	Lte    // Pop two numbers or strings, push left <= right
-	Gt     // Pop two numbers or strings, push left > right
-	Gte    // Pop two numbers or strings, push left >= right
-	Length // Replace string, array, or object with its length
-	Abs    // Replace number with its absolute value
-	Min    // Pop numbers, push minimum (operand = count)
-	Max    // Pop numbers, push maximum (operand = count)
+	Pos // Convert operand to a number
+	Neg // Negate number
+	Add // Pop two values, push numeric sum or string concatenation
+	Sub // Pop two numbers, push difference
+	Mul // Pop two numbers, push product
+	Div // Pop two numbers, push quotient
+	Mod // Pop two numbers, push remainder
+	Lt  // Pop two numbers or strings, push left < right
+	Lte // Pop two numbers or strings, push left <= right
+	Gt  // Pop two numbers or strings, push left > right
+	Gte // Pop two numbers or strings, push left >= right
+
+	// Function calls
+	Call // Call a resolved function (operand = call specification index)
 
 	// Control flow
 	CondJump // Pop condition, jump if false (operand = destination)
 	Jump     // Jump unconditionally (operand = destination)
 
 	// Construction and iteration
-	Array  // Pop values, push array (operand = count)
-	Object // Pop values, push object (operand = property names index)
-	Map    // Start mapping an array (operand = iteration index)
-	Filter // Start filtering an array (operand = iteration index)
-	Next   // Collect body result and advance or finish iteration
+	Array   // Pop values, push array (operand = count)
+	Object  // Pop values, push object (operand = property names index)
+	Map     // Start mapping an array (operand = iteration index)
+	Filter  // Start filtering an array (operand = iteration index)
+	Any     // Test whether any element matches (operand = iteration index)
+	All     // Test whether every element matches (operand = iteration index)
+	NextAny // Advance any, stopping at the first true condition
+	NextAll // Advance all, stopping at the first false condition
+	Next    // Collect body result and advance or finish map/filter
 )
 
 // New packs the opcode and operand into an instruction
