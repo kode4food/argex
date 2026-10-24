@@ -104,13 +104,21 @@ Precedence, highest first:
 | `!`, unary `+`, unary `-` | Boolean negation and numeric signs |
 | `*`, `/`, `%` | Multiplication, division, remainder |
 | `+`, `-` | Addition and subtraction; `+` also joins two strings |
-| `<`, `<=`, `>`, `>=` | Numeric or string ordering |
+| `<`, `<=`, `>`, `>=`, `in` | Numeric or string ordering; array membership |
 | `==`, `!=` | Structural equality, without coercion |
 | `??` | Missing/null fallback |
 | `&&` | Boolean conjunction |
 | `\|\|` | Boolean disjunction |
 
 Binary operators associate left to right except `??`, which associates right to left. Ordering comparisons cannot be chained without parentheses. A collection binding body consumes a full expression regardless of the precedence of the expression containing the collection. `&&` and `||` require Boolean operands and short-circuit. Strings compare lexicographically. Missing equals missing and differs from null.
+
+`in` tests array membership using the same structural equality as `==`. It returns a Boolean and stops at the first match. The right operand must be an array; objects, strings, null, and missing values produce `ErrType`. Empty arrays return false. Like ordering comparisons, `in` requires parentheses when combined with another comparison.
+
+```text
+"domain:inventory" in value.tags || "domain:orders" in value.tags
+item in allowed_items
+!(item in excluded_items)
+```
 
 Only these named pure functions are available:
 

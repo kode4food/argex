@@ -110,3 +110,37 @@ func BenchmarkWorkloads(b *testing.B) {
 		})
 	}
 }
+
+func BenchmarkMembership(b *testing.B) {
+	items := []any{
+		"domain:inventory", "domain:orders", "tier:gold",
+		"market:europe", "environment:production", "example",
+	}
+	for _, needle := range []string{"domain:inventory", "example", "absent"} {
+		variables := map[string]any{"needle": needle, "items": items}
+		for _, tc := range []benchmarkCase{
+			{name: "in", source: "needle in items"},
+			{
+				name:   "filter",
+				source: "length(items.filter item: item == needle) > 0",
+			},
+		} {
+			b.Run(needle+"/"+tc.name, func(b *testing.B) {
+				expr, err := argex.Parse(tc.source)
+				if err != nil {
+					b.Fatal(err)
+				}
+				program, err := argex.Compile(expr)
+				if err != nil {
+					b.Fatal(err)
+				}
+				b.ReportAllocs()
+				for b.Loop() {
+					if _, err := program(variables); err != nil {
+						b.Fatal(err)
+					}
+				}
+			})
+		}
+	}
+}

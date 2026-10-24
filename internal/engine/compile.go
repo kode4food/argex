@@ -256,6 +256,9 @@ func binaryOpcode(op string) isa.Opcode {
 	case "!=":
 		return isa.Neq
 
+	case "in":
+		return isa.In
+
 	case "<":
 		return isa.Lt
 

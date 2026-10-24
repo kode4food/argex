@@ -349,10 +349,10 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			numbers[sp-1] = value
 			stack[sp-1] = numericValue{}
 
-		case isa.Eq, isa.Neq:
+		case isa.Eq, isa.Neq, isa.In:
 			_, leftNumeric := stack[sp-2].(numericValue)
 			_, rightNumeric := stack[sp-1].(numericValue)
-			if leftNumeric || rightNumeric {
+			if oc != isa.In && (leftNumeric || rightNumeric) {
 				a := numbers[sp-2]
 				if !leftNumeric {
 					a = number(stack[sp-2])
@@ -365,72 +365,92 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 				stack[sp-1] = (a == b) == (oc == isa.Eq)
 				continue
 			}
+			left := stack[sp-2]
+			if leftNumeric {
+				left = numbers[sp-2]
+			}
+			candidates := stack[sp-1 : sp]
+			if oc == isa.In {
+				var ok bool
+				candidates, ok = stack[sp-1].([]any)
+				if !ok {
+					return nil, operandError("in")
+				}
+			}
 			var pairs [inlineValues]operands
-			pairs[0] = operands{left: stack[sp-2], right: stack[sp-1]}
-			pending := pairs[:1]
-			matched := true
-			for len(pending) > 0 && matched {
-				last := len(pending) - 1
-				pair := pending[last]
-				pending = pending[:last]
-				switch left := pair.left.(type) {
-				case nil:
-					matched = pair.right == nil
+			matched := false
+			for _, candidate := range candidates {
+				pairs[0] = operands{left: left, right: candidate}
+				pending := pairs[:1]
+				matched = true
+				for len(pending) > 0 && matched {
+					last := len(pending) - 1
+					pair := pending[last]
+					pending = pending[:last]
+					switch left := pair.left.(type) {
+					case nil:
+						matched = pair.right == nil
 
-				case Missing:
-					_, matched = pair.right.(Missing)
+					case Missing:
+						_, matched = pair.right.(Missing)
 
-				case bool:
-					right, ok := pair.right.(bool)
-					matched = ok && left == right
+					case bool:
+						right, ok := pair.right.(bool)
+						matched = ok && left == right
 
-				case string:
-					right, ok := pair.right.(string)
-					matched = ok && left == right
+					case string:
+						right, ok := pair.right.(string)
+						matched = ok && left == right
 
-				case []any:
-					right, ok := pair.right.([]any)
-					if !ok || len(left) != len(right) {
-						matched = false
-						continue
-					}
-					for i, item := range left {
-						pending = append(pending, operands{
-							left:  item,
-							right: right[i],
-						})
-					}
-
-				case map[string]any:
-					right, ok := pair.right.(map[string]any)
-					if !ok || len(left) != len(right) {
-						matched = false
-						continue
-					}
-					for key, item := range left {
-						child, ok := right[key]
-						if !ok {
+					case []any:
+						right, ok := pair.right.([]any)
+						if !ok || len(left) != len(right) {
 							matched = false
-							break
+							continue
 						}
-						pending = append(pending, operands{
-							left:  item,
-							right: child,
-						})
-					}
+						for i, item := range left {
+							pending = append(pending, operands{
+								left:  item,
+								right: right[i],
+							})
+						}
 
-				default:
-					a := number(pair.left)
-					b := number(pair.right)
-					if a-a == 0 {
-						matched = b-b == 0 && a == b
-						continue
+					case map[string]any:
+						right, ok := pair.right.(map[string]any)
+						if !ok || len(left) != len(right) {
+							matched = false
+							continue
+						}
+						for key, item := range left {
+							child, ok := right[key]
+							if !ok {
+								matched = false
+								break
+							}
+							pending = append(pending, operands{
+								left:  item,
+								right: child,
+							})
+						}
+
+					default:
+						a := number(pair.left)
+						b := number(pair.right)
+						if a-a == 0 {
+							matched = b-b == 0 && a == b
+							continue
+						}
+						matched = reflect.DeepEqual(
+							pair.left, pair.right,
+						)
 					}
-					matched = reflect.DeepEqual(pair.left, pair.right)
+				}
+				if matched {
+					break
 				}
 			}
 			sp--
-			stack[sp-1] = matched == (oc == isa.Eq)
+			stack[sp-1] = matched != (oc == isa.Neq)
 
 		case isa.Lt:
 			if a, ok := stack[sp-2].(string); ok {

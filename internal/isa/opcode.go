@@ -36,6 +36,7 @@ const (
 	Not      // Negate Boolean value
 	Eq       // Pop two values, push structural equality
 	Neq      // Pop two values, push structural inequality
+	In       // Pop value and array, push membership by structural equality
 	And      // If false, jump; otherwise pop left operand
 	Or       // If true, jump; otherwise pop left operand
 	Coalesce // If present and non-null, jump; otherwise pop left operand

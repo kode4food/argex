@@ -34,6 +34,9 @@ func (p *parser) expression(minimum int) (*node, error) {
 	compared := false
 	for {
 		op := p.current().kind
+		if op == "name" && p.current().text == "in" {
+			op = "in"
+		}
 		level := precedence(op)
 		if level < minimum {
 			return left, nil
@@ -146,7 +149,8 @@ func (p *parser) member(receiver *node) (*node, error) {
 		return nil, err
 	}
 	if (name.text == "map" || name.text == "filter") &&
-		p.current().kind == "name" {
+		p.current().kind == "name" && p.pos+1 < len(p.tokens) &&
+		p.tokens[p.pos+1].kind == ":" {
 		return p.collection(receiver, name.text, optional)
 	}
 	return &node{
@@ -361,7 +365,7 @@ func precedence(op string) int {
 	case "==", "!=":
 		return precedenceEquality
 
-	case "<", "<=", ">", ">=":
+	case "<", "<=", ">", ">=", "in":
 		return precedenceComparison
 
 	case "+", "-":
