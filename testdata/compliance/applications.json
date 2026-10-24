@@ -1,0 +1,16 @@
+{
+  "tests": [
+    {"name":"token cost","expression":"usage.input_tokens*prices.input+usage.output_tokens*prices.output","variables":{"usage":{"input_tokens":1000,"output_tokens":250},"prices":{"input":0.01,"output":0.03}},"result":17.5},
+    {"name":"model routing","expression":"case{quality>=0.9&&cost<=budget:\"small\",\"large\"}","variables":{"quality":0.95,"cost":2,"budget":3},"result":"small"},
+    {"name":"route fallback","expression":"case{quality>=0.9&&cost<=budget:\"small\",\"large\"}","variables":{"quality":0.8,"cost":2,"budget":3},"result":"large"},
+    {"name":"response extraction","expression":"response.choices?.[0]?.message?.content??\"\"","variables":{"response":{"choices":[{"message":{"content":"hello"}}]}},"result":"hello"},
+    {"name":"empty response extraction","expression":"response.choices?.[0]?.message?.content??\"\"","variables":{"response":{"choices":[]}},"result":""},
+    {"name":"filtered output projection","expression":"(orders.filter order:order.paid).map order:{id:order.id,total:order.quantity*order.price}","variables":{"orders":[{"id":"a","paid":true,"quantity":2,"price":3},{"id":"b","paid":false,"quantity":1,"price":9}]},"result":[{"id":"a","total":6}]},
+    {"name":"independent nested collections","expression":"customers.map customer:{id:customer.id,totals:(customer.orders.filter order:order.paid).map order:order.total}","variables":{"customers":[{"id":1,"orders":[{"paid":true,"total":10},{"paid":false,"total":20}]},{"id":2,"orders":[]}]},"result":[{"id":1,"totals":[10]},{"id":2,"totals":[]}]},
+    {"name":"optional output field omitted","expression":"{id:input.id,description:input?.description,active:input?.active??false}","variables":{"input":{"id":1}},"result":{"id":1,"active":false}},
+    {"name":"null field preserved","expression":"{id:input.id,description:input?.description,active:input?.active??false}","variables":{"input":{"id":1,"description":null,"active":true}},"result":{"id":1,"description":null,"active":true}},
+    {"name":"clamped adjustment","expression":"min(1,max(0,current*0.9+score*0.1))","variables":{"current":0.5,"score":0.5},"result":0.5},
+    {"name":"conditional evaluation protects division","expression":"items.map item:case{item.count>0:item.total/item.count,0}","variables":{"items":[{"count":2,"total":10},{"count":0,"total":0}]},"result":[5,0]},
+    {"name":"empty optional collection default","expression":"(response?.items??[]).map item:item.id","variables":{"response":null},"result":[]}
+  ]
+}
