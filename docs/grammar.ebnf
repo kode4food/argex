@@ -28,12 +28,12 @@ case           = "case", "{", arm, { ",", arm },
 arm            = expression, ":", expression ;
 literal        = number | string | "true" | "false" | "null" ;
 
-(* number: unsigned JSON number; signs are unary operators.
+(* number: unsigned JSON number. Signs are unary operators.
    string: double-quoted JSON string.
    identifier: Unicode letter or underscore followed by letters, digits,
    or underscores. true, false, null, and case are reserved as bindings.
-   in is a contextual operator between expressions; it remains a valid name.
+   in is a contextual operator between expressions. It is also a valid name.
    Whitespace is ignored between tokens. Operators use longest match.
-   | introduces a collection operation; . and ?. access properties.
+   | introduces a collection operation. The . and ?. operators access properties.
    Calls require a named function as their receiver.
    Duplicate object keys are invalid. A case requires a final fallback. *)

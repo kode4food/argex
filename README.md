@@ -42,11 +42,11 @@ result, err := program(map[string]any{
 
 Import `github.com/kode4food/argex`. `Parse` returns an immutable `*Expression`, and `Compile` returns a `Program`, defined as `func(map[string]any) (any, error)`. Call that function directly and reuse it for repeated evaluation. `Eval(source, variables)` combines all three operations for one-off expressions. Compiled functions are safe for concurrent use. Callers must not concurrently mutate their input maps or arrays.
 
-Values use Go's JSON representation: `map[string]any`, `[]any`, strings, booleans, `float64`, and `nil`. Arithmetic also accepts Go `int` and `json.Number` inputs and returns `float64`. Numbers use finite IEEE 754 double precision. Division by zero and non-finite arithmetic results fail. There is no implicit conversion between strings, numbers, and booleans.
+Values use Go's JSON representation: `map[string]any`, `[]any`, strings, booleans, `float64`, and `nil`. Arithmetic also accepts Go `int` and `json.Number` inputs and returns `float64`. Numbers use finite IEEE 754 double precision. Division by zero and non-finite arithmetic results fail. Use `number(value)` and `string(value)` for explicit type conversions.
 
 ## Collections and grouping
 
-`| map` and `| filter` bind a name to each element of their receiver. The expression after `:` is evaluated in that scope. It can read outer bindings and input variables. An inner binding with the same name shadows the outer one. Bindings cannot be assigned to or returned as functions.
+`| map` and `| filter` bind a name to each element of their receiver. The expression after `:` is evaluated in that scope. It can read outer bindings and input variables. An inner binding with the same name shadows the outer one.
 
 ```text
 orders | map order: order.total
@@ -65,9 +65,9 @@ customers | map customer: {
 }
 ```
 
-The binding body is a complete expression. Parentheses end a collection expression before applying another operation to its result. Newlines and indentation have no grammatical meaning. There are no implicit operands or standalone anonymous functions. `| map` preserves order. `| filter` requires a boolean predicate and preserves the relative order of retained elements. Both require an array receiver and produce an array, including for empty inputs.
+The binding body is a complete expression. Parentheses end a collection expression before applying another operation to its result. Whitespace is used to format the expression. `| map` preserves order. `| filter` requires a boolean predicate and preserves the relative order of retained elements. Both require an array receiver and produce an array, including for empty inputs.
 
-`.` and `?.` access properties. `|` introduces collection operations. `response.map`, `response.filter`, and `response.any` are ordinary paths. Optional access and coalescing remain `?.` and `??`. Use `(response?.items ?? []) | map item: item.id` to map an optional array. `||` remains boolean OR. There are no ternary or bitwise operators.
+`.` and `?.` access properties. `|` introduces collection operations. `response.map`, `response.filter`, and `response.any` read properties with those names. `??` provides a fallback for missing or null values. Use `(response?.items ?? []) | map item: item.id` to map an optional array. `||` means boolean OR.
 
 `| any` tests whether at least one element satisfies a condition. `| all` tests whether every element satisfies it. Both require arrays and boolean conditions, return booleans, and stop as soon as their result is known. For an empty array, `any` returns false and `all` returns true without evaluating the condition. The same binding and grouping rules apply as for `map` and `filter`.
 
@@ -100,7 +100,7 @@ response.choices?.[0]?.message?.content ?? ""
 values?.[index] ?? 0
 ```
 
-`?.name` and `?.[index]` return missing for a null or absent receiver or an absent member. They do not hide a wrong receiver type or an invalid index type. Optionality applies to each marked access: use `a?.b?.c` when both accesses may be absent. Optional indexing skips evaluation of the index when the receiver is null or missing.
+`?.name` and `?.[index]` return missing for a null or absent receiver or an absent member. A wrong receiver type or an invalid index type produces `ErrType`. Optionality applies to each marked access: use `a?.b?.c` when both accesses may be absent. Optional indexing skips evaluation of the index when the receiver is null or missing.
 
 `??` evaluates its right operand only when its left operand is missing or null. Zero, false, and the empty string are preserved. Object construction omits fields whose value is missing. Arrays retain missing elements. A missing value cannot be JSON-encoded: explicitly use `?? null` or another fallback where a serializable value is required.
 
@@ -115,7 +115,7 @@ Precedence, highest first:
 | `*`, `/`, `%` | Multiplication, division, remainder |
 | `+`, `-` | Addition and subtraction, with `+` also joining two strings |
 | `<`, `<=`, `>`, `>=`, `in` | Numeric or string ordering and array membership |
-| `==`, `!=` | Structural equality, without coercion |
+| `==`, `!=` | Equality by type and contents |
 | `??` | Missing/null fallback |
 | `&&` | boolean conjunction |
 | `\|\|` | boolean disjunction |
@@ -155,7 +155,7 @@ Only these named pure functions are available:
 | `keys(object)` | Array of property names in lexicographic order |
 | `values(object)` | Array of values in the same property name order as `keys` |
 
-Functions are named calls, rather than methods. String tests are case-sensitive and accept empty search strings. `includes` only tests strings. Use `in` for array membership. Case conversion uses Unicode character mappings without locale-specific rules. Splitting preserves empty fields. An empty separator splits into Unicode code points, with an empty input producing an empty array. Joining requires every element to be a string and returns an empty string for an empty array.
+Call functions by name, as in `length(items)` or `startsWith(text, prefix)`. String tests are case-sensitive and accept empty search strings. `includes` tests string substrings. Use `in` for array membership. Case conversion uses locale-independent Unicode character mappings. Splitting preserves empty fields. An empty separator splits into Unicode code points, with an empty input producing an empty array. Joining requires every element to be a string and returns an empty string for an empty array.
 
 Conversions are explicit. `number` trims surrounding whitespace and requires the entire remaining string to be a valid JSON number. Empty strings, hexadecimal notation, leading zeros such as `"01"`, booleans, null, and non-finite results are rejected. `string` preserves strings, formats finite numbers without unnecessary decimal digits, and converts booleans and null to `"true"`, `"false"`, and `"null"`. It rejects missing values, arrays, and objects. Invalid types or conversions return `ErrType`. `sum` requires finite numeric elements and returns `ErrArithmetic` if the running total overflows. Functions never change their arguments.
 
@@ -167,9 +167,9 @@ ceil(number(usage.tokens) / 1000)
 keys(response) | any key: startsWith(key, "x-")
 ```
 
-`round(-1.5)` returns `-2`, unlike JavaScript's `Math.round(-1.5)`. Object inspection uses lexicographic property name order even for numeric-looking names. `keys({"2": 2, "10": 10})` returns `["10", "2"]`.
+`round` rounds halfway values away from zero: `round(-1.5)` returns `-2` and `round(1.5)` returns `2`. Object inspection uses lexicographic property name order even for numeric-looking names. `keys({"2": 2, "10": 10})` returns `["10", "2"]`.
 
-There are no assignments, statements, arbitrary method calls, I/O, ambient globals, clock access, or randomness. Collection operations use `| map`, `| filter`, `| any`, or `| all` followed by a `name: expression` binding.
+Expressions are pure and deterministic: their results depend on the supplied values. Collection operations use `| map`, `| filter`, `| any`, or `| all` followed by a `name: expression` binding.
 
 ## Errors and limits
 
