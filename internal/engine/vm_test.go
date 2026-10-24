@@ -20,7 +20,7 @@ const (
 
 func TestColonContexts(t *testing.T) {
 	source := `{
-		results: (items.filter item: item > 10).map item: {
+		results: (items | filter item: item > 10) | map item: {
 			value: item,
 			category: case {
 				item > 100: { label: "large" },
@@ -72,7 +72,7 @@ func TestWideStack(t *testing.T) {
 func TestDeepCollections(t *testing.T) {
 	source := "x0"
 	for i := collectionDepth - 1; i >= 0; i-- {
-		source = fmt.Sprintf("[1].map x%d: %s", i, source)
+		source = fmt.Sprintf("[1] | map x%d: %s", i, source)
 	}
 	value, err := argex.Eval(source, nil)
 	assert.NoError(t, err)
@@ -186,8 +186,8 @@ func TestRemainder(t *testing.T) {
 
 func TestLocalLifetime(t *testing.T) {
 	source := `[
-		items.map x: (items.map y: x + y)[0] + x,
-		items.map x: x + 1,
+		items | map x: (items | map y: x + y)[0] + x,
+		items | map x: x + 1,
 		x,
 	]`
 	value, err := argex.Eval(source, map[string]any{
@@ -199,7 +199,7 @@ func TestLocalLifetime(t *testing.T) {
 		[]any{float64(2), float64(3)},
 		"outside",
 	}, value)
-	value, err = argex.Eval("[1].map x: [2].map x: x", nil)
+	value, err = argex.Eval("[1] | map x: [2] | map x: x", nil)
 	assert.NoError(t, err)
 	assert.Equal(t, []any{[]any{float64(2)}}, value)
 }
@@ -210,7 +210,7 @@ func TestLargeCollections(t *testing.T) {
 		items[i] = i
 	}
 	for _, source := range []string{
-		"items.map item: item", "items.filter item: true",
+		"items | map item: item", "items | filter item: true",
 	} {
 		value, err := argex.Eval(source, map[string]any{"items": items})
 		assert.NoError(t, err)
@@ -222,7 +222,7 @@ func TestSkippedCompilation(t *testing.T) {
 	for _, source := range []string{
 		"case { true: 1, unknown() }",
 		"false && unknown()", "1 ?? unknown()", "null?.[unknown()]",
-		"[].map x: unknown()", "[].filter x: unknown()",
+		"[] | map x: unknown()", "[] | filter x: unknown()",
 	} {
 		_, err := argex.Eval(source, nil)
 		assert.ErrorIs(t, err, argex.ErrFunction)

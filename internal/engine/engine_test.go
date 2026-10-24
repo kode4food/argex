@@ -87,31 +87,31 @@ func TestValues(t *testing.T) {
 			want:   map[string]any{"kept": nil},
 		},
 		{
-			source: "items.map item: item + offset",
+			source: "items | map item: item + offset",
 			want: []any{
 				float64(4), float64(8), float64(14), float64(104),
 			},
 		},
-		{source: "items.filter item: item > 10", want: []any{11, 101}},
+		{source: "items | filter item: item > 10", want: []any{11, 101}},
 		{
-			source: `(items.filter item: item > 10).map item: case {
+			source: `(items | filter item: item > 10) | map item: case {
 				item > 100: "large", "medium",
 			}`,
 			want: []any{"medium", "large"},
 		},
-		{source: `(items.map item: item * 2).filter item: item > 10`,
+		{source: `(items | map item: item * 2) | filter item: item > 10`,
 			want: []any{float64(22), float64(202)}},
-		{source: `items.map item: second.map other: item + other`,
+		{source: `items | map item: second | map other: item + other`,
 			want: []any{
 				[]any{float64(3), float64(5)},
 				[]any{float64(7), float64(9)},
 				[]any{float64(13), float64(15)},
 				[]any{float64(103), float64(105)},
 			}},
-		{source: `second.map item: second.map item: item`,
+		{source: `second | map item: second | map item: item`,
 			want: []any{[]any{2, 4}, []any{2, 4}}},
-		{source: `[] . map item: item`, want: []any{}},
-		{source: `[] . filter item: true`, want: []any{}},
+		{source: `[] | map item: item`, want: []any{}},
+		{source: `[] | filter item: true`, want: []any{}},
 		{source: "case { false: 1, true: 2, 3 }", want: float64(2)},
 		{source: "case { false: 1, 3, }", want: float64(3)},
 		{source: "case { true: 1, 1 / 0 }", want: float64(1)},
@@ -122,7 +122,7 @@ func TestValues(t *testing.T) {
 			want: float64(2)},
 		{source: "case { false: 0, -2 < 0: 4, 5 }",
 			want: float64(4)},
-		{source: `(case { true: [1], [], }).map x: x + 1`,
+		{source: `(case { true: [1], [], }) | map x: x + 1`,
 			want: []any{float64(2)}},
 	}
 	for _, tc := range cases {
@@ -197,10 +197,12 @@ func TestSyntax(t *testing.T) {
 		"{x:1,x:2}", "{1:2}", "{true + 1: 2}", "{",
 		"foo(", "foo(1 2)", "(1", "(1))", "x[]", "x[1", "x.",
 		"x.[0]", "x.1", "x.method(1)",
-		"x.map item item", "x.map true: 1",
-		"x.map false: 1", "x.map null: 1", "x.map case: 1",
-		"x?.map x: x", "x.map x:", "x.map |x| x",
-		"x.map x -> x", "case { true -> 1, 2 }",
+		"x | map item item", "x | map true: 1",
+		"x | map false: 1", "x | map null: 1", "x | map case: 1",
+		"x?.map x: x", "x | map x:", "x | map |x| x",
+		"x | map x -> x", "case { true -> 1, 2 }",
+		"x.map item: item", "x.filter item: true", "x | unknown x: x",
+		"x|", "x?.", "x | map", "x | filter",
 		"case {}", "case { 1 }", "case { true: 1 }",
 		"case { true: 1, }", "case { true: 1 false: 2, 3 }",
 		"case { true: 1, 2, false: 3 }", "case true: 1",
@@ -216,58 +218,58 @@ func TestSyntax(t *testing.T) {
 
 func TestErrors(t *testing.T) {
 	cases := map[string]error{
-		"missing.field":             argex.ErrMissing,
-		"{}.field":                  argex.ErrMissing,
-		"[1][5]":                    argex.ErrMissing,
-		"null.field":                argex.ErrMissing,
-		"1 + true":                  argex.ErrType,
-		"true + 1":                  argex.ErrType,
-		`"1" + 2`:                   argex.ErrType,
-		`"1" - "2"`:                 argex.ErrType,
-		"!1":                        argex.ErrType,
-		"-true":                     argex.ErrType,
-		"+true":                     argex.ErrType,
-		"1 - true":                  argex.ErrType,
-		"1 * true":                  argex.ErrType,
-		"1 / true":                  argex.ErrType,
-		"1 % true":                  argex.ErrType,
-		"1 < true":                  argex.ErrType,
-		"1 <= true":                 argex.ErrType,
-		"1 > true":                  argex.ErrType,
-		"1 >= true":                 argex.ErrType,
-		`"1" < 2`:                   argex.ErrType,
-		"1 && true":                 argex.ErrType,
-		"false || 1":                argex.ErrType,
-		"true && 1":                 argex.ErrType,
-		"case { 1: 2, 3 }":          argex.ErrType,
-		"[1].filter x: x":           argex.ErrType,
-		"1 .map x: x":               argex.ErrType,
-		"[1].map x: x.field":        argex.ErrType,
-		"1 / 0":                     argex.ErrArithmetic,
-		"0 / 0":                     argex.ErrArithmetic,
-		"1 % 0":                     argex.ErrArithmetic,
-		"1e308 * 1e308":             argex.ErrArithmetic,
-		"-1e308 - 1e308":            argex.ErrArithmetic,
-		"[1][0.5]":                  argex.ErrType,
-		`[1]["x"]`:                  argex.ErrType,
-		"{}[0]":                     argex.ErrType,
-		"true?.field":               argex.ErrType,
-		"customer?.absent.field":    argex.ErrMissing,
-		"missing.field ?? 1":        argex.ErrMissing,
-		"[1].map x: other.field":    argex.ErrMissing,
-		"[1].filter x: other.field": argex.ErrMissing,
-		"length(1)":                 argex.ErrType,
-		"abs(true)":                 argex.ErrType,
-		"min(1,true)":               argex.ErrType,
-		"min(true,1)":               argex.ErrType,
-		"max(1,true)":               argex.ErrType,
-		"max(true,1)":               argex.ErrType,
-		"abs()":                     argex.ErrFunction,
-		"length(1,2)":               argex.ErrFunction,
-		"min()":                     argex.ErrFunction,
-		"max()":                     argex.ErrFunction,
-		"unknown(1)":                argex.ErrFunction,
-		"[1].map x: unknown()":      argex.ErrFunction,
+		"missing.field":               argex.ErrMissing,
+		"{}.field":                    argex.ErrMissing,
+		"[1][5]":                      argex.ErrMissing,
+		"null.field":                  argex.ErrMissing,
+		"1 + true":                    argex.ErrType,
+		"true + 1":                    argex.ErrType,
+		`"1" + 2`:                     argex.ErrType,
+		`"1" - "2"`:                   argex.ErrType,
+		"!1":                          argex.ErrType,
+		"-true":                       argex.ErrType,
+		"+true":                       argex.ErrType,
+		"1 - true":                    argex.ErrType,
+		"1 * true":                    argex.ErrType,
+		"1 / true":                    argex.ErrType,
+		"1 % true":                    argex.ErrType,
+		"1 < true":                    argex.ErrType,
+		"1 <= true":                   argex.ErrType,
+		"1 > true":                    argex.ErrType,
+		"1 >= true":                   argex.ErrType,
+		`"1" < 2`:                     argex.ErrType,
+		"1 && true":                   argex.ErrType,
+		"false || 1":                  argex.ErrType,
+		"true && 1":                   argex.ErrType,
+		"case { 1: 2, 3 }":            argex.ErrType,
+		"[1] | filter x: x":           argex.ErrType,
+		"1 | map x: x":                argex.ErrType,
+		"[1] | map x: x.field":        argex.ErrType,
+		"1 / 0":                       argex.ErrArithmetic,
+		"0 / 0":                       argex.ErrArithmetic,
+		"1 % 0":                       argex.ErrArithmetic,
+		"1e308 * 1e308":               argex.ErrArithmetic,
+		"-1e308 - 1e308":              argex.ErrArithmetic,
+		"[1][0.5]":                    argex.ErrType,
+		`[1]["x"]`:                    argex.ErrType,
+		"{}[0]":                       argex.ErrType,
+		"true?.field":                 argex.ErrType,
+		"customer?.absent.field":      argex.ErrMissing,
+		"missing.field ?? 1":          argex.ErrMissing,
+		"[1] | map x: other.field":    argex.ErrMissing,
+		"[1] | filter x: other.field": argex.ErrMissing,
+		"length(1)":                   argex.ErrType,
+		"abs(true)":                   argex.ErrType,
+		"min(1,true)":                 argex.ErrType,
+		"min(true,1)":                 argex.ErrType,
+		"max(1,true)":                 argex.ErrType,
+		"max(true,1)":                 argex.ErrType,
+		"abs()":                       argex.ErrFunction,
+		"length(1,2)":                 argex.ErrFunction,
+		"min()":                       argex.ErrFunction,
+		"max()":                       argex.ErrFunction,
+		"unknown(1)":                  argex.ErrFunction,
+		"[1] | map x: unknown()":      argex.ErrFunction,
 	}
 	for source, want := range cases {
 		t.Run(source, func(t *testing.T) {
@@ -322,10 +324,10 @@ func TestNumericInputs(t *testing.T) {
 
 func TestWhitespace(t *testing.T) {
 	cases := []string{
-		`([1,11].filter x:x>10).map x:case{x>100:"big","small",}`,
-		` ( [ 1 , 11 ] . filter x : x > 10 ) . map x :
+		`([1,11]|filter x:x>10)|map x:case{x>100:"big","small",}`,
+		` ( [ 1 , 11 ] | filter x : x > 10 ) | map x :
 		case { x > 100 : "big" , "small" , } `,
-		"([1,11].filter\nx\n:\nx>10)\n.map\nx\n:\n" +
+		"([1,11]|filter\nx\n:\nx>10)\n|map\nx\n:\n" +
 			`case{x>100:"big","small",}`,
 	}
 	for _, source := range cases {
@@ -337,13 +339,13 @@ func TestWhitespace(t *testing.T) {
 
 func TestGrouping(t *testing.T) {
 	value, err := argex.Eval(
-		"([1,11].filter x: x>10).map x: x*2", nil,
+		"([1,11] | filter x: x>10) | map x: x*2", nil,
 	)
 	assert.NoError(t, err)
 	assert.Equal(t, []any{float64(22)}, value)
-	_, err = argex.Eval("[1,11].filter x: x>10.map x: x*2", nil)
+	_, err = argex.Eval("[1,11] | filter x: x>10 | map x: x*2", nil)
 	assert.Error(t, err)
-	value, err = argex.Eval("[1].map x: x + 2 * 3", nil)
+	value, err = argex.Eval("[1] | map x: x + 2 * 3", nil)
 	assert.NoError(t, err)
 	assert.Equal(t, []any{float64(7)}, value)
 }
@@ -372,7 +374,7 @@ func TestProgramFunction(t *testing.T) {
 }
 
 func TestReuse(t *testing.T) {
-	expr, err := argex.Parse("(items.filter x: x > 1).map x: x + n")
+	expr, err := argex.Parse("(items | filter x: x > 1) | map x: x + n")
 	assert.NoError(t, err)
 	program, err := argex.Compile(expr)
 	assert.NoError(t, err)
@@ -400,7 +402,7 @@ func TestReuse(t *testing.T) {
 func FuzzExpression(f *testing.F) {
 	for _, source := range []string{
 		"1+2", "x?.y ?? 4", "case { true: 1, 2, }",
-		"([1,2].filter x: x>1).map x: x+2", "{a:[true,null]}",
+		"([1,2] | filter x: x>1) | map x: x+2", "{a:[true,null]}",
 	} {
 		f.Add(source)
 	}

@@ -23,7 +23,7 @@
     {"name":"nested calls","expression":"max(abs(-5),min(1,2),length([1,2,3]))","result":5},
     {"name":"call trailing comma","expression":"max(1,2,)","result":2},
     {"name":"call result arithmetic","expression":"length([1,2])+abs(-3)","result":5},
-    {"name":"call in collection","expression":"[\"a\",\"abc\"].map item:length(item)","result":[1,3]},
+    {"name":"call in collection","expression":"[\"a\",\"abc\"] | map item:length(item)","result":[1,3]},
     {"name":"input variable named like builtin","expression":"length.value","variables":{"length":{"value":7}},"result":7},
     {"name":"named builtin independent of variable","expression":"length([1,2])","variables":{"length":7},"result":2},
     {"name":"length number","expression":"length(1)","error":"type","phase":"eval"},
@@ -47,8 +47,8 @@
     {"name":"unknown skipped or","expression":"true||unknown()","error":"function","phase":"compile"},
     {"name":"unknown skipped coalesce","expression":"1??unknown()","error":"function","phase":"compile"},
     {"name":"unknown skipped index","expression":"null?.[unknown()]","error":"function","phase":"compile"},
-    {"name":"unknown empty map","expression":"[].map item:unknown()","error":"function","phase":"compile"},
-    {"name":"unknown empty filter","expression":"[].filter item:unknown()","error":"function","phase":"compile"},
+    {"name":"unknown empty map","expression":"[] | map item:unknown()","error":"function","phase":"compile"},
+    {"name":"unknown empty filter","expression":"[] | filter item:unknown()","error":"function","phase":"compile"},
     {"name":"invalid arity in skipped branch","expression":"case{false:abs(),1}","error":"function","phase":"compile"}
   ]
 }

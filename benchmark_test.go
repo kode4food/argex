@@ -21,7 +21,7 @@ func BenchmarkExpressions(b *testing.B) {
 	for _, source := range []string{
 		"a.b.c",
 		"a?.b?.c ?? false",
-		`(items.filter x: x > 10).map x: case {
+		`(items | filter x: x > 10) | map x: case {
 			x > 100: "large", "medium",
 		}`,
 	} {
@@ -83,11 +83,11 @@ func BenchmarkWorkloads(b *testing.B) {
 			source: `case { quality >= 0.9: "accept",
 				quality >= 0.5: "review", "reject" }`,
 		},
-		{name: "map256", source: "items.map item: item * rate + offset"},
-		{name: "filter256", source: "items.filter item: item > 128"},
+		{name: "map256", source: "items | map item: item * rate + offset"},
+		{name: "filter256", source: "items | filter item: item > 128"},
 		{
 			name:   "nested",
-			source: `items.map item: [1,2,3,4].map inner: item + inner`,
+			source: `items | map item: [1,2,3,4] | map inner: item + inner`,
 		},
 	}
 	for _, tc := range cases {
@@ -122,7 +122,7 @@ func BenchmarkMembership(b *testing.B) {
 			{name: "in", source: "needle in items"},
 			{
 				name:   "filter",
-				source: "length(items.filter item: item == needle) > 0",
+				source: "length(items | filter item: item == needle) > 0",
 			},
 		} {
 			b.Run(needle+"/"+tc.name, func(b *testing.B) {

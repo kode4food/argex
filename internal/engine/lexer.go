@@ -60,7 +60,7 @@ func scan(src []rune, pos int) (token, int, error) {
 			return token{kind: pair, pos: start}, pos + 2, nil
 		}
 	}
-	if strings.ContainsRune("()[]{}.,:+-*/%!<>", r) {
+	if strings.ContainsRune("()[]{}.,:|+-*/%!<>", r) {
 		return token{kind: string(r), pos: start}, pos + 1, nil
 	}
 	return token{}, pos, syntax(start, "unexpected character")

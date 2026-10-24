@@ -15,7 +15,7 @@ access         = ".", identifier
                | "?.", "[", expression, "]" ;
 call           = "(", [ arguments ], ")" ;
 arguments      = expression, { ",", expression }, [ "," ] ;
-collection     = ".", ("map" | "filter"), binding ;
+collection     = "|", ("map" | "filter"), binding ;
 binding        = identifier, ":", expression ;
 
 primary        = literal | identifier | "(", expression, ")"
@@ -34,6 +34,6 @@ literal        = number | string | "true" | "false" | "null" ;
    or underscores. true, false, null, and case are reserved as bindings.
    in is a contextual operator between expressions; it remains a valid name.
    Whitespace is ignored between tokens. Operators use longest match.
-   A collection is recognized before member access when map/filter is
-   followed by a name. Calls require a named function as their receiver.
+   | introduces a collection operation; . and ?. access properties.
+   Calls require a named function as their receiver.
    Duplicate object keys are invalid. A case requires a final fallback. *)

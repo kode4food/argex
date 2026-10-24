@@ -9,7 +9,7 @@ customer.address.country
 customer?.address?.country ?? "CH"
 usage.input_tokens * input_price + usage.output_tokens * output_price
 
-(items.filter item: item.price > 10).map item: {
+(items | filter item: item.price > 10) | map item: {
     id: item.id,
     category: case {
         item.price > 100: "large",
@@ -22,7 +22,7 @@ usage.input_tokens * input_price + usage.output_tokens * output_price
 
 ```go
 expression, err := argex.Parse(`
-    (items.filter item: item > 10).map item: case {
+    (items | filter item: item > 10) | map item: case {
         item > 100: "large",
         "medium",
     }
@@ -46,26 +46,28 @@ Values use Go's JSON representation: `map[string]any`, `[]any`, strings, boolean
 
 ## Collections and grouping
 
-`map` and `filter` bind a name to each element of their receiver. The expression after `:` is evaluated in that scope. It can read outer bindings and input variables; an inner binding with the same name shadows the outer one. Bindings cannot be assigned to or returned as functions.
+`| map` and `| filter` bind a name to each element of their receiver. The expression after `:` is evaluated in that scope. It can read outer bindings and input variables; an inner binding with the same name shadows the outer one. Bindings cannot be assigned to or returned as functions.
 
 ```text
-orders.map order: order.total
-orders.filter order: order.status == "paid"
+orders | map order: order.total
+orders | filter order: order.status == "paid"
 
-(orders.filter order: order.status == "paid").map order: order.id
+(orders | filter order: order.status == "paid") | map order: order.id
 
-customers.map customer: {
+customers | map customer: {
     id: customer.id,
-    totals: (customer.orders.filter order: order.paid).map order: order.total,
+    totals: (customer.orders | filter order: order.paid) | map order: order.total,
 }
 
 {
-    first: list1.map item: item.name,
-    second: list2.filter item: item.available,
+    first: list1 | map item: item.name,
+    second: list2 | filter item: item.available,
 }
 ```
 
-The binding body is a complete expression. Parentheses end a collection expression before applying another operation to its result. Newlines and indentation have no grammatical meaning. There are no implicit operands or standalone anonymous functions. `map` preserves order; `filter` requires a Boolean predicate and preserves the relative order of retained elements. Both require an array receiver and produce an array, including for empty inputs.
+The binding body is a complete expression. Parentheses end a collection expression before applying another operation to its result. Newlines and indentation have no grammatical meaning. There are no implicit operands or standalone anonymous functions. `| map` preserves order; `| filter` requires a Boolean predicate and preserves the relative order of retained elements. Both require an array receiver and produce an array, including for empty inputs.
+
+`.` and `?.` access properties; `|` introduces collection operations. `response.map`, `response.filter`, and `response.any` are ordinary paths. Optional access and coalescing remain `?.` and `??`; use `(response?.items ?? []) | map item: item.id` to map an optional array. `||` remains Boolean OR. There are no ternary or bitwise operators.
 
 ## Conditional selection
 
@@ -129,7 +131,7 @@ Only these named pure functions are available:
 | `min(number, ...)` | Minimum of one or more numbers |
 | `max(number, ...)` | Maximum of one or more numbers |
 
-There are no assignments, statements, arbitrary method calls, I/O, ambient globals, clock access, or randomness. Fields named `map` or `filter` can still be accessed normally; a collection operation requires the following `name: expression` binding.
+There are no assignments, statements, arbitrary method calls, I/O, ambient globals, clock access, or randomness. Collection operations use `| map` or `| filter` followed by a `name: expression` binding.
 
 ## Errors and limits
 

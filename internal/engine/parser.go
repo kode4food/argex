@@ -122,6 +122,9 @@ func (p *parser) postfix(left *node) (*node, error) {
 		case ".", "?.":
 			left, err = p.member(left)
 
+		case "|":
+			left, err = p.collection(left)
+
 		case "[":
 			p.pos++
 			left, err = p.index(left, false)
@@ -147,11 +150,6 @@ func (p *parser) member(receiver *node) (*node, error) {
 	name := p.current()
 	if err := p.expect("name"); err != nil {
 		return nil, err
-	}
-	if (name.text == "map" || name.text == "filter") &&
-		p.current().kind == "name" && p.pos+1 < len(p.tokens) &&
-		p.tokens[p.pos+1].kind == ":" {
-		return p.collection(receiver, name.text, optional)
 	}
 	return &node{
 		kind:     "access",
@@ -189,11 +187,14 @@ func (p *parser) call(receiver *node) (*node, error) {
 	}, nil
 }
 
-func (p *parser) collection(
-	receiver *node, operation string, optional bool,
-) (*node, error) {
-	if optional {
-		return nil, p.error("optional collection operation")
+func (p *parser) collection(receiver *node) (*node, error) {
+	p.pos++
+	operation := p.current()
+	if err := p.expect("name"); err != nil {
+		return nil, err
+	}
+	if operation.text != "map" && operation.text != "filter" {
+		return nil, syntax(operation.pos, "unknown collection operation")
 	}
 	name := p.current()
 	if err := p.expect("name"); err != nil {
@@ -208,7 +209,7 @@ func (p *parser) collection(
 	}
 	body, err := p.expression(precedenceOr)
 	return &node{
-		kind:     operation,
+		kind:     operation.text,
 		text:     name.text,
 		children: []*node{receiver, body},
 	}, err
