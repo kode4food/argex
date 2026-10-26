@@ -24,6 +24,7 @@ const (
 	Const  Opcode = iota // Push constant (operand = index)
 	Global               // Push input variable (operand = name index)
 	Load                 // Push local binding (operand = slot)
+	Store                // Pop a value into a local binding (operand = slot)
 	Pop                  // Discard the top of the stack
 
 	// Property and index access

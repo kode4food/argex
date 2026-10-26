@@ -42,144 +42,147 @@ const inlineValues = 32
 
 func (p *program) evaluate(variables map[string]any) (any, error) {
 	var values [inlineValues]any
-	memory := values[:]
+	MEM := values[:]
 	var arguments []any
-	if size := p.stackSize + p.localCount; size > len(memory) {
-		memory = make([]any, size)
+	if size := p.stackSize + p.localCount; size > len(MEM) {
+		MEM = make([]any, size)
 	}
-	stack := memory[:p.stackSize]
-	locals := memory[p.stackSize : p.stackSize+p.localCount]
-	sp := 0
-	for pc := 0; pc < len(p.code); pc++ {
-		inst := p.code[pc]
-		oc := inst.Opcode()
-		operand := int(inst.Operand())
-		switch oc {
+	CODE := p.code
+	LP := p.stackSize
+	SP := 0
+	for PC := 0; PC < len(CODE); PC++ {
+		INST := CODE[PC]
+		op := int(INST.Operand())
+		switch INST.Opcode() {
 		case isa.Const:
-			stack[sp] = p.constants[operand]
-			sp++
+			MEM[SP] = p.constants[op]
+			SP++
 
 		case isa.Global:
-			name := p.constants[operand].(string)
+			name := p.constants[op].(string)
 			value, ok := variables[name]
 			if !ok {
 				value = Missing{}
 			}
-			stack[sp] = value
-			sp++
+			MEM[SP] = value
+			SP++
 
 		case isa.Load:
-			stack[sp] = locals[operand]
-			sp++
+			MEM[SP] = MEM[LP+op]
+			SP++
+
+		case isa.Store:
+			SP--
+			MEM[LP+op] = MEM[SP]
 
 		case isa.Access:
-			key := p.constants[operand]
-			value := stack[sp-1]
+			key := p.constants[op]
+			value := MEM[SP-1]
 			if nullish(value) {
 				return nil, fmt.Errorf("%w: access %v", ErrMissing, key)
 			}
-			child, found, err := accessChild(value, key)
+			child, ok, err := accessChild(value, key)
 			if err != nil {
 				return nil, err
 			}
-			if !found {
+			if !ok {
 				return nil, fmt.Errorf("%w: key %v", ErrMissing, key)
 			}
-			stack[sp-1] = child
+			MEM[SP-1] = child
 
 		case isa.OptionalAccess:
-			key := p.constants[operand]
-			value := stack[sp-1]
+			key := p.constants[op]
+			value := MEM[SP-1]
 			if nullish(value) {
-				stack[sp-1] = Missing{}
+				MEM[SP-1] = Missing{}
 				continue
 			}
-			child, found, err := accessChild(value, key)
+			child, ok, err := accessChild(value, key)
 			if err != nil {
 				return nil, err
 			}
-			if !found {
-				stack[sp-1] = Missing{}
+			if !ok {
+				MEM[SP-1] = Missing{}
 				continue
 			}
-			stack[sp-1] = child
+			MEM[SP-1] = child
 
 		case isa.Index:
-			sp--
-			key := stack[sp]
-			value := stack[sp-1]
+			SP--
+			key := MEM[SP]
+			value := MEM[SP-1]
 			if nullish(value) {
 				return nil, fmt.Errorf("%w: access %v", ErrMissing, key)
 			}
-			child, found, err := accessChild(value, key)
+			child, ok, err := accessChild(value, key)
 			if err != nil {
 				return nil, err
 			}
-			if !found {
+			if !ok {
 				return nil, fmt.Errorf("%w: key %v", ErrMissing, key)
 			}
-			stack[sp-1] = child
+			MEM[SP-1] = child
 
 		case isa.OptionalIndex:
-			sp--
-			key := stack[sp]
-			value := stack[sp-1]
+			SP--
+			key := MEM[SP]
+			value := MEM[SP-1]
 			if nullish(value) {
-				stack[sp-1] = Missing{}
+				MEM[SP-1] = Missing{}
 				continue
 			}
-			child, found, err := accessChild(value, key)
+			child, ok, err := accessChild(value, key)
 			if err != nil {
 				return nil, err
 			}
-			if !found {
-				stack[sp-1] = Missing{}
+			if !ok {
+				MEM[SP-1] = Missing{}
 				continue
 			}
-			stack[sp-1] = child
+			MEM[SP-1] = child
 
 		case isa.Optional:
-			if nullish(stack[sp-1]) {
-				stack[sp-1] = Missing{}
-				pc = operand - 1
+			if nullish(MEM[SP-1]) {
+				MEM[SP-1] = Missing{}
+				PC = op - 1
 			}
 
 		case isa.Not:
-			value, ok := stack[sp-1].(bool)
+			value, ok := MEM[SP-1].(bool)
 			if !ok {
 				return nil, operandError("!")
 			}
-			stack[sp-1] = !value
+			MEM[SP-1] = !value
 
 		case isa.Pos:
-			value := number(stack[sp-1])
+			value := number(MEM[SP-1])
 			if value-value != 0 {
 				return nil, operandError("+")
 			}
-			stack[sp-1] = value
+			MEM[SP-1] = value
 
 		case isa.Neg:
-			value := number(stack[sp-1])
+			value := number(MEM[SP-1])
 			if value-value != 0 {
 				return nil, operandError("-")
 			}
-			stack[sp-1] = -value
+			MEM[SP-1] = -value
 
 		case isa.Add:
-			if a, ok := stack[sp-2].(string); ok {
-				b, ok := stack[sp-1].(string)
+			if a, ok := MEM[SP-2].(string); ok {
+				b, ok := MEM[SP-1].(string)
 				if !ok {
 					return nil, operandError("+")
 				}
-				sp--
-				stack[sp-1] = a + b
+				SP--
+				MEM[SP-1] = a + b
 				continue
 			}
-			a := number(stack[sp-2])
+			a := number(MEM[SP-2])
 			if a-a != 0 {
 				return nil, operandError("+")
 			}
-			b := number(stack[sp-1])
+			b := number(MEM[SP-1])
 			if b-b != 0 {
 				return nil, operandError("+")
 			}
@@ -187,15 +190,15 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			if math.IsNaN(value) || math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: +", ErrArithmetic)
 			}
-			sp--
-			stack[sp-1] = value
+			SP--
+			MEM[SP-1] = value
 
 		case isa.Sub:
-			a := number(stack[sp-2])
+			a := number(MEM[SP-2])
 			if a-a != 0 {
 				return nil, operandError("-")
 			}
-			b := number(stack[sp-1])
+			b := number(MEM[SP-1])
 			if b-b != 0 {
 				return nil, operandError("-")
 			}
@@ -203,15 +206,15 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			if math.IsNaN(value) || math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: -", ErrArithmetic)
 			}
-			sp--
-			stack[sp-1] = value
+			SP--
+			MEM[SP-1] = value
 
 		case isa.Mul:
-			a := number(stack[sp-2])
+			a := number(MEM[SP-2])
 			if a-a != 0 {
 				return nil, operandError("*")
 			}
-			b := number(stack[sp-1])
+			b := number(MEM[SP-1])
 			if b-b != 0 {
 				return nil, operandError("*")
 			}
@@ -219,15 +222,15 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			if math.IsNaN(value) || math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: *", ErrArithmetic)
 			}
-			sp--
-			stack[sp-1] = value
+			SP--
+			MEM[SP-1] = value
 
 		case isa.Div:
-			a := number(stack[sp-2])
+			a := number(MEM[SP-2])
 			if a-a != 0 {
 				return nil, operandError("/")
 			}
-			b := number(stack[sp-1])
+			b := number(MEM[SP-1])
 			if b-b != 0 {
 				return nil, operandError("/")
 			}
@@ -235,15 +238,15 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			if math.IsNaN(value) || math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: /", ErrArithmetic)
 			}
-			sp--
-			stack[sp-1] = value
+			SP--
+			MEM[SP-1] = value
 
 		case isa.Mod:
-			a := number(stack[sp-2])
+			a := number(MEM[SP-2])
 			if a-a != 0 {
 				return nil, operandError("%")
 			}
-			b := number(stack[sp-1])
+			b := number(MEM[SP-1])
 			if b-b != 0 {
 				return nil, operandError("%")
 			}
@@ -251,24 +254,24 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			if math.IsNaN(value) || math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: %%", ErrArithmetic)
 			}
-			sp--
-			stack[sp-1] = value
+			SP--
+			MEM[SP-1] = value
 
 		case isa.Eq:
-			left := stack[sp-2]
-			right := stack[sp-1]
-			sp--
-			stack[sp-1] = structuralEqual(left, right)
+			left := MEM[SP-2]
+			right := MEM[SP-1]
+			SP--
+			MEM[SP-1] = structuralEqual(left, right)
 
 		case isa.Neq:
-			left := stack[sp-2]
-			right := stack[sp-1]
-			sp--
-			stack[sp-1] = !structuralEqual(left, right)
+			left := MEM[SP-2]
+			right := MEM[SP-1]
+			SP--
+			MEM[SP-1] = !structuralEqual(left, right)
 
 		case isa.In:
-			left := stack[sp-2]
-			candidates, ok := stack[sp-1].([]any)
+			left := MEM[SP-2]
+			candidates, ok := MEM[SP-1].([]any)
 			if !ok {
 				return nil, operandError("in")
 			}
@@ -279,192 +282,192 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 					break
 				}
 			}
-			sp--
-			stack[sp-1] = matched
+			SP--
+			MEM[SP-1] = matched
 
 		case isa.Lt:
-			if a, ok := stack[sp-2].(string); ok {
-				b, ok := stack[sp-1].(string)
+			if a, ok := MEM[SP-2].(string); ok {
+				b, ok := MEM[SP-1].(string)
 				if !ok {
 					return nil, operandError("<")
 				}
-				sp--
-				stack[sp-1] = a < b
+				SP--
+				MEM[SP-1] = a < b
 				continue
 			}
-			a := number(stack[sp-2])
+			a := number(MEM[SP-2])
 			if a-a != 0 {
 				return nil, operandError("<")
 			}
-			b := number(stack[sp-1])
+			b := number(MEM[SP-1])
 			if b-b != 0 {
 				return nil, operandError("<")
 			}
-			sp--
-			stack[sp-1] = a < b
+			SP--
+			MEM[SP-1] = a < b
 
 		case isa.Lte:
-			if a, ok := stack[sp-2].(string); ok {
-				b, ok := stack[sp-1].(string)
+			if a, ok := MEM[SP-2].(string); ok {
+				b, ok := MEM[SP-1].(string)
 				if !ok {
 					return nil, operandError("<=")
 				}
-				sp--
-				stack[sp-1] = a <= b
+				SP--
+				MEM[SP-1] = a <= b
 				continue
 			}
-			a := number(stack[sp-2])
+			a := number(MEM[SP-2])
 			if a-a != 0 {
 				return nil, operandError("<=")
 			}
-			b := number(stack[sp-1])
+			b := number(MEM[SP-1])
 			if b-b != 0 {
 				return nil, operandError("<=")
 			}
-			sp--
-			stack[sp-1] = a <= b
+			SP--
+			MEM[SP-1] = a <= b
 
 		case isa.Gt:
-			if a, ok := stack[sp-2].(string); ok {
-				b, ok := stack[sp-1].(string)
+			if a, ok := MEM[SP-2].(string); ok {
+				b, ok := MEM[SP-1].(string)
 				if !ok {
 					return nil, operandError(">")
 				}
-				sp--
-				stack[sp-1] = a > b
+				SP--
+				MEM[SP-1] = a > b
 				continue
 			}
-			a := number(stack[sp-2])
+			a := number(MEM[SP-2])
 			if a-a != 0 {
 				return nil, operandError(">")
 			}
-			b := number(stack[sp-1])
+			b := number(MEM[SP-1])
 			if b-b != 0 {
 				return nil, operandError(">")
 			}
-			sp--
-			stack[sp-1] = a > b
+			SP--
+			MEM[SP-1] = a > b
 
 		case isa.Gte:
-			if a, ok := stack[sp-2].(string); ok {
-				b, ok := stack[sp-1].(string)
+			if a, ok := MEM[SP-2].(string); ok {
+				b, ok := MEM[SP-1].(string)
 				if !ok {
 					return nil, operandError(">=")
 				}
-				sp--
-				stack[sp-1] = a >= b
+				SP--
+				MEM[SP-1] = a >= b
 				continue
 			}
-			a := number(stack[sp-2])
+			a := number(MEM[SP-2])
 			if a-a != 0 {
 				return nil, operandError(">=")
 			}
-			b := number(stack[sp-1])
+			b := number(MEM[SP-1])
 			if b-b != 0 {
 				return nil, operandError(">=")
 			}
-			sp--
-			stack[sp-1] = a >= b
+			SP--
+			MEM[SP-1] = a >= b
 
 		case isa.And:
-			value, ok := stack[sp-1].(bool)
+			value, ok := MEM[SP-1].(bool)
 			if !ok {
 				return nil, operandError("Boolean operand")
 			}
 			if !value {
-				pc = operand - 1
+				PC = op - 1
 			} else {
-				sp--
+				SP--
 			}
 
 		case isa.Or:
-			value, ok := stack[sp-1].(bool)
+			value, ok := MEM[SP-1].(bool)
 			if !ok {
 				return nil, operandError("Boolean operand")
 			}
 			if value {
-				pc = operand - 1
+				PC = op - 1
 			} else {
-				sp--
+				SP--
 			}
 
 		case isa.Coalesce:
-			if !nullish(stack[sp-1]) {
-				pc = operand - 1
+			if !nullish(MEM[SP-1]) {
+				PC = op - 1
 			} else {
-				sp--
+				SP--
 			}
 
 		case isa.Boolean:
-			if _, ok := stack[sp-1].(bool); !ok {
-				return nil, operandError(p.constants[operand].(string))
+			if _, ok := MEM[SP-1].(bool); !ok {
+				return nil, operandError(p.constants[op].(string))
 			}
 
 		case isa.CondJump:
-			sp--
-			value, ok := stack[sp].(bool)
+			SP--
+			value, ok := MEM[SP].(bool)
 			if !ok {
 				return nil, operandError("case condition")
 			}
 			if !value {
-				pc = operand - 1
+				PC = op - 1
 			}
 
 		case isa.Jump:
-			pc = operand - 1
+			PC = op - 1
 
 		case isa.Array:
-			base := sp - operand
-			result := append([]any{}, stack[base:sp]...)
-			stack[base] = result
-			sp = base + 1
+			RES := SP - op
+			result := append([]any{}, MEM[RES:SP]...)
+			MEM[RES] = result
+			SP = RES + 1
 
 		case isa.Object:
-			keys := p.constants[operand].([]string)
-			base := sp - len(keys)
+			keys := p.constants[op].([]string)
+			RES := SP - len(keys)
 			result := make(map[string]any, len(keys))
 			for i, key := range keys {
-				if value := stack[base+i]; !IsMissing(value) {
+				if value := MEM[RES+i]; !IsMissing(value) {
 					result[key] = value
 				}
 			}
-			stack[base] = result
-			sp = base + 1
+			MEM[RES] = result
+			SP = RES + 1
 
 		case isa.Push:
-			sp--
-			value := stack[sp]
-			stack[sp-1] = append(stack[sp-1].([]any), value)
+			SP--
+			value := MEM[SP]
+			MEM[SP-1] = append(MEM[SP-1].([]any), value)
 
 		case isa.Put:
-			sp--
-			value := stack[sp]
+			SP--
+			value := MEM[SP]
 			if !IsMissing(value) {
-				key := p.constants[operand].(string)
-				stack[sp-1].(map[string]any)[key] = value
+				key := p.constants[op].(string)
+				MEM[SP-1].(map[string]any)[key] = value
 			}
 
 		case isa.Concat:
-			sp--
-			if nullish(stack[sp]) {
+			SP--
+			if nullish(MEM[SP]) {
 				continue
 			}
-			source, ok := stack[sp].([]any)
+			source, ok := MEM[SP].([]any)
 			if !ok {
 				return nil, operandError("spread")
 			}
-			stack[sp-1] = append(stack[sp-1].([]any), source...)
+			MEM[SP-1] = append(MEM[SP-1].([]any), source...)
 
 		case isa.Merge:
-			sp--
-			if nullish(stack[sp]) {
+			SP--
+			if nullish(MEM[SP]) {
 				continue
 			}
-			source, ok := stack[sp].(map[string]any)
+			source, ok := MEM[SP].(map[string]any)
 			if !ok {
 				return nil, operandError("spread")
 			}
-			target := stack[sp-1].(map[string]any)
+			target := MEM[SP-1].(map[string]any)
 			for key, value := range source {
 				if !IsMissing(value) {
 					target[key] = value
@@ -472,66 +475,66 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			}
 
 		case isa.Call:
-			spec := p.constants[operand].(callSpec)
-			base := sp - spec.arity
+			spec := p.constants[op].(callSpec)
+			RES := SP - spec.arity
 			if cap(arguments) < spec.arity {
 				arguments = make([]any, spec.arity)
 			}
 			args := arguments[:spec.arity]
 			for i := range args {
-				value := stack[base+i]
+				value := MEM[RES+i]
 				args[i] = value
 			}
 			result, err := spec.call(args...)
 			if err != nil {
 				return nil, err
 			}
-			stack[base] = result
-			sp = base + 1
+			MEM[RES] = result
+			SP = RES + 1
 
 		case isa.Iterate:
-			spec := p.iterations[operand]
+			spec := p.iterations[op]
 			keys, values, err := collectionEntries(
-				stack[sp-1], spec.keyed,
+				MEM[SP-1], spec.keyed,
 			)
 			if err != nil {
 				return nil, err
 			}
-			stack[sp-1] = &iterator{
+			MEM[SP-1] = &iterator{
 				keys:   keys,
 				values: values,
 				result: []any{},
 			}
 
 		case isa.Fetch:
-			spec := p.iterations[operand]
-			it := stack[sp-1].(*iterator)
+			spec := p.iterations[op]
+			it := MEM[SP-1].(*iterator)
 			if len(it.values) == 0 {
-				pc = spec.end - 1
+				PC = spec.end - 1
 				continue
 			}
-			locals[spec.valueSlot] = it.values[0]
+			MEM[LP+spec.valueSlot] = it.values[0]
 			it.values = it.values[1:]
 			if spec.keyed {
-				locals[spec.keySlot] = it.keys[0]
+				MEM[LP+spec.keySlot] = it.keys[0]
 				it.keys = it.keys[1:]
 			}
 
 		case isa.Append:
-			sp--
-			value := stack[sp]
-			it := stack[sp-1].(*iterator)
+			SP--
+			value := MEM[SP]
+			it := MEM[SP-1].(*iterator)
 			it.result = append(it.result, value)
 
 		case isa.Result:
-			it := stack[sp-1].(*iterator)
-			stack[sp-1] = it.result
+			it := MEM[SP-1].(*iterator)
+			MEM[SP-1] = it.result
 
 		case isa.Pop:
-			sp--
+			SP--
 		}
 	}
-	return stack[0], nil
+	return MEM[0], nil
 }
 
 func accessChild(container, key any) (any, bool, error) {

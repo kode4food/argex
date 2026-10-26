@@ -241,9 +241,92 @@ func (c *compiler) branch(n *node, depth int) error {
 	return nil
 }
 
-// collection compiles map/filter/any/all into an Iterate/Fetch loop over an
-// iterator value, with generic CondJump/Jump driving the per-kind outcome
+// collection compiles map/filter/any/all into an Iterate/Fetch loop. A run
+// of unkeyed map/filter stages chained by the receiver is fused into one
+// loop instead of materializing an intermediate array per stage
 func (c *compiler) collection(n *node, depth int) error {
+	if fusable(n) {
+		stages := []*node{n}
+		for fusable(stages[len(stages)-1].children[0]) {
+			last := stages[len(stages)-1]
+			stages = append(stages, last.children[0])
+		}
+		if len(stages) > 1 {
+			slices.Reverse(stages)
+			return c.fusedCollection(stages, depth)
+		}
+	}
+	return c.singleCollection(n, depth)
+}
+
+// fusedCollection compiles a dataflow-ordered chain of unkeyed map/filter
+// stages into one Iterate/Fetch loop, storing each stage's output into the
+// next stage's binding slot instead of an intermediate array
+func (c *compiler) fusedCollection(stages []*node, depth int) error {
+	first := stages[0]
+	if err := c.compile(first.children[0], depth+1); err != nil {
+		return err
+	}
+
+	valueSlot := len(c.bindings)
+	c.bindings = append(c.bindings, first.valueBinding)
+	c.program.localCount = max(c.program.localCount, len(c.bindings))
+
+	index := len(c.program.iterations)
+	c.program.iterations = append(c.program.iterations, iterationSpec{
+		valueSlot: valueSlot,
+	})
+	c.emit(isa.Iterate, isa.Operand(index), 0)
+
+	loopTop := len(c.program.code)
+	c.emit(isa.Fetch, isa.Operand(index), 0)
+
+	slot := valueSlot
+	for i, stage := range stages {
+		last := i == len(stages)-1
+		if err := c.compile(stage.children[1], depth+1); err != nil {
+			return err
+		}
+		switch {
+		case stage.kind == "map" && last:
+			c.emit(isa.Append, 0, -1)
+
+		case stage.kind == "filter" && last:
+			skip := c.emit(isa.CondJump, 0, -1)
+			c.emit(isa.Load, isa.Operand(slot), 1)
+			c.emit(isa.Append, 0, -1)
+			c.patch(skip)
+
+		case stage.kind == "map":
+			slot = c.nextStageSlot(stages[i+1])
+			c.emit(isa.Store, isa.Operand(slot), -1)
+
+		default: // filter, not last
+			c.emit(isa.CondJump, isa.Operand(loopTop), -1)
+			next := c.nextStageSlot(stages[i+1])
+			c.emit(isa.Load, isa.Operand(slot), 1)
+			c.emit(isa.Store, isa.Operand(next), -1)
+			slot = next
+		}
+	}
+	c.emit(isa.Jump, isa.Operand(loopTop), 0)
+	c.program.iterations[index].end = len(c.program.code)
+	c.emit(isa.Result, 0, 0)
+
+	c.bindings = c.bindings[:valueSlot]
+	return nil
+}
+
+// nextStageSlot reserves the binding slot a following stage reads its
+// input from
+func (c *compiler) nextStageSlot(stage *node) int {
+	slot := len(c.bindings)
+	c.bindings = append(c.bindings, stage.valueBinding)
+	c.program.localCount = max(c.program.localCount, len(c.bindings))
+	return slot
+}
+
+func (c *compiler) singleCollection(n *node, depth int) error {
 	if err := c.compile(n.children[0], depth+1); err != nil {
 		return err
 	}
@@ -380,4 +463,10 @@ func binaryOpcode(op string) isa.Opcode {
 	default:
 		return isa.Coalesce
 	}
+}
+
+// fusable reports whether n is an unkeyed map/filter stage, eligible to
+// share a single iterator loop with the stages feeding its receiver
+func fusable(n *node) bool {
+	return (n.kind == "map" || n.kind == "filter") && n.keyBinding == ""
 }

@@ -17,8 +17,10 @@ func number(value any) float64 {
 	switch value := value.(type) {
 	case float64:
 		return value
+
 	case int:
 		return float64(value)
+
 	default:
 		return jsonNumber(value)
 	}
@@ -58,7 +60,7 @@ func structuralEqual(left, right any) bool {
 			matched = pair.right == nil
 
 		case Missing:
-			_, matched = pair.right.(Missing)
+			matched = IsMissing(pair.right)
 
 		case bool:
 			right, ok := pair.right.(bool)
