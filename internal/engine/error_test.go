@@ -61,6 +61,16 @@ func TestErrors(t *testing.T) {
 		"max()":                       argex.ErrFunction,
 		"unknown(1)":                  argex.ErrFunction,
 		"[1] | map x: unknown()":      argex.ErrFunction,
+		"{a: 1} | map x: x":           argex.ErrType,
+		`startsWith(1, "a")`:          argex.ErrType,
+		`startsWith("a", 1)`:          argex.ErrType,
+		`endsWith(1, "a")`:            argex.ErrType,
+		`endsWith("a", 1)`:            argex.ErrType,
+		`includes(1, "a")`:            argex.ErrType,
+		`includes("a", 1)`:            argex.ErrType,
+		"lower(1)":                    argex.ErrType,
+		"upper(1)":                    argex.ErrType,
+		"trim(1)":                     argex.ErrType,
 	}
 	for source, want := range cases {
 		t.Run(source, func(t *testing.T) {

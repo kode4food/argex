@@ -214,6 +214,23 @@ func TestOperators(t *testing.T) {
 		{source: "min(5, 1, 4)", want: float64(1)},
 		{source: "max(5, 1, 9)", want: float64(9)},
 		{source: "min(5)", want: float64(5)},
+		{source: `endsWith("abc", "bc")`, want: true},
+		{source: `includes("abc", "b")`, want: true},
+		{source: `lower("ABC")`, want: "abc"},
+		{source: `upper("abc")`, want: "ABC"},
+		{source: `trim("  abc  ")`, want: "abc"},
+		{
+			source: `values({a: 1, b: 2})`,
+			want:   []any{float64(1), float64(2)},
+		},
+		{
+			source: "[10, 20] | map i, v: i + v",
+			want:   []any{float64(10), float64(21)},
+		},
+		{
+			source: `{a: 1, b: 2} | map k, v: k`,
+			want:   []any{"a", "b"},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.source, func(t *testing.T) {
