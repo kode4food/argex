@@ -23,7 +23,7 @@ items | filter item: item.price > 10 | map item: {
 
 ```go
 expression, err := argex.Parse(`
-    (items | filter item: item > 10) | map item: case {
+    items | filter item: item > 10 | map item: case {
         item > 100: "large",
         "medium",
     }
