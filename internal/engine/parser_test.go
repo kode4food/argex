@@ -53,12 +53,13 @@ func TestWhitespace(t *testing.T) {
 }
 
 func TestGrouping(t *testing.T) {
-	value, err := argex.Eval("([1,11] | filter x: x>10) | map x: x*2", nil)
+	chained, err := argex.Eval("[1,11] | filter x: x>10 | map x: x*2", nil)
 	assert.NoError(t, err)
-	assert.Equal(t, []any{float64(22)}, value)
-	_, err = argex.Eval("[1,11] | filter x: x>10 | map x: x*2", nil)
-	assert.ErrorIs(t, err, argex.ErrType)
-	value, err = argex.Eval("[1] | map x: x + 2 * 3", nil)
+	assert.Equal(t, []any{float64(22)}, chained)
+	grouped, err := argex.Eval("([1,11] | filter x: x>10) | map x: x*2", nil)
+	assert.NoError(t, err)
+	assert.Equal(t, chained, grouped)
+	value, err := argex.Eval("[1] | map x: x + 2 * 3", nil)
 	assert.NoError(t, err)
 	assert.Equal(t, []any{float64(7)}, value)
 }

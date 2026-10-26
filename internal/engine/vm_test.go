@@ -135,7 +135,7 @@ func TestValues(t *testing.T) {
 			want:   []any{float64(22), float64(202)},
 		},
 		{
-			source: `items | map item: second | map other: item + other`,
+			source: `items | map item: (second | map other: item + other)`,
 			want: []any{
 				[]any{float64(3), float64(5)},
 				[]any{float64(7), float64(9)},
@@ -144,7 +144,7 @@ func TestValues(t *testing.T) {
 			},
 		},
 		{
-			source: `second | map item: second | map item: item`,
+			source: `second | map item: (second | map item: item)`,
 			want:   []any{[]any{2, 4}, []any{2, 4}},
 		},
 		{source: `[] | map item: item`, want: []any{}},
@@ -254,7 +254,7 @@ func TestWideStack(t *testing.T) {
 func TestDeepCollections(t *testing.T) {
 	source := "x0"
 	for i := collectionDepth - 1; i >= 0; i-- {
-		source = fmt.Sprintf("[1] | map x%d: %s", i, source)
+		source = fmt.Sprintf("[1] | map x%d: (%s)", i, source)
 	}
 	value, err := argex.Eval(source, nil)
 	assert.NoError(t, err)
@@ -269,7 +269,7 @@ func TestDeepQuantifiers(t *testing.T) {
 	for _, operation := range []string{"any", "all"} {
 		source := "true"
 		for range collectionDepth {
-			source = "[1] | " + operation + " item: " + source
+			source = "[1] | " + operation + " item: (" + source + ")"
 		}
 		value, err := argex.Eval(source, nil)
 		assert.NoError(t, err)

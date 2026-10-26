@@ -29,6 +29,22 @@ const (
 	precedenceUnary
 )
 
+// pipeline chains collection operations left to right; the pipe is the
+// lowest-precedence operator, so a binding body stops before the next pipe
+func (p *parser) pipeline() (*node, error) {
+	left, err := p.expression(precedenceOr)
+	if err != nil {
+		return nil, err
+	}
+	for p.current().kind == "|" {
+		left, err = p.collection(left)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return left, nil
+}
+
 func (p *parser) expression(minimum int) (*node, error) {
 	p.depth++
 	defer func() { p.depth-- }()
@@ -93,7 +109,7 @@ func (p *parser) primary() (*node, error) {
 		}, err
 
 	case "(":
-		expr, err := p.expression(precedenceOr)
+		expr, err := p.pipeline()
 		if err != nil {
 			return nil, err
 		}
@@ -133,9 +149,6 @@ func (p *parser) postfix(left *node) (*node, error) {
 		case ".", "?.":
 			left, err = p.member(left)
 
-		case "|":
-			left, err = p.collection(left)
-
 		case "[":
 			p.pos++
 			left, err = p.index(left, false)
@@ -171,7 +184,7 @@ func (p *parser) member(receiver *node) (*node, error) {
 }
 
 func (p *parser) index(receiver *node, optional bool) (*node, error) {
-	key, err := p.expression(precedenceOr)
+	key, err := p.pipeline()
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +261,7 @@ func (p *parser) bindingName() (string, error) {
 func (p *parser) list(end string) ([]*node, error) {
 	var children []*node
 	for !p.take(end) {
-		child, err := p.expression(precedenceOr)
+		child, err := p.pipeline()
 		if err != nil {
 			return nil, err
 		}
@@ -317,7 +330,7 @@ func (p *parser) objectMember(seen map[string]bool) (*node, error) {
 	if err := p.expect(":"); err != nil {
 		return nil, err
 	}
-	value, err := p.expression(precedenceOr)
+	value, err := p.pipeline()
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +339,7 @@ func (p *parser) objectMember(seen map[string]bool) (*node, error) {
 
 func (p *parser) spreadable() (*node, error) {
 	spread := p.take("...")
-	expr, err := p.expression(precedenceOr)
+	expr, err := p.pipeline()
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +367,7 @@ func (p *parser) caseExpression() (*node, error) {
 	result := &node{kind: "case"}
 	var fallback *node
 	for {
-		condition, err := p.expression(precedenceOr)
+		condition, err := p.pipeline()
 		if err != nil {
 			return nil, err
 		}
@@ -362,7 +375,7 @@ func (p *parser) caseExpression() (*node, error) {
 			fallback = condition
 			break
 		}
-		value, err := p.expression(precedenceOr)
+		value, err := p.pipeline()
 		if err != nil {
 			return nil, err
 		}
@@ -412,7 +425,7 @@ func Parse(source string) (*Expression, error) {
 		return nil, err
 	}
 	p := &parser{tokens: tokens}
-	root, err := p.expression(precedenceOr)
+	root, err := p.pipeline()
 	if err != nil {
 		return nil, err
 	}

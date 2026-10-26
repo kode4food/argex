@@ -1,4 +1,7 @@
-expression     = logicalOr ;
+expression     = pipeline ;
+pipeline       = logicalOr, { "|", operation, binding } ;
+operation      = "map" | "filter" | "any" | "all" ;
+binding        = identifier, [ ",", identifier ], ":", logicalOr ;
 logicalOr      = logicalAnd, { "||", logicalAnd } ;
 logicalAnd     = coalesce, { "&&", coalesce } ;
 coalesce       = equality, [ "??", coalesce ] ;
@@ -8,15 +11,13 @@ additive       = multiplicative, { ("+" | "-"), multiplicative } ;
 multiplicative = unary, { ("*" | "/" | "%"), unary } ;
 unary          = ("!" | "+" | "-"), unary | postfix ;
 
-postfix        = primary, { access | call }, [ collection ] ;
+postfix        = primary, { access | call } ;
 access         = ".", identifier
                | "?.", identifier
                | "[", expression, "]"
                | "?.", "[", expression, "]" ;
 call           = "(", [ arguments ], ")" ;
 arguments      = expression, { ",", expression }, [ "," ] ;
-collection     = "|", ("map" | "filter" | "any" | "all"), binding ;
-binding        = identifier, [ ",", identifier ], ":", expression ;
 
 primary        = literal | identifier | "(", expression, ")"
                | array | object | case ;
@@ -34,4 +35,6 @@ literal        = number | string | "true" | "false" | "null" ;
    string is a double-quoted JSON string; identifier is a Unicode letter or
    underscore followed by letters, digits, or underscores. true, false, null,
    and case are reserved; in is contextual and also a valid identifier.
-   Whitespace is ignored between tokens and operators use longest match. *)
+   Whitespace is ignored between tokens and operators use longest match.
+   The pipe is the lowest-precedence operator and chains left to right; a
+   binding body is a logicalOr, so a nested pipeline needs parentheses. *)

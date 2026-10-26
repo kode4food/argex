@@ -9,7 +9,8 @@ customer.address.country
 customer?.address?.country ?? "CH"
 usage.input_tokens * input_price + usage.output_tokens * output_price
 
-(items | filter item: item.price > 10) | map item: {
+
+items | filter item: item.price > 10 | map item: {
     id: item.id,
     category: case {
         item.price > 100: "large",
@@ -70,7 +71,7 @@ customers | map customer: {
 }
 ```
 
-The binding body is a complete expression. Parentheses end a collection expression before applying another operation to its result. `| map` preserves order. `| filter` requires a boolean predicate and preserves the relative order of retained elements. Both produce an array, including for empty inputs.
+`|` is the lowest-precedence operator and chains left to right, so `a | filter x: p | map x: q` applies the `map` to the result of the `filter` and needs no parentheses. The binding body after `:` stops at the next `|`; to nest a pipeline inside a body, parenthesize it, as in `items | map item: (item.tags | filter tag: tag.active)`. `| map` preserves order. `| filter` requires a boolean predicate and preserves the relative order of retained elements. Both produce an array, including for empty inputs.
 
 `.` and `?.` access properties. `|` introduces collection operations. `response.map`, `response.filter`, and `response.any` read properties with those names. `??` provides a fallback for missing or null values. Use `(response?.items ?? []) | map item: item.id` to map an optional array. `||` means boolean OR.
 
@@ -136,8 +137,9 @@ Precedence, highest first:
 | `??` | Missing/null fallback |
 | `&&` | boolean conjunction |
 | `\|\|` | boolean disjunction |
+| `\|` | Collection operation (`map`, `filter`, `any`, `all`) |
 
-Binary operators associate left to right except `??`, which associates right to left. Ordering comparisons cannot be chained without parentheses. A collection binding body consumes a full expression regardless of the precedence of the expression containing the collection. `&&` and `||` require boolean operands and short-circuit. Strings compare lexicographically. Missing equals missing and differs from null.
+Binary operators associate left to right except `??`, which associates right to left. Ordering comparisons cannot be chained without parentheses. `|` is the lowest-precedence operator and chains left to right; a collection binding body extends up to the next `|`, so a nested pipeline must be parenthesized. `&&` and `||` require boolean operands and short-circuit. Strings compare lexicographically. Missing equals missing and differs from null.
 
 `in` tests array membership using the same structural equality as `==`. It returns a boolean and stops at the first match. The right operand must be an array. Objects, strings, null, and missing values produce `ErrType`. Empty arrays return false. Like ordering comparisons, `in` requires parentheses when combined with another comparison.
 
