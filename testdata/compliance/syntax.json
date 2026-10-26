@@ -47,7 +47,6 @@
     {"name":"numeric object key","expression":"{1:2}","error":"syntax","phase":"parse"},
     {"name":"computed object key","expression":"{[\"a\"]:1}","error":"syntax","phase":"parse"},
     {"name":"object shorthand","expression":"{a}","error":"syntax","phase":"parse"},
-    {"name":"spread","expression":"[...items]","error":"syntax","phase":"parse"},
     {"name":"missing property name","expression":"value.","error":"syntax","phase":"parse"},
     {"name":"missing index","expression":"value[]","error":"syntax","phase":"parse"},
     {"name":"unclosed index","expression":"value[1","error":"syntax","phase":"parse"},

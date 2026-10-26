@@ -34,6 +34,16 @@
     {"name":"OR is not a collection separator","expression":"[1] || map item: item","error":"syntax","phase":"parse"},
     {"name":"no bitwise OR","expression":"1 | 2","error":"syntax","phase":"parse"},
     {"name":"no ternary","expression":"true ? 1 : 2","error":"syntax","phase":"parse"},
-    {"name":"optional access does not make map optional","expression":"value?.items | map item: item","variables":{"value":null},"error":"type","phase":"eval"}
+    {"name":"optional access does not make map optional","expression":"value?.items | map item: item","variables":{"value":null},"error":"type","phase":"eval"},
+    {"name":"array index binding","expression":"[10,20] | map i, v: [i, v]","result":[[0,10],[1,20]]},
+    {"name":"array key binding ignores value name collision","expression":"[5,6] | map i, i: i","result":[0,1]},
+    {"name":"object key value binding","expression":"{a:1,b:2} | map k, v: k","result":["a","b"]},
+    {"name":"object value binding","expression":"{b:2,a:1} | map k, v: v","result":[1,2]},
+    {"name":"object filter two names","expression":"{a:1,b:2,c:3} | filter k, v: v > 1","result":[2,3]},
+    {"name":"object any two names","expression":"{a:1,b:2} | any k, v: k == \"b\"","result":true},
+    {"name":"object all two names","expression":"{a:1,b:2} | all k, v: v > 0","result":true},
+    {"name":"array two names any","expression":"[1,2,3] | any i, v: i == 2","result":true},
+    {"name":"two name binding missing value name","expression":"[1] | map i,: i","error":"syntax","phase":"parse"},
+    {"name":"object single name rejected","expression":"{a:1} | map v: v","error":"type","phase":"eval"}
   ]
 }

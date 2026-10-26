@@ -10,7 +10,7 @@ type (
 
 const (
 	// OpcodeSize is the number of opcode bits in an instruction
-	OpcodeSize = 7
+	OpcodeSize = 6
 
 	// OpcodeMask selects an instruction's opcode bits
 	OpcodeMask = Opcode(1<<OpcodeSize - 1)
@@ -20,10 +20,11 @@ const (
 )
 
 const (
-	// Constants, globals, and locals
+	// Stack, constants, globals, and locals
 	Const  Opcode = iota // Push constant (operand = index)
 	Global               // Push input variable (operand = name index)
 	Load                 // Push local binding (operand = slot)
+	Pop                  // Discard the top of the stack
 
 	// Property and index access
 	Access         // Replace receiver with property (operand = name index)
@@ -65,13 +66,14 @@ const (
 	// Construction and iteration
 	Array   // Pop values, push array (operand = count)
 	Object  // Pop values, push object (operand = property names index)
-	Map     // Start mapping an array (operand = iteration index)
-	Filter  // Start filtering an array (operand = iteration index)
-	Any     // Test whether any element matches (operand = iteration index)
-	All     // Test whether every element matches (operand = iteration index)
-	NextAny // Advance any, stopping at the first true condition
-	NextAll // Advance all, stopping at the first false condition
-	Next    // Collect body result and advance or finish map/filter
+	Push    // Pop a value, append it to the array being built
+	Put     // Pop a value, set it on the object being built (operand = name)
+	Concat  // Pop an array, append its elements to the array being built
+	Merge   // Pop an object, set its entries on the object being built
+	Iterate // Replace a collection with an iterator (operand = iteration index)
+	Fetch   // Bind the iterator's next element and advance, or jump to end
+	Append  // Pop a value, append it to the iterator's result
+	Result  // Replace the iterator with its accumulated result
 )
 
 // New packs the opcode and operand into an instruction

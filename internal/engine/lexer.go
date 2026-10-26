@@ -53,6 +53,10 @@ func scan(src []rune, pos int) (token, int, error) {
 	if r == '"' {
 		return scanString(src, start)
 	}
+	if pos+2 < len(src) && src[pos] == '.' && src[pos+1] == '.' &&
+		src[pos+2] == '.' {
+		return token{kind: "...", pos: start}, pos + 3, nil
+	}
 	if pos+1 < len(src) {
 		pair := string(src[pos : pos+2])
 		switch pair {

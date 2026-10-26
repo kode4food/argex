@@ -43,6 +43,12 @@ func (c *compiler) compile(n *node, depth int) error {
 	case "call":
 		return c.call(n, depth)
 
+	case "array":
+		return c.array(n, depth)
+
+	case "object":
+		return c.object(n, depth)
+
 	default:
 		return c.operation(n, depth)
 	}
@@ -74,18 +80,65 @@ func (c *compiler) operation(n *node, depth int) error {
 		}
 		c.emit(op, c.constant(n.text), 0)
 
-	case "array":
-		c.emit(
-			isa.Array, isa.Operand(len(n.children)),
-			stackChange(1-len(n.children)),
-		)
-
-	case "object":
-		keys := append([]string{}, n.keys...)
-		c.emit(isa.Object, c.constant(keys), stackChange(1-len(n.children)))
-
 	default:
 		return fmt.Errorf("%w: unknown expression", ErrSyntax)
+	}
+	return nil
+}
+
+// array builds an array literal. A leading run of plain elements uses one
+// Array op; each later element folds in with Push, each spread with Concat
+func (c *compiler) array(n *node, depth int) error {
+	fixed := 0
+	for fixed < len(n.children) && n.children[fixed].kind != "spread" {
+		if err := c.compile(n.children[fixed], depth+1); err != nil {
+			return err
+		}
+		fixed++
+	}
+	c.emit(isa.Array, isa.Operand(fixed), stackChange(1-fixed))
+	for _, child := range n.children[fixed:] {
+		if child.kind == "spread" {
+			if err := c.compile(child.children[0], depth+1); err != nil {
+				return err
+			}
+			c.emit(isa.Concat, 0, -1)
+			continue
+		}
+		if err := c.compile(child, depth+1); err != nil {
+			return err
+		}
+		c.emit(isa.Push, 0, -1)
+	}
+	return nil
+}
+
+// object builds an object literal. A leading run of plain fields uses one
+// Object op; each later field folds in with Put, each spread with Merge
+func (c *compiler) object(n *node, depth int) error {
+	var keys []string
+	fixed := 0
+	for fixed < len(n.children) && n.children[fixed].kind == "field" {
+		field := n.children[fixed]
+		keys = append(keys, field.text)
+		if err := c.compile(field.children[0], depth+1); err != nil {
+			return err
+		}
+		fixed++
+	}
+	c.emit(isa.Object, c.constant(keys), stackChange(1-len(keys)))
+	for _, child := range n.children[fixed:] {
+		if child.kind == "spread" {
+			if err := c.compile(child.children[0], depth+1); err != nil {
+				return err
+			}
+			c.emit(isa.Merge, 0, -1)
+			continue
+		}
+		if err := c.compile(child.children[0], depth+1); err != nil {
+			return err
+		}
+		c.emit(isa.Put, c.constant(child.text), -1)
 	}
 	return nil
 }
@@ -188,38 +241,74 @@ func (c *compiler) branch(n *node, depth int) error {
 	return nil
 }
 
+// collection compiles map/filter/any/all into an Iterate/Fetch loop over an
+// iterator value, with generic CondJump/Jump driving the per-kind outcome
 func (c *compiler) collection(n *node, depth int) error {
 	if err := c.compile(n.children[0], depth+1); err != nil {
 		return err
 	}
-	slot := len(c.bindings)
-	c.bindings = append(c.bindings, n.text)
-	c.program.localCount = max(c.program.localCount, slot+1)
-	index := len(c.program.iterations)
-	c.program.iterations = append(
-		c.program.iterations, iterationSpec{slot: slot},
-	)
-	op := isa.Map
-	next := isa.Next
-	switch n.kind {
-	case "filter":
-		op = isa.Filter
-
-	case "any":
-		op = isa.Any
-		next = isa.NextAny
-
-	case "all":
-		op = isa.All
-		next = isa.NextAll
+	valueSlot := len(c.bindings)
+	c.bindings = append(c.bindings, n.valueBinding)
+	keyed := n.keyBinding != ""
+	keySlot := 0
+	if keyed {
+		keySlot = len(c.bindings)
+		c.bindings = append(c.bindings, n.keyBinding)
 	}
-	c.emit(op, isa.Operand(index), -1)
+	c.program.localCount = max(c.program.localCount, len(c.bindings))
+
+	index := len(c.program.iterations)
+	c.program.iterations = append(c.program.iterations, iterationSpec{
+		valueSlot: valueSlot,
+		keySlot:   keySlot,
+		keyed:     keyed,
+	})
+	c.emit(isa.Iterate, isa.Operand(index), 0)
+
+	loopTop := len(c.program.code)
+	c.emit(isa.Fetch, isa.Operand(index), 0)
 	if err := c.compile(n.children[1], depth+1); err != nil {
 		return err
 	}
-	c.emit(next, 0, 0)
-	c.program.iterations[index].end = len(c.program.code)
-	c.bindings = c.bindings[:slot]
+	switch n.kind {
+	case "map":
+		c.emit(isa.Append, 0, -1)
+		c.emit(isa.Jump, isa.Operand(loopTop), 0)
+		c.program.iterations[index].end = len(c.program.code)
+		c.emit(isa.Result, 0, 0)
+
+	case "filter":
+		skip := c.emit(isa.CondJump, 0, -1)
+		c.emit(isa.Load, isa.Operand(valueSlot), 1)
+		c.emit(isa.Append, 0, -1)
+		c.patch(skip)
+		c.emit(isa.Jump, isa.Operand(loopTop), 0)
+		c.program.iterations[index].end = len(c.program.code)
+		c.emit(isa.Result, 0, 0)
+
+	case "any":
+		c.emit(isa.CondJump, isa.Operand(loopTop), -1)
+		c.emit(isa.Pop, 0, -1)
+		c.emit(isa.Const, c.constant(true), 1)
+		done := c.emit(isa.Jump, 0, 0)
+		c.program.iterations[index].end = len(c.program.code)
+		c.emit(isa.Pop, 0, -1)
+		c.emit(isa.Const, c.constant(false), 1)
+		c.patch(done)
+
+	case "all":
+		fail := c.emit(isa.CondJump, 0, -1)
+		c.emit(isa.Jump, isa.Operand(loopTop), 0)
+		c.patch(fail)
+		c.emit(isa.Pop, 0, -1)
+		c.emit(isa.Const, c.constant(false), 1)
+		done := c.emit(isa.Jump, 0, 0)
+		c.program.iterations[index].end = len(c.program.code)
+		c.emit(isa.Pop, 0, -1)
+		c.emit(isa.Const, c.constant(true), 1)
+		c.patch(done)
+	}
+	c.bindings = c.bindings[:valueSlot]
 	return nil
 }
 

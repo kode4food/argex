@@ -1,10 +1,6 @@
 package engine
 
-import (
-	"fmt"
-
-	"github.com/kode4food/argex/internal/isa"
-)
+import "fmt"
 
 type (
 	// Expression is an immutable parsed expression
@@ -14,29 +10,6 @@ type (
 
 	// Missing distinguishes absent data from an explicit JSON null
 	Missing struct{}
-
-	node struct {
-		kind     string
-		text     string
-		value    any
-		children []*node
-		keys     []string
-		optional bool
-	}
-
-	program struct {
-		code       isa.Instructions
-		constants  []any
-		iterations []iterationSpec
-		stackSize  int
-		localCount int
-		numeric    bool
-	}
-
-	iterationSpec struct {
-		slot int
-		end  int
-	}
 )
 
 const maxDepth = 256

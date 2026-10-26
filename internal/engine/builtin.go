@@ -17,11 +17,6 @@ type (
 		variadic bool
 	}
 
-	callSpec struct {
-		call  function
-		arity int
-	}
-
 	function func(...any) (any, error)
 )
 

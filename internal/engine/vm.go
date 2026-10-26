@@ -3,41 +3,46 @@ package engine
 import (
 	"fmt"
 	"math"
-	"reflect"
+	"slices"
 
 	"github.com/kode4food/argex/internal/isa"
 )
 
 type (
-	// Numeric results use the parallel stack to avoid boxing intermediates.
+	program struct {
+		code       isa.Instructions
+		constants  []any
+		iterations []iterationSpec
+		stackSize  int
+		localCount int
+		numeric    bool
+	}
+
+	iterationSpec struct {
+		valueSlot int
+		keySlot   int
+		end       int
+		keyed     bool
+	}
+
+	callSpec struct {
+		call  function
+		arity int
+	}
+
+	// Numeric results use the parallel stack to avoid boxing intermediates
 	numericValue struct{}
 
-	operands struct {
-		left  any
-		right any
-	}
-
-	iteration struct {
-		items  []any
+	// iterator is a comprehension in progress, held as one operand-stack
+	// value: Fetch advances it, Append grows result, Result extracts it
+	iterator struct {
+		keys   []any
+		values []any
 		result []any
-		index  int
-		slot   int
-		start  int
-		filter bool
 	}
 )
 
-const (
-	inlineValues = 32
-	inlineLoops  = 4
-)
-
-const (
-	floatFractionBits = 52
-	floatImplicitBit  = uint64(1) << floatFractionBits
-	floatFractionMask = floatImplicitBit - 1
-	floatSignMask     = uint64(1) << 63
-)
+const inlineValues = 32
 
 func (p *program) evaluate(variables map[string]any) (any, error) {
 	var values [inlineValues]any
@@ -56,11 +61,6 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 	}
 	stack := memory[:p.stackSize]
 	locals := memory[p.stackSize : p.stackSize+p.localCount]
-	var frames [inlineLoops]iteration
-	loops := frames[:0]
-	if p.localCount > cap(loops) {
-		loops = make([]iteration, 0, p.localCount)
-	}
 	sp := 0
 	for pc := 0; pc < len(p.code); pc++ {
 		inst := p.code[pc]
@@ -84,56 +84,77 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			stack[sp] = locals[operand]
 			sp++
 
-		case isa.Access, isa.OptionalAccess, isa.Index, isa.OptionalIndex:
-			var key any
-			if oc == isa.Index || oc == isa.OptionalIndex {
-				sp--
-				key = stack[sp]
-			} else {
-				key = p.constants[operand]
-			}
-			optional := oc == isa.OptionalAccess || oc == isa.OptionalIndex
+		case isa.Access:
+			key := p.constants[operand]
 			value := stack[sp-1]
 			if nullish(value) {
-				if !optional {
-					return nil, fmt.Errorf("%w: access %v", ErrMissing, key)
-				}
+				return nil, fmt.Errorf("%w: access %v", ErrMissing, key)
+			}
+			child, found, err := accessChild(value, key)
+			if err != nil {
+				return nil, err
+			}
+			if !found {
+				return nil, fmt.Errorf("%w: key %v", ErrMissing, key)
+			}
+			stack[sp-1] = child
+
+		case isa.OptionalAccess:
+			key := p.constants[operand]
+			value := stack[sp-1]
+			if nullish(value) {
 				stack[sp-1] = Missing{}
 				continue
 			}
-			switch container := value.(type) {
-			case map[string]any:
-				name, ok := key.(string)
-				if !ok {
-					return nil, operandError("object key")
-				}
-				if child, ok := container[name]; ok {
-					stack[sp-1] = child
-					continue
-				}
-
-			case []any:
-				var index float64
-				if _, ok := key.(numericValue); ok {
-					index = numbers[sp]
-				} else {
-					index = number(key)
-				}
-				if index-index != 0 || math.Trunc(index) != index {
-					return nil, operandError("array index")
-				}
-				if index >= 0 && index < float64(len(container)) {
-					stack[sp-1] = container[int(index)]
-					continue
-				}
-
-			default:
-				return nil, operandError("access")
+			child, found, err := accessChild(value, key)
+			if err != nil {
+				return nil, err
 			}
-			if !optional {
+			if !found {
+				stack[sp-1] = Missing{}
+				continue
+			}
+			stack[sp-1] = child
+
+		case isa.Index:
+			sp--
+			key := stack[sp]
+			if _, ok := key.(numericValue); ok {
+				key = numbers[sp]
+			}
+			value := stack[sp-1]
+			if nullish(value) {
+				return nil, fmt.Errorf("%w: access %v", ErrMissing, key)
+			}
+			child, found, err := accessChild(value, key)
+			if err != nil {
+				return nil, err
+			}
+			if !found {
 				return nil, fmt.Errorf("%w: key %v", ErrMissing, key)
 			}
-			stack[sp-1] = Missing{}
+			stack[sp-1] = child
+
+		case isa.OptionalIndex:
+			sp--
+			key := stack[sp]
+			if _, ok := key.(numericValue); ok {
+				key = numbers[sp]
+			}
+			value := stack[sp-1]
+			if nullish(value) {
+				stack[sp-1] = Missing{}
+				continue
+			}
+			child, found, err := accessChild(value, key)
+			if err != nil {
+				return nil, err
+			}
+			if !found {
+				stack[sp-1] = Missing{}
+				continue
+			}
+			stack[sp-1] = child
 
 		case isa.Optional:
 			if nullish(stack[sp-1]) {
@@ -286,66 +307,18 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			if b-b != 0 {
 				return nil, operandError("%")
 			}
-			if b == 0 {
+			value := math.Mod(a, b)
+			if math.IsNaN(value) || math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: %%", ErrArithmetic)
-			}
-			value := a
-			x := math.Float64bits(a) &^ floatSignMask
-			y := math.Float64bits(b) &^ floatSignMask
-			if x >= y {
-				ex := int(x >> floatFractionBits)
-				ey := int(y >> floatFractionBits)
-				if ex == 0 {
-					ex = 1
-					for x < floatImplicitBit {
-						x <<= 1
-						ex--
-					}
-				} else {
-					x = x&floatFractionMask | floatImplicitBit
-				}
-				if ey == 0 {
-					ey = 1
-					for y < floatImplicitBit {
-						y <<= 1
-						ey--
-					}
-				} else {
-					y = y&floatFractionMask | floatImplicitBit
-				}
-				// Align significands and subtract without rounding a/b.
-				for ex > ey && x != 0 {
-					if x >= y {
-						x -= y
-					}
-					x <<= 1
-					ex--
-				}
-				if x >= y {
-					x -= y
-				}
-				if x != 0 {
-					for x < floatImplicitBit {
-						x <<= 1
-						ex--
-					}
-					if ex > 0 {
-						x = x&floatFractionMask | uint64(ex)<<floatFractionBits
-					} else {
-						x >>= uint(1 - ex)
-					}
-				}
-				sign := math.Float64bits(a) & floatSignMask
-				value = math.Float64frombits(x | sign)
 			}
 			sp--
 			numbers[sp-1] = value
 			stack[sp-1] = numericValue{}
 
-		case isa.Eq, isa.Neq, isa.In:
+		case isa.Eq:
 			_, leftNumeric := stack[sp-2].(numericValue)
 			_, rightNumeric := stack[sp-1].(numericValue)
-			if oc != isa.In && (leftNumeric || rightNumeric) {
+			if leftNumeric || rightNumeric {
 				a := numbers[sp-2]
 				if !leftNumeric {
 					a = number(stack[sp-2])
@@ -355,95 +328,52 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 					b = number(stack[sp-1])
 				}
 				sp--
-				stack[sp-1] = (a == b) == (oc == isa.Eq)
+				stack[sp-1] = a == b
 				continue
 			}
+			left, right := stack[sp-2], stack[sp-1]
+			sp--
+			stack[sp-1] = structuralEqual(left, right)
+
+		case isa.Neq:
+			_, leftNumeric := stack[sp-2].(numericValue)
+			_, rightNumeric := stack[sp-1].(numericValue)
+			if leftNumeric || rightNumeric {
+				a := numbers[sp-2]
+				if !leftNumeric {
+					a = number(stack[sp-2])
+				}
+				b := numbers[sp-1]
+				if !rightNumeric {
+					b = number(stack[sp-1])
+				}
+				sp--
+				stack[sp-1] = a != b
+				continue
+			}
+			left, right := stack[sp-2], stack[sp-1]
+			sp--
+			stack[sp-1] = !structuralEqual(left, right)
+
+		case isa.In:
+			_, leftNumeric := stack[sp-2].(numericValue)
 			left := stack[sp-2]
 			if leftNumeric {
 				left = numbers[sp-2]
 			}
-			candidates := stack[sp-1 : sp]
-			if oc == isa.In {
-				var ok bool
-				candidates, ok = stack[sp-1].([]any)
-				if !ok {
-					return nil, operandError("in")
-				}
+			candidates, ok := stack[sp-1].([]any)
+			if !ok {
+				return nil, operandError("in")
 			}
-			var pairs [inlineValues]operands
 			matched := false
 			for _, candidate := range candidates {
-				pairs[0] = operands{left: left, right: candidate}
-				pending := pairs[:1]
-				matched = true
-				for len(pending) > 0 && matched {
-					last := len(pending) - 1
-					pair := pending[last]
-					pending = pending[:last]
-					switch left := pair.left.(type) {
-					case nil:
-						matched = pair.right == nil
-
-					case Missing:
-						_, matched = pair.right.(Missing)
-
-					case bool:
-						right, ok := pair.right.(bool)
-						matched = ok && left == right
-
-					case string:
-						right, ok := pair.right.(string)
-						matched = ok && left == right
-
-					case []any:
-						right, ok := pair.right.([]any)
-						if !ok || len(left) != len(right) {
-							matched = false
-							continue
-						}
-						for i, item := range left {
-							pending = append(pending, operands{
-								left:  item,
-								right: right[i],
-							})
-						}
-
-					case map[string]any:
-						right, ok := pair.right.(map[string]any)
-						if !ok || len(left) != len(right) {
-							matched = false
-							continue
-						}
-						for key, item := range left {
-							child, ok := right[key]
-							if !ok {
-								matched = false
-								break
-							}
-							pending = append(pending, operands{
-								left:  item,
-								right: child,
-							})
-						}
-
-					default:
-						a := number(pair.left)
-						b := number(pair.right)
-						if a-a == 0 {
-							matched = b-b == 0 && a == b
-							continue
-						}
-						matched = reflect.DeepEqual(
-							pair.left, pair.right,
-						)
-					}
-				}
-				if matched {
+				if structuralEqual(left, candidate) {
+					matched = true
 					break
 				}
 			}
 			sp--
-			stack[sp-1] = matched != (oc == isa.Neq)
+			stack[sp-1] = matched
 
 		case isa.Lt:
 			if a, ok := stack[sp-2].(string); ok {
@@ -553,12 +483,23 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			sp--
 			stack[sp-1] = a >= b
 
-		case isa.And, isa.Or:
+		case isa.And:
 			value, ok := stack[sp-1].(bool)
 			if !ok {
 				return nil, operandError("Boolean operand")
 			}
-			if oc == isa.And && !value || oc == isa.Or && value {
+			if !value {
+				pc = operand - 1
+			} else {
+				sp--
+			}
+
+		case isa.Or:
+			value, ok := stack[sp-1].(bool)
+			if !ok {
+				return nil, operandError("Boolean operand")
+			}
+			if value {
 				pc = operand - 1
 			} else {
 				sp--
@@ -615,6 +556,52 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			stack[base] = result
 			sp = base + 1
 
+		case isa.Push:
+			sp--
+			value := stack[sp]
+			if _, ok := value.(numericValue); ok {
+				value = numbers[sp]
+			}
+			stack[sp-1] = append(stack[sp-1].([]any), value)
+
+		case isa.Put:
+			sp--
+			value := stack[sp]
+			if _, ok := value.(numericValue); ok {
+				value = numbers[sp]
+			}
+			if !IsMissing(value) {
+				key := p.constants[operand].(string)
+				stack[sp-1].(map[string]any)[key] = value
+			}
+
+		case isa.Concat:
+			sp--
+			if nullish(stack[sp]) {
+				continue
+			}
+			source, ok := stack[sp].([]any)
+			if !ok {
+				return nil, operandError("spread")
+			}
+			stack[sp-1] = append(stack[sp-1].([]any), source...)
+
+		case isa.Merge:
+			sp--
+			if nullish(stack[sp]) {
+				continue
+			}
+			source, ok := stack[sp].(map[string]any)
+			if !ok {
+				return nil, operandError("spread")
+			}
+			target := stack[sp-1].(map[string]any)
+			for key, value := range source {
+				if !IsMissing(value) {
+					target[key] = value
+				}
+			}
+
 		case isa.Call:
 			spec := p.constants[operand].(callSpec)
 			base := sp - spec.arity
@@ -636,79 +623,114 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			stack[base] = result
 			sp = base + 1
 
-		case isa.Map, isa.Filter, isa.Any, isa.All:
-			items, ok := stack[sp-1].([]any)
-			if !ok {
-				return nil, operandError("collection receiver")
-			}
+		case isa.Iterate:
 			spec := p.iterations[operand]
-			if len(items) == 0 {
-				if oc == isa.Any || oc == isa.All {
-					stack[sp-1] = oc == isa.All
-				} else {
-					stack[sp-1] = []any{}
-				}
+			keys, values, err := collectionEntries(
+				stack[sp-1], spec.keyed,
+			)
+			if err != nil {
+				return nil, err
+			}
+			stack[sp-1] = &iterator{
+				keys:   keys,
+				values: values,
+				result: []any{},
+			}
+
+		case isa.Fetch:
+			spec := p.iterations[operand]
+			it := stack[sp-1].(*iterator)
+			if len(it.values) == 0 {
 				pc = spec.end - 1
 				continue
 			}
-			loops = append(loops, iteration{
-				items:  items,
-				result: []any{},
-				slot:   spec.slot,
-				start:  pc + 1,
-				filter: oc == isa.Filter,
-			})
-			locals[spec.slot] = items[0]
-			sp--
-
-		case isa.NextAny, isa.NextAll:
-			frame := &loops[len(loops)-1]
-			sp--
-			value, ok := stack[sp].(bool)
-			if !ok {
-				return nil, operandError("collection predicate")
+			locals[spec.valueSlot] = it.values[0]
+			it.values = it.values[1:]
+			if spec.keyed {
+				locals[spec.keySlot] = it.keys[0]
+				it.keys = it.keys[1:]
 			}
-			frame.index++
-			if value == (oc == isa.NextAny) ||
-				frame.index == len(frame.items) {
-				stack[sp] = value
-				sp++
-				loops = loops[:len(loops)-1]
-				continue
-			}
-			locals[frame.slot] = frame.items[frame.index]
-			pc = frame.start - 1
 
-		case isa.Next:
-			frame := &loops[len(loops)-1]
+		case isa.Append:
 			sp--
 			value := stack[sp]
 			if _, ok := value.(numericValue); ok {
 				value = numbers[sp]
 			}
-			keep, ok := value.(bool)
-			if frame.filter && !ok {
-				return nil, operandError("filter predicate")
-			}
-			if frame.filter {
-				value = frame.items[frame.index]
-			}
-			if !frame.filter || keep {
-				frame.result = append(frame.result, value)
-			}
-			frame.index++
-			if frame.index < len(frame.items) {
-				locals[frame.slot] = frame.items[frame.index]
-				pc = frame.start - 1
-				continue
-			}
-			stack[sp] = frame.result
-			sp++
-			loops = loops[:len(loops)-1]
+			it := stack[sp-1].(*iterator)
+			it.result = append(it.result, value)
+
+		case isa.Result:
+			it := stack[sp-1].(*iterator)
+			stack[sp-1] = it.result
+
+		case isa.Pop:
+			sp--
 		}
 	}
 	if _, ok := stack[0].(numericValue); ok {
 		return numbers[0], nil
 	}
 	return stack[0], nil
+}
+
+func accessChild(container, key any) (any, bool, error) {
+	switch c := container.(type) {
+	case map[string]any:
+		name, ok := key.(string)
+		if !ok {
+			return nil, false, operandError("object key")
+		}
+		child, ok := c[name]
+		return child, ok, nil
+
+	case []any:
+		index := number(key)
+		if index-index != 0 || math.Trunc(index) != index {
+			return nil, false, operandError("array index")
+		}
+		if index >= 0 && index < float64(len(c)) {
+			return c[int(index)], true, nil
+		}
+		return nil, false, nil
+
+	default:
+		return nil, false, operandError("access")
+	}
+}
+
+// collectionEntries materializes a comprehension receiver into parallel
+// key/value slices; keys is nil when the binding form doesn't need it
+func collectionEntries(receiver any, keyed bool) ([]any, []any, error) {
+	switch c := receiver.(type) {
+	case []any:
+		var keys []any
+		if keyed {
+			keys = make([]any, len(c))
+			for i := range c {
+				keys[i] = float64(i)
+			}
+		}
+		return keys, c, nil
+
+	case map[string]any:
+		if !keyed {
+			return nil, nil, operandError("collection receiver")
+		}
+		names := make([]string, 0, len(c))
+		for name := range c {
+			names = append(names, name)
+		}
+		slices.Sort(names)
+		keys := make([]any, len(names))
+		values := make([]any, len(names))
+		for i, name := range names {
+			keys[i] = name
+			values[i] = c[name]
+		}
+		return keys, values, nil
+
+	default:
+		return nil, nil, operandError("collection receiver")
+	}
 }

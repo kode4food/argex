@@ -16,12 +16,14 @@ access         = ".", identifier
 call           = "(", [ arguments ], ")" ;
 arguments      = expression, { ",", expression }, [ "," ] ;
 collection     = "|", ("map" | "filter" | "any" | "all"), binding ;
-binding        = identifier, ":", expression ;
+binding        = identifier, [ ",", identifier ], ":", expression ;
 
 primary        = literal | identifier | "(", expression, ")"
                | array | object | case ;
-array          = "[", [ arguments ], "]" ;
-object         = "{", [ field, { ",", field }, [ "," ] ], "}" ;
+array          = "[", [ element, { ",", element }, [ "," ] ], "]" ;
+element        = [ "..." ], expression ;
+object         = "{", [ member, { ",", member }, [ "," ] ], "}" ;
+member         = field | "...", expression ;
 field          = (identifier | string), ":", expression ;
 case           = "case", "{", arm, { ",", arm },
                  ",", expression, [ "," ], "}" ;
@@ -34,6 +36,12 @@ literal        = number | string | "true" | "false" | "null" ;
    or underscores. true, false, null, and case are reserved as bindings.
    in is a contextual operator between expressions. It is also a valid name.
    Whitespace is ignored between tokens. Operators use longest match.
-   | introduces a collection operation. The . and ?. operators access properties.
+   | introduces a collection operation. A single binding name binds each
+   element and requires an array receiver; two names bind a key and element,
+   where the key is the index for an array or the property name for an object.
+   The . and ?. operators access properties.
    Calls require a named function as their receiver.
-   Duplicate object keys are invalid. A case requires a final fallback. *)
+   A ... element or member spreads an array into an array or an object into
+   an object; a null or missing spread contributes nothing, and later entries
+   override earlier ones. Duplicate static object keys are invalid, but a
+   spread may override an earlier key. A case requires a final fallback. *)

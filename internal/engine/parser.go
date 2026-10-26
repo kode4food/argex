@@ -1,10 +1,22 @@
 package engine
 
-type parser struct {
-	tokens []token
-	pos    int
-	depth  int
-}
+type (
+	parser struct {
+		tokens []token
+		pos    int
+		depth  int
+	}
+
+	node struct {
+		kind         string
+		text         string
+		valueBinding string
+		keyBinding   string
+		value        any
+		children     []*node
+		optional     bool
+	}
+)
 
 const (
 	precedenceOr = iota + 1
@@ -88,8 +100,7 @@ func (p *parser) primary() (*node, error) {
 		return expr, p.expect(")")
 
 	case "[":
-		children, err := p.list("]")
-		return &node{kind: "array", children: children}, err
+		return p.array()
 
 	case "{":
 		return p.object()
@@ -198,23 +209,40 @@ func (p *parser) collection(receiver *node) (*node, error) {
 	default:
 		return nil, syntax(operation.pos, "unknown collection operation")
 	}
-	name := p.current()
-	if err := p.expect("name"); err != nil {
+	first, err := p.bindingName()
+	if err != nil {
 		return nil, err
 	}
-	if name.text == "true" || name.text == "false" ||
-		name.text == "null" || name.text == "case" {
-		return nil, syntax(name.pos, "reserved binding name")
+	keyBinding, valueBinding := "", first
+	if p.take(",") {
+		keyBinding = first
+		valueBinding, err = p.bindingName()
+		if err != nil {
+			return nil, err
+		}
 	}
 	if err := p.expect(":"); err != nil {
 		return nil, err
 	}
 	body, err := p.expression(precedenceOr)
 	return &node{
-		kind:     operation.text,
-		text:     name.text,
-		children: []*node{receiver, body},
+		kind:         operation.text,
+		valueBinding: valueBinding,
+		keyBinding:   keyBinding,
+		children:     []*node{receiver, body},
 	}, err
+}
+
+func (p *parser) bindingName() (string, error) {
+	name := p.current()
+	if err := p.expect("name"); err != nil {
+		return "", err
+	}
+	if name.text == "true" || name.text == "false" ||
+		name.text == "null" || name.text == "case" {
+		return "", syntax(name.pos, "reserved binding name")
+	}
+	return name.text, nil
 }
 
 func (p *parser) list(end string) ([]*node, error) {
@@ -235,29 +263,33 @@ func (p *parser) list(end string) ([]*node, error) {
 	return children, nil
 }
 
+func (p *parser) array() (*node, error) {
+	result := &node{kind: "array"}
+	for !p.take("]") {
+		element, err := p.spreadable()
+		if err != nil {
+			return nil, err
+		}
+		result.children = append(result.children, element)
+		if p.take("]") {
+			return result, nil
+		}
+		if err := p.expect(","); err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
 func (p *parser) object() (*node, error) {
 	result := &node{kind: "object"}
 	seen := map[string]bool{}
 	for !p.take("}") {
-		key := p.current()
-		name, err := p.objectKey()
+		entry, err := p.objectMember(seen)
 		if err != nil {
 			return nil, err
 		}
-		p.pos++
-		if seen[name] {
-			return nil, syntax(key.pos, "duplicate object key")
-		}
-		seen[name] = true
-		if err := p.expect(":"); err != nil {
-			return nil, err
-		}
-		value, err := p.expression(precedenceOr)
-		if err != nil {
-			return nil, err
-		}
-		result.keys = append(result.keys, name)
-		result.children = append(result.children, value)
+		result.children = append(result.children, entry)
 		if p.take("}") {
 			return result, nil
 		}
@@ -266,6 +298,42 @@ func (p *parser) object() (*node, error) {
 		}
 	}
 	return result, nil
+}
+
+func (p *parser) objectMember(seen map[string]bool) (*node, error) {
+	if p.current().kind == "..." {
+		return p.spreadable()
+	}
+	key := p.current()
+	name, err := p.objectKey()
+	if err != nil {
+		return nil, err
+	}
+	p.pos++
+	if seen[name] {
+		return nil, syntax(key.pos, "duplicate object key")
+	}
+	seen[name] = true
+	if err := p.expect(":"); err != nil {
+		return nil, err
+	}
+	value, err := p.expression(precedenceOr)
+	if err != nil {
+		return nil, err
+	}
+	return &node{kind: "field", text: name, children: []*node{value}}, nil
+}
+
+func (p *parser) spreadable() (*node, error) {
+	spread := p.take("...")
+	expr, err := p.expression(precedenceOr)
+	if err != nil {
+		return nil, err
+	}
+	if !spread {
+		return expr, nil
+	}
+	return &node{kind: "spread", children: []*node{expr}}, nil
 }
 
 func (p *parser) objectKey() (string, error) {

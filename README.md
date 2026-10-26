@@ -46,13 +46,18 @@ Values use Go's JSON representation: `map[string]any`, `[]any`, strings, boolean
 
 ## Collections and grouping
 
-`| map` and `| filter` bind a name to each element of their receiver. The expression after `:` is evaluated in that scope. It can read outer bindings and input variables. An inner binding with the same name shadows the outer one.
+`| map` and `| filter` bind each element of their receiver to a name. The expression after `:` is evaluated in that scope. It can read outer bindings and input variables. An inner binding with the same name shadows the outer one.
+
+A binding may name two identifiers, `key, value`, to also bind each element's position: the numeric index for an array receiver, or the property name for an object receiver, visited in sorted key order. The single-name form requires an array receiver; the two-name form accepts arrays and objects.
 
 ```text
 orders | map order: order.total
 orders | filter order: order.status == "paid"
 
 (orders | filter order: order.status == "paid") | map order: order.id
+
+items | map index, item: {position: index, value: item}
+totals | filter key, amount: amount > 100
 
 customers | map customer: {
     id: customer.id,
@@ -65,17 +70,29 @@ customers | map customer: {
 }
 ```
 
-The binding body is a complete expression. Parentheses end a collection expression before applying another operation to its result. `| map` preserves order. `| filter` requires a boolean predicate and preserves the relative order of retained elements. Both require an array receiver and produce an array, including for empty inputs.
+The binding body is a complete expression. Parentheses end a collection expression before applying another operation to its result. `| map` preserves order. `| filter` requires a boolean predicate and preserves the relative order of retained elements. Both produce an array, including for empty inputs.
 
 `.` and `?.` access properties. `|` introduces collection operations. `response.map`, `response.filter`, and `response.any` read properties with those names. `??` provides a fallback for missing or null values. Use `(response?.items ?? []) | map item: item.id` to map an optional array. `||` means boolean OR.
 
-`| any` tests whether at least one element satisfies a condition. `| all` tests whether every element satisfies it. Both require arrays and boolean conditions, return booleans, and stop as soon as their result is known. For an empty array, `any` returns false and `all` returns true without evaluating the condition. The same binding and grouping rules apply as for `map` and `filter`.
+`| any` tests whether at least one element satisfies a condition. `| all` tests whether every element satisfies it. Both require boolean conditions, return booleans, and stop as soon as their result is known. For an empty collection, `any` returns false and `all` returns true without evaluating the condition. The same binding and grouping rules apply as for `map` and `filter`.
 
 ```javascript
 tags | any tag: startsWith(tag, "market:")
 results | all result: result.status == "approved"
 (results | any result: result.status == "approved") && enabled
 ```
+
+## Constructing arrays and objects
+
+Array and object literals may include a `...` spread. Spreading an array into an array inserts its elements; spreading an object into an object copies its entries. Later entries win, so a field or spread overrides an earlier key. Spreading a missing or null value contributes nothing. Spreading any other type, or spreading an array into an object or an object into an array, is an error.
+
+```javascript
+[first, ...rest, last]
+{...defaults, ...overrides, id: record.id}
+(response?.tags ?? []) | map tag: tag.name
+```
+
+Each spread produces a fresh value and never mutates its source. Object construction still omits fields whose value is missing, including entries drawn from a spread.
 
 ## Conditional selection
 
@@ -169,7 +186,7 @@ keys(response) | any key: startsWith(key, "x-")
 
 `round` rounds halfway values away from zero: `round(-1.5)` returns `-2` and `round(1.5)` returns `2`. Object inspection uses lexicographic property name order even for numeric-looking names. `keys({"2": 2, "10": 10})` returns `["10", "2"]`.
 
-Expressions are pure and deterministic: their results depend on the supplied values. Collection operations use `| map`, `| filter`, `| any`, or `| all` followed by a `name: expression` binding.
+Expressions are pure and deterministic: their results depend on the supplied values. Collection operations use `| map`, `| filter`, `| any`, or `| all` followed by a `name: expression` or `key, name: expression` binding.
 
 ## Errors and limits
 
