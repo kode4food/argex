@@ -17,11 +17,11 @@ func number(value any) float64 {
 	switch value := value.(type) {
 	case float64:
 		return value
-
 	case int:
 		return float64(value)
+	default:
+		return jsonNumber(value)
 	}
-	return jsonNumber(value)
 }
 
 func jsonNumber(value any) float64 {

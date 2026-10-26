@@ -315,9 +315,6 @@ func (c *compiler) collection(n *node, depth int) error {
 func (c *compiler) emit(
 	op isa.Opcode, operand isa.Operand, change stackChange,
 ) int {
-	if op >= isa.Pos && op <= isa.Gte {
-		c.program.numeric = true
-	}
 	index := len(c.program.code)
 	c.program.code = append(c.program.code, op.New(operand))
 	c.height += int(change)

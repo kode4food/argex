@@ -15,7 +15,6 @@ type (
 		iterations []iterationSpec
 		stackSize  int
 		localCount int
-		numeric    bool
 	}
 
 	iterationSpec struct {
@@ -29,9 +28,6 @@ type (
 		call  function
 		arity int
 	}
-
-	// Numeric results use the parallel stack to avoid boxing intermediates
-	numericValue struct{}
 
 	// iterator is a comprehension in progress, held as one operand-stack
 	// value: Fetch advances it, Append grows result, Result extracts it
@@ -47,17 +43,9 @@ const inlineValues = 32
 func (p *program) evaluate(variables map[string]any) (any, error) {
 	var values [inlineValues]any
 	memory := values[:]
-	var numbers []float64
 	var arguments []any
 	if size := p.stackSize + p.localCount; size > len(memory) {
 		memory = make([]any, size)
-	}
-	if p.numeric {
-		var scalars [inlineValues]float64
-		numbers = scalars[:]
-		if p.stackSize > len(numbers) {
-			numbers = make([]float64, p.stackSize)
-		}
 	}
 	stack := memory[:p.stackSize]
 	locals := memory[p.stackSize : p.stackSize+p.localCount]
@@ -119,9 +107,6 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 		case isa.Index:
 			sp--
 			key := stack[sp]
-			if _, ok := key.(numericValue); ok {
-				key = numbers[sp]
-			}
 			value := stack[sp-1]
 			if nullish(value) {
 				return nil, fmt.Errorf("%w: access %v", ErrMissing, key)
@@ -138,9 +123,6 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 		case isa.OptionalIndex:
 			sp--
 			key := stack[sp]
-			if _, ok := key.(numericValue); ok {
-				key = numbers[sp]
-			}
 			value := stack[sp-1]
 			if nullish(value) {
 				stack[sp-1] = Missing{}
@@ -170,26 +152,18 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			stack[sp-1] = !value
 
 		case isa.Pos:
-			value := numbers[sp-1]
-			if _, ok := stack[sp-1].(numericValue); !ok {
-				value = number(stack[sp-1])
-			}
+			value := number(stack[sp-1])
 			if value-value != 0 {
 				return nil, operandError("+")
 			}
-			numbers[sp-1] = value
-			stack[sp-1] = numericValue{}
+			stack[sp-1] = value
 
 		case isa.Neg:
-			value := numbers[sp-1]
-			if _, ok := stack[sp-1].(numericValue); !ok {
-				value = number(stack[sp-1])
-			}
+			value := number(stack[sp-1])
 			if value-value != 0 {
 				return nil, operandError("-")
 			}
-			numbers[sp-1] = -value
-			stack[sp-1] = numericValue{}
+			stack[sp-1] = -value
 
 		case isa.Add:
 			if a, ok := stack[sp-2].(string); ok {
@@ -201,17 +175,11 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 				stack[sp-1] = a + b
 				continue
 			}
-			a := numbers[sp-2]
-			if _, ok := stack[sp-2].(numericValue); !ok {
-				a = number(stack[sp-2])
-			}
+			a := number(stack[sp-2])
 			if a-a != 0 {
 				return nil, operandError("+")
 			}
-			b := numbers[sp-1]
-			if _, ok := stack[sp-1].(numericValue); !ok {
-				b = number(stack[sp-1])
-			}
+			b := number(stack[sp-1])
 			if b-b != 0 {
 				return nil, operandError("+")
 			}
@@ -220,21 +188,14 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 				return nil, fmt.Errorf("%w: +", ErrArithmetic)
 			}
 			sp--
-			numbers[sp-1] = value
-			stack[sp-1] = numericValue{}
+			stack[sp-1] = value
 
 		case isa.Sub:
-			a := numbers[sp-2]
-			if _, ok := stack[sp-2].(numericValue); !ok {
-				a = number(stack[sp-2])
-			}
+			a := number(stack[sp-2])
 			if a-a != 0 {
 				return nil, operandError("-")
 			}
-			b := numbers[sp-1]
-			if _, ok := stack[sp-1].(numericValue); !ok {
-				b = number(stack[sp-1])
-			}
+			b := number(stack[sp-1])
 			if b-b != 0 {
 				return nil, operandError("-")
 			}
@@ -243,21 +204,14 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 				return nil, fmt.Errorf("%w: -", ErrArithmetic)
 			}
 			sp--
-			numbers[sp-1] = value
-			stack[sp-1] = numericValue{}
+			stack[sp-1] = value
 
 		case isa.Mul:
-			a := numbers[sp-2]
-			if _, ok := stack[sp-2].(numericValue); !ok {
-				a = number(stack[sp-2])
-			}
+			a := number(stack[sp-2])
 			if a-a != 0 {
 				return nil, operandError("*")
 			}
-			b := numbers[sp-1]
-			if _, ok := stack[sp-1].(numericValue); !ok {
-				b = number(stack[sp-1])
-			}
+			b := number(stack[sp-1])
 			if b-b != 0 {
 				return nil, operandError("*")
 			}
@@ -266,21 +220,14 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 				return nil, fmt.Errorf("%w: *", ErrArithmetic)
 			}
 			sp--
-			numbers[sp-1] = value
-			stack[sp-1] = numericValue{}
+			stack[sp-1] = value
 
 		case isa.Div:
-			a := numbers[sp-2]
-			if _, ok := stack[sp-2].(numericValue); !ok {
-				a = number(stack[sp-2])
-			}
+			a := number(stack[sp-2])
 			if a-a != 0 {
 				return nil, operandError("/")
 			}
-			b := numbers[sp-1]
-			if _, ok := stack[sp-1].(numericValue); !ok {
-				b = number(stack[sp-1])
-			}
+			b := number(stack[sp-1])
 			if b-b != 0 {
 				return nil, operandError("/")
 			}
@@ -289,21 +236,14 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 				return nil, fmt.Errorf("%w: /", ErrArithmetic)
 			}
 			sp--
-			numbers[sp-1] = value
-			stack[sp-1] = numericValue{}
+			stack[sp-1] = value
 
 		case isa.Mod:
-			a := numbers[sp-2]
-			if _, ok := stack[sp-2].(numericValue); !ok {
-				a = number(stack[sp-2])
-			}
+			a := number(stack[sp-2])
 			if a-a != 0 {
 				return nil, operandError("%")
 			}
-			b := numbers[sp-1]
-			if _, ok := stack[sp-1].(numericValue); !ok {
-				b = number(stack[sp-1])
-			}
+			b := number(stack[sp-1])
 			if b-b != 0 {
 				return nil, operandError("%")
 			}
@@ -312,55 +252,22 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 				return nil, fmt.Errorf("%w: %%", ErrArithmetic)
 			}
 			sp--
-			numbers[sp-1] = value
-			stack[sp-1] = numericValue{}
+			stack[sp-1] = value
 
 		case isa.Eq:
-			_, leftNumeric := stack[sp-2].(numericValue)
-			_, rightNumeric := stack[sp-1].(numericValue)
-			if leftNumeric || rightNumeric {
-				a := numbers[sp-2]
-				if !leftNumeric {
-					a = number(stack[sp-2])
-				}
-				b := numbers[sp-1]
-				if !rightNumeric {
-					b = number(stack[sp-1])
-				}
-				sp--
-				stack[sp-1] = a == b
-				continue
-			}
-			left, right := stack[sp-2], stack[sp-1]
+			left := stack[sp-2]
+			right := stack[sp-1]
 			sp--
 			stack[sp-1] = structuralEqual(left, right)
 
 		case isa.Neq:
-			_, leftNumeric := stack[sp-2].(numericValue)
-			_, rightNumeric := stack[sp-1].(numericValue)
-			if leftNumeric || rightNumeric {
-				a := numbers[sp-2]
-				if !leftNumeric {
-					a = number(stack[sp-2])
-				}
-				b := numbers[sp-1]
-				if !rightNumeric {
-					b = number(stack[sp-1])
-				}
-				sp--
-				stack[sp-1] = a != b
-				continue
-			}
-			left, right := stack[sp-2], stack[sp-1]
+			left := stack[sp-2]
+			right := stack[sp-1]
 			sp--
 			stack[sp-1] = !structuralEqual(left, right)
 
 		case isa.In:
-			_, leftNumeric := stack[sp-2].(numericValue)
 			left := stack[sp-2]
-			if leftNumeric {
-				left = numbers[sp-2]
-			}
 			candidates, ok := stack[sp-1].([]any)
 			if !ok {
 				return nil, operandError("in")
@@ -385,17 +292,11 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 				stack[sp-1] = a < b
 				continue
 			}
-			a := numbers[sp-2]
-			if _, ok := stack[sp-2].(numericValue); !ok {
-				a = number(stack[sp-2])
-			}
+			a := number(stack[sp-2])
 			if a-a != 0 {
 				return nil, operandError("<")
 			}
-			b := numbers[sp-1]
-			if _, ok := stack[sp-1].(numericValue); !ok {
-				b = number(stack[sp-1])
-			}
+			b := number(stack[sp-1])
 			if b-b != 0 {
 				return nil, operandError("<")
 			}
@@ -412,17 +313,11 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 				stack[sp-1] = a <= b
 				continue
 			}
-			a := numbers[sp-2]
-			if _, ok := stack[sp-2].(numericValue); !ok {
-				a = number(stack[sp-2])
-			}
+			a := number(stack[sp-2])
 			if a-a != 0 {
 				return nil, operandError("<=")
 			}
-			b := numbers[sp-1]
-			if _, ok := stack[sp-1].(numericValue); !ok {
-				b = number(stack[sp-1])
-			}
+			b := number(stack[sp-1])
 			if b-b != 0 {
 				return nil, operandError("<=")
 			}
@@ -439,17 +334,11 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 				stack[sp-1] = a > b
 				continue
 			}
-			a := numbers[sp-2]
-			if _, ok := stack[sp-2].(numericValue); !ok {
-				a = number(stack[sp-2])
-			}
+			a := number(stack[sp-2])
 			if a-a != 0 {
 				return nil, operandError(">")
 			}
-			b := numbers[sp-1]
-			if _, ok := stack[sp-1].(numericValue); !ok {
-				b = number(stack[sp-1])
-			}
+			b := number(stack[sp-1])
 			if b-b != 0 {
 				return nil, operandError(">")
 			}
@@ -466,17 +355,11 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 				stack[sp-1] = a >= b
 				continue
 			}
-			a := numbers[sp-2]
-			if _, ok := stack[sp-2].(numericValue); !ok {
-				a = number(stack[sp-2])
-			}
+			a := number(stack[sp-2])
 			if a-a != 0 {
 				return nil, operandError(">=")
 			}
-			b := numbers[sp-1]
-			if _, ok := stack[sp-1].(numericValue); !ok {
-				b = number(stack[sp-1])
-			}
+			b := number(stack[sp-1])
 			if b-b != 0 {
 				return nil, operandError(">=")
 			}
@@ -532,11 +415,6 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 
 		case isa.Array:
 			base := sp - operand
-			for i := base; i < sp; i++ {
-				if _, ok := stack[i].(numericValue); ok {
-					stack[i] = numbers[i]
-				}
-			}
 			result := append([]any{}, stack[base:sp]...)
 			stack[base] = result
 			sp = base + 1
@@ -546,9 +424,6 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			base := sp - len(keys)
 			result := make(map[string]any, len(keys))
 			for i, key := range keys {
-				if _, ok := stack[base+i].(numericValue); ok {
-					stack[base+i] = numbers[base+i]
-				}
 				if value := stack[base+i]; !IsMissing(value) {
 					result[key] = value
 				}
@@ -559,17 +434,11 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 		case isa.Push:
 			sp--
 			value := stack[sp]
-			if _, ok := value.(numericValue); ok {
-				value = numbers[sp]
-			}
 			stack[sp-1] = append(stack[sp-1].([]any), value)
 
 		case isa.Put:
 			sp--
 			value := stack[sp]
-			if _, ok := value.(numericValue); ok {
-				value = numbers[sp]
-			}
 			if !IsMissing(value) {
 				key := p.constants[operand].(string)
 				stack[sp-1].(map[string]any)[key] = value
@@ -611,9 +480,6 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			args := arguments[:spec.arity]
 			for i := range args {
 				value := stack[base+i]
-				if _, ok := value.(numericValue); ok {
-					value = numbers[base+i]
-				}
 				args[i] = value
 			}
 			result, err := spec.call(args...)
@@ -654,9 +520,6 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 		case isa.Append:
 			sp--
 			value := stack[sp]
-			if _, ok := value.(numericValue); ok {
-				value = numbers[sp]
-			}
 			it := stack[sp-1].(*iterator)
 			it.result = append(it.result, value)
 
@@ -667,9 +530,6 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 		case isa.Pop:
 			sp--
 		}
-	}
-	if _, ok := stack[0].(numericValue); ok {
-		return numbers[0], nil
 	}
 	return stack[0], nil
 }
