@@ -74,7 +74,7 @@ func scanNumber(src []rune, start int) (token, int, error) {
 	pos := start
 	for pos < len(src) {
 		r := src[pos]
-		if r >= '0' && r <= '9' || r == '.' || r == 'e' || r == 'E' {
+		if strings.ContainsRune("0123456789.eE", r) {
 			pos++
 			continue
 		}

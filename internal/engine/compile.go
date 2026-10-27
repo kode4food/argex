@@ -23,6 +23,24 @@ type (
 	stackChange int
 )
 
+var binaryOpcodes = map[string]isa.Opcode{
+	"+":  isa.Add,
+	"-":  isa.Sub,
+	"*":  isa.Mul,
+	"/":  isa.Div,
+	"%":  isa.Mod,
+	"==": isa.Eq,
+	"!=": isa.Neq,
+	"in": isa.In,
+	"<":  isa.Lt,
+	"<=": isa.Lte,
+	">":  isa.Gt,
+	">=": isa.Gte,
+	"&&": isa.And,
+	"||": isa.Or,
+	"??": isa.Coalesce,
+}
+
 // Compile prepares an expression for repeated evaluation
 func Compile(expr *Expression) (func(map[string]any) (any, error), error) {
 	if expr == nil || expr.root == nil {
@@ -39,6 +57,7 @@ func (c *compiler) compile(n *node, depth int) error {
 	if depth > maxDepth {
 		return ErrLimit
 	}
+	var err error
 	switch n.kind {
 	case "literal":
 		c.emit(isa.Const, c.constant(n.value), 1)
@@ -47,30 +66,30 @@ func (c *compiler) compile(n *node, depth int) error {
 		c.name(n.text)
 
 	case "binary":
-		return c.binary(n, depth)
+		err = c.binary(n, depth)
 
 	case "case":
-		return c.branch(n, depth)
+		err = c.branch(n, depth)
 
 	case "map", "filter", "any", "all":
-		return c.collection(n, depth)
+		err = c.collection(n, depth)
 
 	case "index":
-		return c.index(n, depth)
+		err = c.index(n, depth)
 
 	case "call":
-		return c.call(n, depth)
+		err = c.call(n, depth)
 
 	case "array":
-		return c.array(n, depth)
+		err = c.array(n, depth)
 
 	case "object":
-		return c.object(n, depth)
+		err = c.object(n, depth)
 
 	default:
-		return c.operation(n, depth)
+		err = c.operation(n, depth)
 	}
-	return nil
+	return err
 }
 
 func (c *compiler) operation(n *node, depth int) error {
@@ -200,7 +219,7 @@ func (c *compiler) binary(n *node, depth int) error {
 	if err := c.compile(n.children[0], depth+1); err != nil {
 		return err
 	}
-	op := binaryOpcode(n.text)
+	op := binaryOpcodes[n.text]
 	jump := -1
 	if op == isa.And || op == isa.Or || op == isa.Coalesce {
 		jump = c.emit(op, 0, -1)
@@ -404,55 +423,6 @@ func (c *compiler) constant(value any) isa.Operand {
 func (c *compiler) patch(index int) {
 	inst := c.program.code[index]
 	c.program.code[index] = inst.Opcode().New(isa.Operand(len(c.program.code)))
-}
-
-func binaryOpcode(op string) isa.Opcode {
-	switch op {
-	case "+":
-		return isa.Add
-
-	case "-":
-		return isa.Sub
-
-	case "*":
-		return isa.Mul
-
-	case "/":
-		return isa.Div
-
-	case "%":
-		return isa.Mod
-
-	case "==":
-		return isa.Eq
-
-	case "!=":
-		return isa.Neq
-
-	case "in":
-		return isa.In
-
-	case "<":
-		return isa.Lt
-
-	case "<=":
-		return isa.Lte
-
-	case ">":
-		return isa.Gt
-
-	case ">=":
-		return isa.Gte
-
-	case "&&":
-		return isa.And
-
-	case "||":
-		return isa.Or
-
-	default:
-		return isa.Coalesce
-	}
 }
 
 // chainable reports whether n can feed a later stage of the same pipeline;

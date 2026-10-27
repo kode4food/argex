@@ -36,6 +36,24 @@ const (
 
 const maxDepth = 256
 
+var precedences = map[string]int{
+	"||": precedenceOr,
+	"&&": precedenceAnd,
+	"??": precedenceCoalesce,
+	"==": precedenceEquality,
+	"!=": precedenceEquality,
+	"<":  precedenceComparison,
+	"<=": precedenceComparison,
+	">":  precedenceComparison,
+	">=": precedenceComparison,
+	"in": precedenceComparison,
+	"+":  precedenceAdd,
+	"-":  precedenceAdd,
+	"*":  precedenceMultiply,
+	"/":  precedenceMultiply,
+	"%":  precedenceMultiply,
+}
+
 // Parse parses a complete expression; whitespace never determines grouping
 func Parse(source string) (*Expression, error) {
 	tokens, err := lex(source)
@@ -89,7 +107,7 @@ func (p *parser) expression(minimum int) (*node, error) {
 		if op == "name" && p.current().text == "in" {
 			op = "in"
 		}
-		level := precedence(op)
+		level := precedences[op]
 		if level < minimum {
 			return left, nil
 		}
@@ -125,19 +143,10 @@ func (p *parser) primary() (*node, error) {
 		return p.named(t.text)
 
 	case "!", "-", "+":
-		child, err := p.expression(precedenceUnary)
-		return &node{
-			kind:     "unary",
-			text:     t.kind,
-			children: []*node{child},
-		}, err
+		return p.unary(t.kind)
 
 	case "(":
-		expr, err := p.pipeline()
-		if err != nil {
-			return nil, err
-		}
-		return expr, p.expect(")")
+		return p.group()
 
 	case "[":
 		return p.array()
@@ -148,6 +157,25 @@ func (p *parser) primary() (*node, error) {
 	default:
 		return nil, syntax(t.pos, "expected an expression")
 	}
+}
+
+func (p *parser) unary(op string) (*node, error) {
+	child, err := p.expression(precedenceUnary)
+	if err != nil {
+		return nil, err
+	}
+	return &node{kind: "unary", text: op, children: []*node{child}}, nil
+}
+
+func (p *parser) group() (*node, error) {
+	expr, err := p.pipeline()
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expect(")"); err != nil {
+		return nil, err
+	}
+	return expr, nil
 }
 
 func (p *parser) named(name string) (*node, error) {
@@ -474,32 +502,4 @@ func (p *parser) current() token {
 
 func (p *parser) error(message string) error {
 	return syntax(p.current().pos, message)
-}
-
-func precedence(op string) int {
-	switch op {
-	case "||":
-		return precedenceOr
-
-	case "&&":
-		return precedenceAnd
-
-	case "??":
-		return precedenceCoalesce
-
-	case "==", "!=":
-		return precedenceEquality
-
-	case "<", "<=", ">", ">=", "in":
-		return precedenceComparison
-
-	case "+", "-":
-		return precedenceAdd
-
-	case "*", "/", "%":
-		return precedenceMultiply
-
-	default:
-		return 0
-	}
 }
