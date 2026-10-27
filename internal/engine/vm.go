@@ -75,6 +75,12 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			SP--
 			MEM[LP+op] = MEM[SP]
 
+		case isa.Zero:
+			MEM[LP+op] = float64(0)
+
+		case isa.Inc:
+			MEM[LP+op] = MEM[LP+op].(float64) + 1
+
 		case isa.Access:
 			key := p.constants[op]
 			value := MEM[SP-1]

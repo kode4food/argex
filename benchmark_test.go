@@ -89,6 +89,23 @@ func BenchmarkWorkloads(b *testing.B) {
 		{name: "all256", source: "items | all item: item >= 0"},
 		{name: "sum256", source: "sum(items)"},
 		{
+			name:   "chain256",
+			source: "items | map x: x * 2 | filter y: y > 128 | map z: z + 1",
+		},
+		{
+			name:   "keyedFirst256",
+			source: "items | map i, x: i * x | filter y: y > 100",
+		},
+		{
+			name:   "keyedLater256",
+			source: "items | filter x: x > 64 | map i, x: i + x",
+		},
+		{name: "anyChain256", source: "items | map x: x * 2 | any y: y > 256"},
+		{
+			name:   "allChain256",
+			source: "items | filter x: x > 10 | all y: y >= 0",
+		},
+		{
 			name:   "nested",
 			source: `items | map item: [1,2,3,4] | map inner: item + inner`,
 		},

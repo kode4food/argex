@@ -11,7 +11,7 @@ Use `errors.Is` with these sentinels:
 
 | Sentinel | Raised for |
 | --- | --- |
-| `ErrSyntax` | Invalid syntax, with the byte offset of the error in the source |
+| `ErrSyntax` | Invalid syntax, with the character offset of the error in the source |
 | `ErrFunction` | Unknown function names and incorrect argument counts |
 | `ErrType` | Operands, receivers, indexes, keys, or arguments of the wrong type |
 | `ErrMissing` | Ordinary access to a missing property, value, or index |

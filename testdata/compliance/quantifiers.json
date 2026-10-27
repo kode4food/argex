@@ -27,6 +27,16 @@
     {"name":"nested bindings","expression":"[1,2] | all outer: ([1,2] | any inner: inner==outer)","result":true},
     {"name":"binding shadow and restore","expression":"[1,2] | map item: {match: [3] | any item: item==3, outer: item}","result":[{"match":true,"outer":1},{"match":true,"outer":2}]},
     {"name":"siblings after early exit","expression":"[([1,0] | any x: x==1),([1,0] | all x: x==0),([2] | map x:x+1)]","result":[true,false,[3]]},
+    {"name":"any stops earlier stages","expression":"[1,\"a\"] | map x:x+1 | any y:y>0","result":true},
+    {"name":"all stops earlier stages","expression":"[0,\"a\"] | map x:x+1 | all y:y>5","result":false},
+    {"name":"any reaches error when undecided","expression":"[1,\"a\"] | map x:x+1 | any y:y>5","error":"type","phase":"eval"},
+    {"name":"all reaches error when undecided","expression":"[9,\"a\"] | map x:x+1 | all y:y>5","error":"type","phase":"eval"},
+    {"name":"any after filter","expression":"[1,2,3] | filter x:x>1 | any y:y==3","result":true},
+    {"name":"all after filter skips rejected","expression":"[1,\"a\",3] | filter x:x!=\"a\" | all y:y>0","result":true},
+    {"name":"any keyed after filter","expression":"[5,6,7] | filter x:x>5 | any i,x:i==1 && x==7","result":true},
+    {"name":"all on empty filtered","expression":"[1,2] | filter x:x>5 | all y:false","result":true},
+    {"name":"any on empty filtered","expression":"[1,2] | filter x:x>5 | any y:true","result":false},
+    {"name":"chained any result in sibling","expression":"[([1,2] | map x:x*2 | any y:y==4), ([1] | map x:x)]","result":[true,[1]]},
     {"name":"prefix tag selection","expression":"tags | any tag: startsWith(tag,\"market:\")","variables":{"tags":["domain:risk","market:europe"]},"result":true}
   ]
 }

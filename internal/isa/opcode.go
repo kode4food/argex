@@ -25,6 +25,8 @@ const (
 	Global               // Push input variable (operand = name index)
 	Load                 // Push local binding (operand = slot)
 	Store                // Pop a value into a local binding (operand = slot)
+	Zero                 // Set a local binding to zero (operand = slot)
+	Inc                  // Add one to a numeric local binding (operand = slot)
 	Pop                  // Discard the top of the stack
 
 	// Property and index access
