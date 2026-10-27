@@ -2,6 +2,10 @@
 
 Notable changes to Argyll Expressions.
 
+## 0.1.2
+
+- `//` line comments
+
 ## 0.1.1
 
 - Pipeline stages see earlier bindings
