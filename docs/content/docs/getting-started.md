@@ -49,9 +49,11 @@ length(this)
 
 When the input is an object, its top-level properties can also be read by bare name, so `items` and `this.items` read the same property. A bare name with no matching property, or any bare name when the input is not an object, evaluates to a missing value. `this.name` follows the ordinary access rules, so an absent property fails instead. The result can be any JSON value.
 
+`expression.Names()` returns the input properties an expression reads by bare name, sorted, so a caller can check them against a schema before evaluating. Names bound by collection operations are excluded, and reads through `this` are not reported.
+
 ## Values
 
-Values use Go's JSON representation: `map[string]any`, `[]any`, strings, booleans, `float64`, and `nil`. Go `int` and `json.Number` inputs are also accepted anywhere a number is expected, including arithmetic, comparisons, indexes, and functions; computed numbers are always `float64`. Other Go types, such as `int64`, `float32`, `[]string`, or `map[string]string`, are rejected with `ErrType`. Numbers use finite IEEE 754 double precision. Division by zero and non-finite arithmetic results fail. Use `number(value)` and `string(value)` for explicit type conversions.
+Values use Go's JSON representation: `map[string]any`, `[]any`, strings, booleans, `float64`, and `nil`. Go `int` and `json.Number` inputs are also accepted anywhere a number is expected, including arithmetic, comparisons, indexes, and functions. Computed numbers are always `float64`. Other Go types, such as `int64`, `float32`, `[]string`, or `map[string]string`, are rejected with `ErrType`. Numbers use finite IEEE 754 double precision. Division by zero and non-finite arithmetic results fail. Use `number(value)` and `string(value)` for explicit type conversions.
 
 A bare name with no value produces `Missing{}`, which is distinct from JSON `null`. Use `IsMissing` to test for it. See [Missing Values]({{< relref "/docs/missing-values" >}}) for how missing values flow through expressions.
 

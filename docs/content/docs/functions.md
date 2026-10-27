@@ -42,7 +42,7 @@ keys(response) | any key: startsWith(key, "x-")
 
 ## Strings
 
-String tests are case-sensitive and accept empty search strings. `includes` tests string substrings; use `in` for array membership. Case conversion uses locale-independent Unicode character mappings.
+String tests are case-sensitive and accept empty search strings. `includes` tests string substrings. Use `in` for array membership. Case conversion uses locale-independent Unicode character mappings.
 
 Splitting preserves empty fields. An empty separator splits into Unicode code points, with an empty input producing an empty array. Joining requires every element to be a string and returns an empty string for an empty array.
 

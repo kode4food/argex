@@ -18,7 +18,7 @@ orders | filter order: order.status == "paid"
 
 ## Keys and Indexes
 
-A binding may name two identifiers, `key, value`, to also bind each element's position: the numeric index for an array receiver, or the property name for an object receiver, visited in sorted key order. The single-name form requires an array receiver; the two-name form accepts arrays and objects. Any other receiver, including null or a missing value, raises `ErrType`.
+A binding may name two identifiers, `key, value`, to also bind each element's position: the numeric index for an array receiver, or the property name for an object receiver, visited in sorted key order. The single-name form requires an array receiver. The two-name form accepts arrays and objects. Any other receiver, including null or a missing value, raises `ErrType`.
 
 ```javascript
 items | map index, item: {position: index, value: item}

@@ -7,7 +7,49 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type namesCase struct {
+	source string
+	want   []string
+}
+
 const maxFuzzSourceSize = 4096
+
+func TestNames(t *testing.T) {
+	cases := []namesCase{
+		{source: "1 + 2"},
+		{source: "a + b", want: []string{"a", "b"}},
+		{source: "a + a", want: []string{"a"}},
+		{source: "a.b.c", want: []string{"a"}},
+		{source: "length(xs)", want: []string{"xs"}},
+		{source: "this.a + this[k]", want: []string{"k"}},
+		{source: "{[k]: v, ...rest}", want: []string{"k", "rest", "v"}},
+		{source: "case { a: b, c }", want: []string{"a", "b", "c"}},
+		{source: "items | map i: i.id", want: []string{"items"}},
+		{
+			source: "items | map i: i + offset",
+			want:   []string{"items", "offset"},
+		},
+		{source: "x | map x: x", want: []string{"x"}},
+		{source: "obj | map k, v: [k, v, w]", want: []string{"obj", "w"}},
+		{source: "xs | map x: x | map y: x", want: []string{"x", "xs"}},
+		{source: "xs | filter x: x | any y: y > z", want: []string{"xs", "z"}},
+		{
+			source: "xs | map x: (ys | map y: x + y + z)",
+			want:   []string{"xs", "ys", "z"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.source, func(t *testing.T) {
+			expr, err := argex.Parse(tc.source)
+			if !assert.NoError(t, err) {
+				return
+			}
+			assert.Equal(t, tc.want, expr.Names())
+		})
+	}
+	assert.Empty(t, (&argex.Expression{}).Names())
+	assert.Empty(t, (*argex.Expression)(nil).Names())
+}
 
 func TestSyntax(t *testing.T) {
 	cases := []string{

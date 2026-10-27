@@ -1,5 +1,10 @@
 package engine
 
+import (
+	"maps"
+	"slices"
+)
+
 type (
 	// Expression is an immutable parsed expression
 	Expression struct {
@@ -42,6 +47,17 @@ func Parse(source string) (*Expression, error) {
 	return &Expression{root: root}, nil
 }
 
+// Names reports the input properties the expression reads by bare name, sorted.
+// Names bound by collection operations and reads through this are excluded
+func (e *Expression) Names() []string {
+	if e == nil || e.root == nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	collectNames(e.root, nil, seen)
+	return slices.Sorted(maps.Keys(seen))
+}
+
 func (p *parser) expect(kind string) error {
 	if !p.take(kind) {
 		return p.error("expected " + kind)
@@ -66,4 +82,28 @@ func (p *parser) current() token {
 
 func (p *parser) error(message string) error {
 	return syntax(p.current().pos, message)
+}
+
+// collectNames scopes bindings as the compiler does: a collection's body sees
+// its own bindings, its receiver only the enclosing ones
+func collectNames(n *node, bound []string, seen map[string]bool) {
+	switch n.kind {
+	case "name":
+		if !slices.Contains(bound, n.text) {
+			seen[n.text] = true
+		}
+		return
+
+	case "map", "filter", "any", "all":
+		collectNames(n.children[0], bound, seen)
+		inner := append(bound[:len(bound):len(bound)], n.valueBinding)
+		if n.keyBinding != "" {
+			inner = append(inner, n.keyBinding)
+		}
+		collectNames(n.children[1], inner, seen)
+		return
+	}
+	for _, child := range n.children {
+		collectNames(child, bound, seen)
+	}
 }

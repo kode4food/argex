@@ -1,8 +1,11 @@
 GO ?= go
 
-.PHONY: all format check test pre-commit generate clean
+.PHONY: all install format check test pre-commit generate clean
 
 all: test
+
+install: test
+	$(GO) install github.com/kode4food/argex/cmd/argex
 
 format: generate
 	$(GO) tool goimports -w .
