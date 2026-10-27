@@ -1,0 +1,27 @@
+---
+title: "Errors and Limits"
+weight: 80
+---
+
+# Errors and Limits
+
+## Errors
+
+Use `errors.Is` with these sentinels:
+
+| Sentinel | Raised for |
+| --- | --- |
+| `ErrSyntax` | Invalid syntax, with the byte offset of the error in the source |
+| `ErrFunction` | Unknown function names and incorrect argument counts |
+| `ErrType` | Operands, receivers, indexes, keys, or arguments of the wrong type |
+| `ErrMissing` | Ordinary access to a missing property, value, or index |
+| `ErrArithmetic` | Division by zero and non-finite results |
+| `ErrLimit` | Expressions nested beyond the limit |
+
+Function errors fail during compilation, even in an unchosen branch. Runtime errors occur only in expressions actually evaluated.
+
+## Limits
+
+Parsing and compilation limit expression nesting to 256 levels and return `ErrLimit` beyond that. Each binary operator in a chain adds a level, so `a + b + ...` with more than 256 operators exceeds the limit. Array elements, object members, `case` arms, and `|` stages do not add levels.
+
+Inputs must be JSON-shaped, acyclic values.

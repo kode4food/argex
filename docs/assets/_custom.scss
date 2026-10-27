@@ -1,0 +1,44 @@
+@import "plugins/themes";
+
+@mixin theme-argex-auto {
+  --body-background: #ffffff;
+  --body-background-tint: none;
+  --body-font-color: #0f172a;
+  --color-link: #b45309;
+  --color-visited-link: #92400e;
+  --icon-filter: none;
+  --gray-100: #f8fafc;
+  --gray-200: #e2e8f0;
+  --gray-500: #64748b;
+
+  @include accent("default", #64748b);
+  @include accent("note", #d97706);
+  @include accent("tip", #15803d);
+  @include accent("important", #b45309);
+  @include accent("warning", #ca8a04);
+  @include accent("caution", #b91c1c);
+  @include accent("info", #d97706);
+  @include accent("success", #15803d);
+  @include accent("danger", #b91c1c);
+
+  @media (prefers-color-scheme: dark) {
+    --body-background: #0f172a;
+    --body-font-color: #e2e8f0;
+    --color-link: #fbbf24;
+    --color-visited-link: #fcd34d;
+    --icon-filter: brightness(0) invert(1);
+    --gray-100: #1e293b;
+    --gray-200: #334155;
+    --gray-500: #94a3b8;
+
+    @include accent("default", #94a3b8);
+    @include accent("note", #fbbf24);
+    @include accent("tip", #86efac);
+    @include accent("important", #fcd34d);
+    @include accent("warning", #facc15);
+    @include accent("caution", #fca5a5);
+    @include accent("info", #fbbf24);
+    @include accent("success", #86efac);
+    @include accent("danger", #fca5a5);
+  }
+}

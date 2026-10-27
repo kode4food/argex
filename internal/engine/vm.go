@@ -407,7 +407,7 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			SP--
 			value, ok := MEM[SP].(bool)
 			if !ok {
-				return nil, operandError("case condition")
+				return nil, operandError("condition")
 			}
 			if !value {
 				PC = op - 1

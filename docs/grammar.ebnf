@@ -35,7 +35,9 @@ literal        = number | string | "true" | "false" | "null" ;
 (* Terminals: number is an unsigned JSON number (signs are unary operators);
    string is a double-quoted JSON string; identifier is a Unicode letter or
    underscore followed by letters, digits, or underscores. true, false, null,
-   and case are reserved; in is contextual and also a valid identifier.
+   and case are reserved as variable and binding names but remain valid
+   property names and object keys; in is contextual and also a valid
+   identifier.
    Whitespace is ignored between tokens and operators use longest match.
    The pipe is the lowest-precedence operator and chains left to right; a
    binding body is a logicalOr, so a nested pipeline needs parentheses. *)
