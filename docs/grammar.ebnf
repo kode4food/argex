@@ -39,6 +39,7 @@ literal        = number | string | "true" | "false" | "null" ;
    property names and object keys; in is contextual and also a valid
    identifier. this is the program's input.
    Whitespace is ignored between tokens and operators use longest match.
+   // starts a comment that runs to the end of the line.
    The pipe is the lowest-precedence operator and chains left to right; a
    stage body is a logicalOr, so a nested pipeline needs parentheses.
    A binding is recognized only as "name:" or "name, name:". A binding name

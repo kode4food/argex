@@ -18,19 +18,35 @@ type token struct {
 func lex(source string) ([]token, error) {
 	src := []rune(source)
 	var result []token
-	for pos := 0; pos < len(src); {
-		if unicode.IsSpace(src[pos]) {
-			pos++
-			continue
-		}
+	pos := skipIgnored(src, 0)
+	for pos < len(src) {
 		item, next, err := scan(src, pos)
 		if err != nil {
 			return nil, err
 		}
 		result = append(result, item)
-		pos = next
+		pos = skipIgnored(src, next)
 	}
 	return append(result, token{kind: "eof", pos: len(src)}), nil
+}
+
+// skipIgnored returns the next token's position, past whitespace and comments
+func skipIgnored(src []rune, pos int) int {
+	for pos < len(src) {
+		switch {
+		case unicode.IsSpace(src[pos]):
+			pos++
+
+		case src[pos] == '/' && pos+1 < len(src) && src[pos+1] == '/':
+			for pos < len(src) && src[pos] != '\n' {
+				pos++
+			}
+
+		default:
+			return pos
+		}
+	}
+	return pos
 }
 
 func scan(src []rune, pos int) (token, int, error) {
