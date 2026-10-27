@@ -1,6 +1,11 @@
 package engine
 
 type (
+	// Expression is an immutable parsed expression
+	Expression struct {
+		root *node
+	}
+
 	parser struct {
 		tokens []token
 		pos    int
@@ -28,6 +33,25 @@ const (
 	precedenceMultiply
 	precedenceUnary
 )
+
+const maxDepth = 256
+
+// Parse parses a complete expression; whitespace never determines grouping
+func Parse(source string) (*Expression, error) {
+	tokens, err := lex(source)
+	if err != nil {
+		return nil, err
+	}
+	p := &parser{tokens: tokens}
+	root, err := p.pipeline()
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expect("eof"); err != nil {
+		return nil, err
+	}
+	return &Expression{root: root}, nil
+}
 
 // pipeline chains collection operations left to right; the pipe is the
 // lowest-precedence operator, so a binding body stops before the next pipe
@@ -450,23 +474,6 @@ func (p *parser) current() token {
 
 func (p *parser) error(message string) error {
 	return syntax(p.current().pos, message)
-}
-
-// Parse parses a complete expression; whitespace never determines grouping
-func Parse(source string) (*Expression, error) {
-	tokens, err := lex(source)
-	if err != nil {
-		return nil, err
-	}
-	p := &parser{tokens: tokens}
-	root, err := p.pipeline()
-	if err != nil {
-		return nil, err
-	}
-	if err := p.expect("eof"); err != nil {
-		return nil, err
-	}
-	return &Expression{root: root}, nil
 }
 
 func precedence(op string) int {

@@ -7,9 +7,25 @@ import (
 	"reflect"
 )
 
-type operands struct {
-	left  any
-	right any
+type (
+	// Missing distinguishes absent data from an explicit JSON null
+	Missing struct{}
+
+	operands struct {
+		left  any
+		right any
+	}
+)
+
+// MarshalJSON rejects absent values instead of encoding them as null
+func (Missing) MarshalJSON() ([]byte, error) {
+	return nil, ErrMissing
+}
+
+// IsMissing reports whether a value represents absent data
+func IsMissing(value any) bool {
+	_, ok := value.(Missing)
+	return ok
 }
 
 // number uses NaN for invalid inputs so finiteness checks stay inline

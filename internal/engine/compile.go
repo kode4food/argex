@@ -17,6 +17,18 @@ type (
 	stackChange int
 )
 
+// Compile prepares an expression for repeated evaluation
+func Compile(expr *Expression) (func(map[string]any) (any, error), error) {
+	if expr == nil || expr.root == nil {
+		return nil, fmt.Errorf("%w: empty expression", ErrSyntax)
+	}
+	c := &compiler{program: &program{}}
+	if err := c.compile(expr.root, 0); err != nil {
+		return nil, err
+	}
+	return c.program.evaluate, nil
+}
+
 func (c *compiler) compile(n *node, depth int) error {
 	if depth > maxDepth {
 		return ErrLimit
