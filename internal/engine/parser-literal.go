@@ -1,17 +1,17 @@
 package engine
 
 func (p *parser) array() (*node, error) {
-	result := &node{kind: "array"}
-	for !p.take("]") {
+	result := &node{kind: nodeArray}
+	for !p.take(kindRBrack) {
 		element, err := p.spreadable()
 		if err != nil {
 			return nil, err
 		}
 		result.children = append(result.children, element)
-		if p.take("]") {
+		if p.take(kindRBrack) {
 			return result, nil
 		}
-		if err := p.expect(","); err != nil {
+		if err := p.expect(kindComma); err != nil {
 			return nil, err
 		}
 	}
@@ -19,18 +19,18 @@ func (p *parser) array() (*node, error) {
 }
 
 func (p *parser) object() (*node, error) {
-	result := &node{kind: "object"}
+	result := &node{kind: nodeObject}
 	seen := map[string]bool{}
-	for !p.take("}") {
+	for !p.take(kindRBrace) {
 		entry, err := p.objectMember(seen)
 		if err != nil {
 			return nil, err
 		}
 		result.children = append(result.children, entry)
-		if p.take("}") {
+		if p.take(kindRBrace) {
 			return result, nil
 		}
-		if err := p.expect(","); err != nil {
+		if err := p.expect(kindComma); err != nil {
 			return nil, err
 		}
 	}
@@ -38,10 +38,10 @@ func (p *parser) object() (*node, error) {
 }
 
 func (p *parser) objectMember(seen map[string]bool) (*node, error) {
-	if p.current().kind == "..." {
+	if p.current().kind == kindSpread {
 		return p.spreadable()
 	}
-	if p.current().kind == "[" {
+	if p.current().kind == kindLBrack {
 		return p.computedMember(seen)
 	}
 	key := p.current()
@@ -54,14 +54,14 @@ func (p *parser) objectMember(seen map[string]bool) (*node, error) {
 		return nil, syntax(key.pos, "duplicate object key")
 	}
 	seen[name] = true
-	if err := p.expect(":"); err != nil {
+	if err := p.expect(kindColon); err != nil {
 		return nil, err
 	}
 	value, err := p.pipeline()
 	if err != nil {
 		return nil, err
 	}
-	return &node{kind: "field", text: name, children: []*node{value}}, nil
+	return &node{kind: nodeField, text: name, children: []*node{value}}, nil
 }
 
 // computedMember parses a [key]: value member. A string literal key is a plain
@@ -73,10 +73,10 @@ func (p *parser) computedMember(seen map[string]bool) (*node, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := p.expect("]"); err != nil {
+	if err := p.expect(kindRBrack); err != nil {
 		return nil, err
 	}
-	if err := p.expect(":"); err != nil {
+	if err := p.expect(kindColon); err != nil {
 		return nil, err
 	}
 	value, err := p.pipeline()
@@ -84,19 +84,19 @@ func (p *parser) computedMember(seen map[string]bool) (*node, error) {
 		return nil, err
 	}
 	name, ok := key.value.(string)
-	if key.kind != "literal" || !ok {
+	if key.kind != nodeLiteral || !ok {
 		children := []*node{key, value}
-		return &node{kind: "computed", children: children}, nil
+		return &node{kind: nodeComputed, children: children}, nil
 	}
 	if seen[name] {
 		return nil, syntax(start.pos, "duplicate object key")
 	}
 	seen[name] = true
-	return &node{kind: "field", text: name, children: []*node{value}}, nil
+	return &node{kind: nodeField, text: name, children: []*node{value}}, nil
 }
 
 func (p *parser) spreadable() (*node, error) {
-	spread := p.take("...")
+	spread := p.take(kindSpread)
 	expr, err := p.pipeline()
 	if err != nil {
 		return nil, err
@@ -104,15 +104,15 @@ func (p *parser) spreadable() (*node, error) {
 	if !spread {
 		return expr, nil
 	}
-	return &node{kind: "spread", children: []*node{expr}}, nil
+	return &node{kind: nodeSpread, children: []*node{expr}}, nil
 }
 
 func (p *parser) objectKey() (string, error) {
 	key := p.current()
-	if key.kind == "name" {
+	if key.kind == kindName {
 		return key.text, nil
 	}
-	if name, ok := key.value.(string); key.kind == "literal" && ok {
+	if name, ok := key.value.(string); key.kind == kindLiteral && ok {
 		return name, nil
 	}
 	return "", p.error("expected an object key")

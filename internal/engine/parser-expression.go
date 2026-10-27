@@ -1,6 +1,14 @@
 package engine
 
 const (
+	kwTrue  = "true"
+	kwFalse = "false"
+	kwNull  = "null"
+	kwCase  = "case"
+	kwThis  = "this"
+)
+
+const (
 	precedenceOr = iota + 1
 	precedenceAnd
 	precedenceCoalesce
@@ -11,22 +19,22 @@ const (
 	precedenceUnary
 )
 
-var precedences = map[string]int{
-	"||": precedenceOr,
-	"&&": precedenceAnd,
-	"??": precedenceCoalesce,
-	"==": precedenceEquality,
-	"!=": precedenceEquality,
-	"<":  precedenceComparison,
-	"<=": precedenceComparison,
-	">":  precedenceComparison,
-	">=": precedenceComparison,
-	"in": precedenceComparison,
-	"+":  precedenceAdd,
-	"-":  precedenceAdd,
-	"*":  precedenceMultiply,
-	"/":  precedenceMultiply,
-	"%":  precedenceMultiply,
+var precedences = map[tokenKind]int{
+	kindOr:       precedenceOr,
+	kindAnd:      precedenceAnd,
+	kindCoalesce: precedenceCoalesce,
+	kindEq:       precedenceEquality,
+	kindNeq:      precedenceEquality,
+	kindLt:       precedenceComparison,
+	kindLte:      precedenceComparison,
+	kindGt:       precedenceComparison,
+	kindGte:      precedenceComparison,
+	kindIn:       precedenceComparison,
+	kindAdd:      precedenceAdd,
+	kindSub:      precedenceAdd,
+	kindMul:      precedenceMultiply,
+	kindDiv:      precedenceMultiply,
+	kindMod:      precedenceMultiply,
 }
 
 func (p *parser) expression(minimum int) (*node, error) {
@@ -46,8 +54,8 @@ func (p *parser) expression(minimum int) (*node, error) {
 	compared := false
 	for {
 		op := p.current().kind
-		if op == "name" && p.current().text == "in" {
-			op = "in"
+		if op == kindName && p.current().text == opIn {
+			op = kindIn
 		}
 		level := precedences[op]
 		if level < minimum {
@@ -59,7 +67,7 @@ func (p *parser) expression(minimum int) (*node, error) {
 		compared = compared || level == precedenceComparison
 		p.pos++
 		next := level + 1
-		if op == "??" {
+		if op == kindCoalesce {
 			next = level
 		}
 		right, err := p.expression(next)
@@ -67,8 +75,8 @@ func (p *parser) expression(minimum int) (*node, error) {
 			return nil, err
 		}
 		left = &node{
-			kind:     "binary",
-			text:     op,
+			kind:     nodeBinary,
+			text:     operatorText[op],
 			children: []*node{left, right},
 		}
 	}
@@ -78,22 +86,22 @@ func (p *parser) primary() (*node, error) {
 	t := p.current()
 	p.pos++
 	switch t.kind {
-	case "literal":
-		return &node{kind: "literal", value: t.value}, nil
+	case kindLiteral:
+		return &node{kind: nodeLiteral, value: t.value}, nil
 
-	case "name":
+	case kindName:
 		return p.named(t.text)
 
-	case "!", "-", "+":
-		return p.unary(t.kind)
+	case kindNot, kindSub, kindAdd:
+		return p.unary(operatorText[t.kind])
 
-	case "(":
+	case kindLParen:
 		return p.group()
 
-	case "[":
+	case kindLBrack:
 		return p.array()
 
-	case "{":
+	case kindLBrace:
 		return p.object()
 
 	default:
@@ -106,7 +114,7 @@ func (p *parser) unary(op string) (*node, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &node{kind: "unary", text: op, children: []*node{child}}, nil
+	return &node{kind: nodeUnary, text: op, children: []*node{child}}, nil
 }
 
 func (p *parser) group() (*node, error) {
@@ -114,7 +122,7 @@ func (p *parser) group() (*node, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := p.expect(")"); err != nil {
+	if err := p.expect(kindRParen); err != nil {
 		return nil, err
 	}
 	return expr, nil
@@ -122,19 +130,19 @@ func (p *parser) group() (*node, error) {
 
 func (p *parser) named(name string) (*node, error) {
 	switch name {
-	case "true", "false":
-		return &node{kind: "literal", value: name == "true"}, nil
+	case kwTrue, kwFalse:
+		return &node{kind: nodeLiteral, value: name == kwTrue}, nil
 
-	case "null":
-		return &node{kind: "literal"}, nil
+	case kwNull:
+		return &node{kind: nodeLiteral}, nil
 
-	case "case":
+	case kwCase:
 		return p.caseExpression()
 
-	case "this":
-		return &node{kind: "root"}, nil
+	case kwThis:
+		return &node{kind: nodeRoot}, nil
 
 	default:
-		return &node{kind: "name", text: name}, nil
+		return &node{kind: nodeName, text: name}, nil
 	}
 }

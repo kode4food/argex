@@ -4,11 +4,25 @@ package engine
 const discardName = "_"
 
 var reservedNames = map[string]bool{
-	"true":  true,
-	"false": true,
-	"null":  true,
-	"case":  true,
-	"this":  true,
+	kwTrue:  true,
+	kwFalse: true,
+	kwNull:  true,
+	kwCase:  true,
+	kwThis:  true,
+}
+
+var collectionKinds = map[string]nodeKind{
+	"map":    nodeMap,
+	"filter": nodeFilter,
+	"any":    nodeAny,
+	"all":    nodeAll,
+}
+
+var collectionNames = map[nodeKind]string{
+	nodeMap:    "map",
+	nodeFilter: "filter",
+	nodeAny:    "any",
+	nodeAll:    "all",
 }
 
 // pipeline chains collection operations left to right; the pipe is the
@@ -18,7 +32,7 @@ func (p *parser) pipeline() (*node, error) {
 	if err != nil {
 		return nil, err
 	}
-	for stage := 0; p.current().kind == "|"; stage++ {
+	for stage := 0; p.current().kind == kindPipe; stage++ {
 		left, err = p.collection(left, stage > 0 && chainable(left))
 		if err != nil {
 			return nil, err
@@ -32,15 +46,14 @@ func (p *parser) pipeline() (*node, error) {
 func (p *parser) collection(receiver *node, chained bool) (*node, error) {
 	p.pos++
 	operation := p.current()
-	if err := p.expect("name"); err != nil {
+	if err := p.expect(kindName); err != nil {
 		return nil, err
 	}
-	switch operation.text {
-	case "map", "filter", "any", "all":
-	default:
+	kind, ok := collectionKinds[operation.text]
+	if !ok {
 		return nil, syntax(operation.pos, "unknown collection operation")
 	}
-	stage := &node{kind: operation.text, chained: chained}
+	stage := &node{kind: kind, chained: chained}
 	if err := p.stageBinding(stage); err != nil {
 		return nil, err
 	}
@@ -60,30 +73,30 @@ func (p *parser) stageBinding(stage *node) error {
 	if err != nil {
 		return err
 	}
-	if !p.take(",") {
+	if !p.take(kindComma) {
 		stage.valueBinding = first
-		return p.expect(":")
+		return p.expect(kindColon)
 	}
 	stage.keyBinding = first
 	stage.valueBinding, err = p.bindingName()
 	if err != nil {
 		return err
 	}
-	return p.expect(":")
+	return p.expect(kindColon)
 }
 
 // hasBinding looks for "name:" or "name, name:". Neither can begin an
 // expression, so anything else is a body without bindings
 func (p *parser) hasBinding() bool {
-	if p.peek(0).kind != "name" {
+	if p.peek(0).kind != kindName {
 		return false
 	}
 	switch p.peek(1).kind {
-	case ":":
+	case kindColon:
 		return true
 
-	case ",":
-		return p.peek(2).kind == "name" && p.peek(3).kind == ":"
+	case kindComma:
+		return p.peek(2).kind == kindName && p.peek(3).kind == kindColon
 
 	default:
 		return false
@@ -93,7 +106,7 @@ func (p *parser) hasBinding() bool {
 // bindingName returns "" for a discard, which binds no name
 func (p *parser) bindingName() (string, error) {
 	name := p.current()
-	if err := p.expect("name"); err != nil {
+	if err := p.expect(kindName); err != nil {
 		return "", err
 	}
 	if reservedNames[name.text] {

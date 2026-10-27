@@ -4,14 +4,14 @@ func (p *parser) postfix(left *node) (*node, error) {
 	for {
 		var err error
 		switch p.current().kind {
-		case ".", "?.":
+		case kindDot, kindOptDot:
 			left, err = p.member(left)
 
-		case "[":
+		case kindLBrack:
 			p.pos++
 			left, err = p.index(left, false)
 
-		case "(":
+		case kindLParen:
 			left, err = p.call(left)
 
 		default:
@@ -24,17 +24,17 @@ func (p *parser) postfix(left *node) (*node, error) {
 }
 
 func (p *parser) member(receiver *node) (*node, error) {
-	optional := p.current().kind == "?."
+	optional := p.current().kind == kindOptDot
 	p.pos++
-	if optional && p.take("[") {
+	if optional && p.take(kindLBrack) {
 		return p.index(receiver, optional)
 	}
 	name := p.current()
-	if err := p.expect("name"); err != nil {
+	if err := p.expect(kindName); err != nil {
 		return nil, err
 	}
 	return &node{
-		kind:     "access",
+		kind:     nodeAccess,
 		text:     name.text,
 		optional: optional,
 		children: []*node{receiver},
@@ -47,29 +47,29 @@ func (p *parser) index(receiver *node, optional bool) (*node, error) {
 		return nil, err
 	}
 	return &node{
-		kind:     "index",
+		kind:     nodeIndex,
 		optional: optional,
 		children: []*node{receiver, key},
-	}, p.expect("]")
+	}, p.expect(kindRBrack)
 }
 
 func (p *parser) call(receiver *node) (*node, error) {
-	if receiver.kind != "name" {
+	if receiver.kind != nodeName {
 		return nil, p.error("only named functions can be called")
 	}
 	p.pos++
-	children, err := p.list(")")
+	children, err := p.list(kindRParen)
 	if err != nil {
 		return nil, err
 	}
 	return &node{
-		kind:     "call",
+		kind:     nodeCall,
 		text:     receiver.text,
 		children: children,
 	}, nil
 }
 
-func (p *parser) list(end string) ([]*node, error) {
+func (p *parser) list(end tokenKind) ([]*node, error) {
 	var children []*node
 	for !p.take(end) {
 		child, err := p.pipeline()
@@ -80,7 +80,7 @@ func (p *parser) list(end string) ([]*node, error) {
 		if p.take(end) {
 			return children, nil
 		}
-		if err := p.expect(","); err != nil {
+		if err := p.expect(kindComma); err != nil {
 			return nil, err
 		}
 	}

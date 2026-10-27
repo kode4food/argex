@@ -160,21 +160,21 @@ func (p *program) evaluate(this any) (any, error) {
 		case isa.Not:
 			value, ok := MEM[SP-1].(bool)
 			if !ok {
-				return nil, operandError("!")
+				return nil, operandError("! operand must be a Boolean")
 			}
 			MEM[SP-1] = !value
 
 		case isa.Pos:
 			value := number(MEM[SP-1])
 			if value-value != 0 {
-				return nil, operandError("+")
+				return nil, operandError("+ operand must be a number")
 			}
 			MEM[SP-1] = value
 
 		case isa.Neg:
 			value := number(MEM[SP-1])
 			if value-value != 0 {
-				return nil, operandError("-")
+				return nil, operandError("- operand must be a number")
 			}
 			MEM[SP-1] = -value
 
@@ -182,7 +182,9 @@ func (p *program) evaluate(this any) (any, error) {
 			if a, ok := MEM[SP-2].(string); ok {
 				b, ok := MEM[SP-1].(string)
 				if !ok {
-					return nil, operandError("+")
+					return nil, operandError(
+						"+ right operand must be a string when the left is",
+					)
 				}
 				SP--
 				MEM[SP-1] = a + b
@@ -190,11 +192,13 @@ func (p *program) evaluate(this any) (any, error) {
 			}
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError("+")
+				return nil, operandError(
+					"+ left operand must be a number or a string",
+				)
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError("+")
+				return nil, operandError("+ right operand must be a number")
 			}
 			value := a + b
 			if math.IsNaN(value) || math.IsInf(value, 0) {
@@ -206,11 +210,11 @@ func (p *program) evaluate(this any) (any, error) {
 		case isa.Sub:
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError("-")
+				return nil, operandError("- left operand must be a number")
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError("-")
+				return nil, operandError("- right operand must be a number")
 			}
 			value := a - b
 			if math.IsNaN(value) || math.IsInf(value, 0) {
@@ -222,11 +226,11 @@ func (p *program) evaluate(this any) (any, error) {
 		case isa.Mul:
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError("*")
+				return nil, operandError("* left operand must be a number")
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError("*")
+				return nil, operandError("* right operand must be a number")
 			}
 			value := a * b
 			if math.IsNaN(value) || math.IsInf(value, 0) {
@@ -238,11 +242,11 @@ func (p *program) evaluate(this any) (any, error) {
 		case isa.Div:
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError("/")
+				return nil, operandError("/ left operand must be a number")
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError("/")
+				return nil, operandError("/ right operand must be a number")
 			}
 			value := a / b
 			if math.IsNaN(value) || math.IsInf(value, 0) {
@@ -254,11 +258,11 @@ func (p *program) evaluate(this any) (any, error) {
 		case isa.Mod:
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError("%")
+				return nil, operandError("% left operand must be a number")
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError("%")
+				return nil, operandError("% right operand must be a number")
 			}
 			value := math.Mod(a, b)
 			if math.IsNaN(value) || math.IsInf(value, 0) {
@@ -283,7 +287,7 @@ func (p *program) evaluate(this any) (any, error) {
 			left := MEM[SP-2]
 			candidates, ok := MEM[SP-1].([]any)
 			if !ok {
-				return nil, operandError("in")
+				return nil, operandError("in right operand must be an array")
 			}
 			matched := false
 			for _, candidate := range candidates {
@@ -299,7 +303,9 @@ func (p *program) evaluate(this any) (any, error) {
 			if a, ok := MEM[SP-2].(string); ok {
 				b, ok := MEM[SP-1].(string)
 				if !ok {
-					return nil, operandError("<")
+					return nil, operandError(
+						"< right operand must be a string when the left is",
+					)
 				}
 				SP--
 				MEM[SP-1] = a < b
@@ -307,11 +313,13 @@ func (p *program) evaluate(this any) (any, error) {
 			}
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError("<")
+				return nil, operandError(
+					"< left operand must be a number or a string",
+				)
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError("<")
+				return nil, operandError("< right operand must be a number")
 			}
 			SP--
 			MEM[SP-1] = a < b
@@ -320,7 +328,9 @@ func (p *program) evaluate(this any) (any, error) {
 			if a, ok := MEM[SP-2].(string); ok {
 				b, ok := MEM[SP-1].(string)
 				if !ok {
-					return nil, operandError("<=")
+					return nil, operandError(
+						"<= right operand must be a string when the left is",
+					)
 				}
 				SP--
 				MEM[SP-1] = a <= b
@@ -328,11 +338,13 @@ func (p *program) evaluate(this any) (any, error) {
 			}
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError("<=")
+				return nil, operandError(
+					"<= left operand must be a number or a string",
+				)
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError("<=")
+				return nil, operandError("<= right operand must be a number")
 			}
 			SP--
 			MEM[SP-1] = a <= b
@@ -341,7 +353,9 @@ func (p *program) evaluate(this any) (any, error) {
 			if a, ok := MEM[SP-2].(string); ok {
 				b, ok := MEM[SP-1].(string)
 				if !ok {
-					return nil, operandError(">")
+					return nil, operandError(
+						"> right operand must be a string when the left is",
+					)
 				}
 				SP--
 				MEM[SP-1] = a > b
@@ -349,11 +363,13 @@ func (p *program) evaluate(this any) (any, error) {
 			}
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError(">")
+				return nil, operandError(
+					"> left operand must be a number or a string",
+				)
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError(">")
+				return nil, operandError("> right operand must be a number")
 			}
 			SP--
 			MEM[SP-1] = a > b
@@ -362,7 +378,9 @@ func (p *program) evaluate(this any) (any, error) {
 			if a, ok := MEM[SP-2].(string); ok {
 				b, ok := MEM[SP-1].(string)
 				if !ok {
-					return nil, operandError(">=")
+					return nil, operandError(
+						">= right operand must be a string when the left is",
+					)
 				}
 				SP--
 				MEM[SP-1] = a >= b
@@ -370,11 +388,13 @@ func (p *program) evaluate(this any) (any, error) {
 			}
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError(">=")
+				return nil, operandError(
+					">= left operand must be a number or a string",
+				)
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError(">=")
+				return nil, operandError(">= right operand must be a number")
 			}
 			SP--
 			MEM[SP-1] = a >= b
@@ -382,7 +402,7 @@ func (p *program) evaluate(this any) (any, error) {
 		case isa.And:
 			value, ok := MEM[SP-1].(bool)
 			if !ok {
-				return nil, operandError("Boolean operand")
+				return nil, operandError("&& left operand must be a Boolean")
 			}
 			if !value {
 				PC = op - 1
@@ -393,7 +413,7 @@ func (p *program) evaluate(this any) (any, error) {
 		case isa.Or:
 			value, ok := MEM[SP-1].(bool)
 			if !ok {
-				return nil, operandError("Boolean operand")
+				return nil, operandError("|| left operand must be a Boolean")
 			}
 			if value {
 				PC = op - 1
@@ -410,14 +430,17 @@ func (p *program) evaluate(this any) (any, error) {
 
 		case isa.Boolean:
 			if _, ok := MEM[SP-1].(bool); !ok {
-				return nil, operandError(p.constants[op].(string))
+				symbol := p.constants[op].(string)
+				return nil, operandError(
+					symbol + " right operand must be a Boolean",
+				)
 			}
 
 		case isa.CondJump:
 			SP--
 			value, ok := MEM[SP].(bool)
 			if !ok {
-				return nil, operandError("condition")
+				return nil, operandError("condition must be a Boolean")
 			}
 			if !value {
 				PC = op - 1

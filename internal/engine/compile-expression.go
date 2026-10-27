@@ -7,21 +7,21 @@ import (
 )
 
 var binaryOpcodes = map[string]isa.Opcode{
-	"+":  isa.Add,
-	"-":  isa.Sub,
-	"*":  isa.Mul,
-	"/":  isa.Div,
-	"%":  isa.Mod,
-	"==": isa.Eq,
-	"!=": isa.Neq,
-	"in": isa.In,
-	"<":  isa.Lt,
-	"<=": isa.Lte,
-	">":  isa.Gt,
-	">=": isa.Gte,
-	"&&": isa.And,
-	"||": isa.Or,
-	"??": isa.Coalesce,
+	opAdd:      isa.Add,
+	opSub:      isa.Sub,
+	opMul:      isa.Mul,
+	opDiv:      isa.Div,
+	opMod:      isa.Mod,
+	opEq:       isa.Eq,
+	opNeq:      isa.Neq,
+	opIn:       isa.In,
+	opLt:       isa.Lt,
+	opLte:      isa.Lte,
+	opGt:       isa.Gt,
+	opGte:      isa.Gte,
+	opAnd:      isa.And,
+	opOr:       isa.Or,
+	opCoalesce: isa.Coalesce,
 }
 
 func (c *compiler) operation(n *node, depth int) error {
@@ -31,18 +31,18 @@ func (c *compiler) operation(n *node, depth int) error {
 		}
 	}
 	switch n.kind {
-	case "unary":
+	case nodeUnary:
 		op := isa.Pos
 		switch n.text {
-		case "!":
+		case opNot:
 			op = isa.Not
 
-		case "-":
+		case opSub:
 			op = isa.Neg
 		}
 		c.emit(op, 0, 0)
 
-	case "access":
+	case nodeAccess:
 		op := isa.Access
 		if n.optional {
 			op = isa.OptionalAccess

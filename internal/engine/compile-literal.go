@@ -6,7 +6,7 @@ import "github.com/kode4food/argex/internal/isa"
 // op; each later element folds in with Push, each spread with Concat
 func (c *compiler) array(n *node, depth int) error {
 	fixed := 0
-	for fixed < len(n.children) && n.children[fixed].kind != "spread" {
+	for fixed < len(n.children) && n.children[fixed].kind != nodeSpread {
 		if err := c.compile(n.children[fixed], depth+1); err != nil {
 			return err
 		}
@@ -14,7 +14,7 @@ func (c *compiler) array(n *node, depth int) error {
 	}
 	c.emit(isa.Array, isa.Operand(fixed), stackChange(1-fixed))
 	for _, child := range n.children[fixed:] {
-		if child.kind == "spread" {
+		if child.kind == nodeSpread {
 			if err := c.compile(child.children[0], depth+1); err != nil {
 				return err
 			}
@@ -34,7 +34,7 @@ func (c *compiler) array(n *node, depth int) error {
 func (c *compiler) object(n *node, depth int) error {
 	var keys []string
 	fixed := 0
-	for fixed < len(n.children) && n.children[fixed].kind == "field" {
+	for fixed < len(n.children) && n.children[fixed].kind == nodeField {
 		field := n.children[fixed]
 		keys = append(keys, field.text)
 		if err := c.compile(field.children[0], depth+1); err != nil {
@@ -45,14 +45,14 @@ func (c *compiler) object(n *node, depth int) error {
 	c.emit(isa.Object, c.constant(keys), stackChange(1-len(keys)))
 	for _, child := range n.children[fixed:] {
 		switch child.kind {
-		case "spread":
+		case nodeSpread:
 			if err := c.compile(child.children[0], depth+1); err != nil {
 				return err
 			}
 			c.emit(isa.Merge, 0, -1)
 			continue
 
-		case "field":
+		case nodeField:
 			c.emit(isa.Const, c.constant(child.text), 1)
 		}
 		for _, part := range child.children {

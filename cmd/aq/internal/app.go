@@ -125,5 +125,8 @@ func compile(source string) (argex.Program, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := expr.Check(); err != nil {
+		return nil, err
+	}
 	return argex.Compile(expr)
 }

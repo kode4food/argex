@@ -12,6 +12,23 @@ type (
 
 	// Missing distinguishes absent data from an explicit JSON null
 	Missing = engine.Missing
+
+	// TypeTag is a single possible runtime type for an expression's result
+	TypeTag = engine.TypeTag
+
+	// TypeSet is the union of every TypeTag an expression might evaluate to
+	TypeSet = engine.TypeSet
+)
+
+const (
+	TypeBool    TypeTag = engine.TypeBool
+	TypeNumber  TypeTag = engine.TypeNumber
+	TypeString  TypeTag = engine.TypeString
+	TypeArray   TypeTag = engine.TypeArray
+	TypeObject  TypeTag = engine.TypeObject
+	TypeNull    TypeTag = engine.TypeNull
+	TypeMissing TypeTag = engine.TypeMissing
+	TypeAny     TypeTag = engine.TypeAny
 )
 
 var (

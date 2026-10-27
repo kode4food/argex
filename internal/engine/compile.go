@@ -47,34 +47,34 @@ func (c *compiler) compile(n *node, depth int) error {
 	}
 	var err error
 	switch n.kind {
-	case "literal":
+	case nodeLiteral:
 		c.emit(isa.Const, c.constant(n.value), 1)
 
-	case "name":
+	case nodeName:
 		c.name(n.text)
 
-	case "root":
+	case nodeRoot:
 		c.emit(isa.Load, rootSlot, 1)
 
-	case "binary":
+	case nodeBinary:
 		err = c.binary(n, depth)
 
-	case "case":
+	case nodeCase:
 		err = c.branch(n, depth)
 
-	case "map", "filter", "any", "all":
+	case nodeMap, nodeFilter, nodeAny, nodeAll:
 		err = c.collection(n, depth)
 
-	case "index":
+	case nodeIndex:
 		err = c.index(n, depth)
 
-	case "call":
+	case nodeCall:
 		err = c.call(n, depth)
 
-	case "array":
+	case nodeArray:
 		err = c.array(n, depth)
 
-	case "object":
+	case nodeObject:
 		err = c.object(n, depth)
 
 	default:

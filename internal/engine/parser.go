@@ -11,14 +11,8 @@ type (
 		root *node
 	}
 
-	parser struct {
-		tokens []token
-		pos    int
-		depth  int
-	}
-
 	node struct {
-		kind         string
+		kind         nodeKind
 		text         string
 		valueBinding string
 		keyBinding   string
@@ -27,6 +21,36 @@ type (
 		optional     bool
 		chained      bool
 	}
+
+	// nodeKind identifies an AST node's grammar production
+	nodeKind int
+
+	parser struct {
+		tokens []token
+		pos    int
+		depth  int
+	}
+)
+
+const (
+	nodeLiteral nodeKind = iota
+	nodeName
+	nodeRoot
+	nodeAccess
+	nodeIndex
+	nodeCall
+	nodeUnary
+	nodeBinary
+	nodeArray
+	nodeObject
+	nodeField
+	nodeSpread
+	nodeComputed
+	nodeCase
+	nodeMap
+	nodeFilter
+	nodeAny
+	nodeAll
 )
 
 const maxDepth = 256
@@ -42,7 +66,7 @@ func Parse(source string) (*Expression, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := p.expect("eof"); err != nil {
+	if err := p.expect(kindEOF); err != nil {
 		return nil, err
 	}
 	return &Expression{root: root}, nil
@@ -59,14 +83,14 @@ func (e *Expression) Names() []string {
 	return slices.Sorted(maps.Keys(seen))
 }
 
-func (p *parser) expect(kind string) error {
+func (p *parser) expect(kind tokenKind) error {
 	if !p.take(kind) {
-		return p.error("expected " + kind)
+		return p.error("expected " + kind.String())
 	}
 	return nil
 }
 
-func (p *parser) take(kind string) bool {
+func (p *parser) take(kind tokenKind) bool {
 	if p.current().kind != kind {
 		return false
 	}
@@ -93,13 +117,13 @@ func (p *parser) error(message string) error {
 // its own and its pipeline's bindings, its receiver only the enclosing ones
 func collectNames(n *node, bound []string, seen map[string]bool) {
 	switch n.kind {
-	case "name":
+	case nodeName:
 		if !slices.Contains(bound, n.text) {
 			seen[n.text] = true
 		}
 		return
 
-	case "map", "filter", "any", "all":
+	case nodeMap, nodeFilter, nodeAny, nodeAll:
 		collectNames(n.children[0], bound, seen)
 		inner := append(bound[:len(bound):len(bound)], stageNames(n)...)
 		collectNames(n.children[1], inner, seen)

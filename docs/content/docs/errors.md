@@ -18,7 +18,7 @@ Use `errors.Is` with these sentinels:
 | `ErrArithmetic` | Division by zero and non-finite results |
 | `ErrLimit` | Expressions nested beyond the limit |
 
-Function errors fail during compilation, even in an unchosen branch. Runtime errors occur only in expressions actually evaluated.
+Function errors fail during compilation, even in an unchosen branch. Runtime errors occur only in expressions actually evaluated. Many `ErrType` mismatches can be caught before either, without input, with [Static Type Checking]({{< relref "/docs/static-types" >}}).
 
 ## Limits
 

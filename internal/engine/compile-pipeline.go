@@ -75,7 +75,7 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 		if i == len(stages)-1 {
 			break
 		}
-		if stage.kind == "filter" {
+		if stage.kind == nodeFilter {
 			c.emit(isa.CondJump, isa.Operand(loopTop), -1)
 			c.emit(isa.Load, isa.Operand(names[0].slot), 1)
 		}
@@ -83,13 +83,13 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 	}
 
 	switch stages[len(stages)-1].kind {
-	case "map":
+	case nodeMap:
 		c.emit(isa.Append, 0, -1)
 		c.emit(isa.Jump, isa.Operand(loopTop), 0)
 		c.program.iterations[index].end = len(c.program.code)
 		c.emit(isa.Result, 0, 0)
 
-	case "filter":
+	case nodeFilter:
 		skip := c.emit(isa.CondJump, 0, -1)
 		c.emit(isa.Load, isa.Operand(scopes[len(scopes)-1][0].slot), 1)
 		c.emit(isa.Append, 0, -1)
@@ -98,7 +98,7 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 		c.program.iterations[index].end = len(c.program.code)
 		c.emit(isa.Result, 0, 0)
 
-	case "any":
+	case nodeAny:
 		c.emit(isa.CondJump, isa.Operand(loopTop), -1)
 		c.emit(isa.Pop, 0, -1)
 		c.emit(isa.Const, c.constant(true), 1)
@@ -108,7 +108,7 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 		c.emit(isa.Const, c.constant(false), 1)
 		c.patch(done)
 
-	case "all":
+	case nodeAll:
 		fail := c.emit(isa.CondJump, 0, -1)
 		c.emit(isa.Jump, isa.Operand(loopTop), 0)
 		c.patch(fail)
@@ -144,5 +144,5 @@ func (c *compiler) allocSlot() int {
 // chainable reports whether n can feed a later stage of the same pipeline;
 // any and all produce booleans, so they can only end one
 func chainable(n *node) bool {
-	return n.kind == "map" || n.kind == "filter"
+	return n.kind == nodeMap || n.kind == nodeFilter
 }

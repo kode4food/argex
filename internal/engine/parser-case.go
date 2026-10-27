@@ -1,17 +1,17 @@
 package engine
 
 func (p *parser) caseExpression() (*node, error) {
-	if err := p.expect("{"); err != nil {
+	if err := p.expect(kindLBrace); err != nil {
 		return nil, err
 	}
-	result := &node{kind: "case"}
+	result := &node{kind: nodeCase}
 	var fallback *node
 	for {
 		condition, err := p.pipeline()
 		if err != nil {
 			return nil, err
 		}
-		if !p.take(":") {
+		if !p.take(kindColon) {
 			fallback = condition
 			break
 		}
@@ -20,7 +20,7 @@ func (p *parser) caseExpression() (*node, error) {
 			return nil, err
 		}
 		result.children = append(result.children, condition, value)
-		if err := p.expect(","); err != nil {
+		if err := p.expect(kindComma); err != nil {
 			return nil, err
 		}
 	}
@@ -28,6 +28,6 @@ func (p *parser) caseExpression() (*node, error) {
 		return nil, p.error("case requires a conditional arm")
 	}
 	result.children = append(result.children, fallback)
-	p.take(",")
-	return result, p.expect("}")
+	p.take(kindComma)
+	return result, p.expect(kindRBrace)
 }
