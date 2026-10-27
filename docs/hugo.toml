@@ -18,6 +18,9 @@ title = "Argyll Expressions"
   [[module.mounts]]
     source = "layouts"
     target = "layouts"
+  [[module.mounts]]
+    source = "img"
+    target = "static/img"
   [[module.imports]]
     path = "github.com/alex-shpak/hugo-book"
 
@@ -25,5 +28,6 @@ title = "Argyll Expressions"
   BookTheme = "argex-auto"
   BookSearch = true
   BookToC = true
+  BookLogo = "img/argex-logo.svg"
   BookRepo = "https://github.com/kode4food/argex"
   BookEditPath = "edit/main/docs/content"
