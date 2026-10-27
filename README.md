@@ -2,7 +2,7 @@
 
 ![Build Status](https://github.com/kode4food/argex/actions/workflows/build.yml/badge.svg) [![Code Coverage](https://qlty.sh/gh/kode4food/projects/argex/coverage.svg)](https://qlty.sh/gh/kode4food/projects/argex) [![Maintainability](https://qlty.sh/gh/kode4food/projects/argex/maintainability.svg)](https://qlty.sh/gh/kode4food/projects/argex) [![GitHub](https://img.shields.io/github/license/kode4food/argex)](https://github.com/kode4food/argex/blob/main/LICENSE)
 
-Argyll Expressions is a small, pure expression language for JSON values with familiar JavaScript-style operators and access syntax. Expressions support arithmetic, comparisons, optional access, object and array construction, conditional selection, and explicit collection operations.
+Argyll Expressions is a small, pure expression language for JSON objects with familiar JavaScript-style operators and access syntax. An expression reads the object's top-level properties as variables and can produce any JSON value. Expressions support arithmetic, comparisons, optional access, object and array construction, conditional selection, and explicit collection operations.
 
 ```javascript
 customer?.address?.country ?? "CH"
@@ -62,6 +62,6 @@ go test ./internal/engine -run '^$' -fuzz FuzzExpression -fuzztime=10s
 go test -run '^$' -bench . -benchmem
 ```
 
-The grammar is in [grammar.ebnf](docs/grammar.ebnf). The documentation site is a Hugo project in [docs](docs); run `hugo server` there to preview it.
+The grammar is in [grammar.ebnf](docs/grammar.ebnf).
 
 The compliance corpus is in [testdata/compliance](testdata/compliance). Each JSON case specifies an expression, input variables, and an expected result, missing value, or error phase. `go test ./...` runs the corpus through both `Eval` and compiled programs, checks repeated execution, and verifies that inputs are unchanged.

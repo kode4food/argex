@@ -35,6 +35,8 @@ result, err := program(map[string]any{
 
 `Parse` returns an immutable `*Expression`, and `Compile` returns a `Program`, defined as `func(map[string]any) (any, error)`. Call that function directly and reuse it for repeated evaluation. `Eval(source, variables)` combines all three operations for one-off expressions.
 
+The input is a JSON object. Each top-level property is a variable that the expression reads by name, so `items` above refers to the `"items"` property. A name with no matching property evaluates to a missing value. The result can be any JSON value: an object, array, string, number, boolean, or null.
+
 Compiled functions are safe for concurrent use. Callers must not concurrently mutate their input maps or arrays.
 
 ## Values
