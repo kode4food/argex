@@ -20,6 +20,7 @@ type (
 		children     []*node
 		optional     bool
 		chained      bool
+		inferred     TypeSet
 	}
 
 	// nodeKind identifies an AST node's grammar production
@@ -69,6 +70,7 @@ func Parse(source string) (*Expression, error) {
 	if err := p.expect(kindEOF); err != nil {
 		return nil, err
 	}
+	annotateType(root)
 	return &Expression{root: root}, nil
 }
 

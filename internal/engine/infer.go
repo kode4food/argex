@@ -76,7 +76,7 @@ func (e *Expression) StaticType() TypeSet {
 	if e == nil || e.root == nil {
 		return TypeSet(TypeAny)
 	}
-	return inferType(e.root)
+	return e.root.inferred
 }
 
 // Check statically validates every operator and builtin call operand whose type
@@ -89,7 +89,14 @@ func (e *Expression) Check() error {
 	return checkNode(e.root)
 }
 
-func inferType(n *node) TypeSet {
+func annotateType(n *node) {
+	for _, child := range n.children {
+		annotateType(child)
+	}
+	n.inferred = computeType(n)
+}
+
+func computeType(n *node) TypeSet {
 	switch n.kind {
 	case nodeLiteral:
 		return literalType(n.value)
@@ -160,12 +167,12 @@ func inferBinaryType(n *node) TypeSet {
 		return TypeSet(TypeBool)
 
 	case opCoalesce:
-		left := inferType(n.children[0])
+		left := n.children[0].inferred
 		left &^= TypeSet(TypeNull) | TypeSet(TypeMissing)
-		return left | inferType(n.children[1])
+		return left | n.children[1].inferred
 
 	case opAdd:
-		left := inferType(n.children[0])
+		left := n.children[0].inferred
 		switch {
 		case left.Is(TypeString):
 			return TypeSet(TypeString)
@@ -186,9 +193,9 @@ func inferCaseType(n *node) TypeSet {
 	var result TypeSet
 	last := len(n.children) - 1
 	for i := 1; i < last; i += 2 {
-		result |= inferType(n.children[i])
+		result |= n.children[i].inferred
 	}
-	return result | inferType(n.children[last])
+	return result | n.children[last].inferred
 }
 
 func checkNode(n *node) error {
@@ -262,7 +269,7 @@ func checkCallArgs(n *node, fn builtin) error {
 
 // requireType fails when n's known type has no overlap with allowed
 func requireType(n *node, allowed TypeSet, what string) error {
-	actual := inferType(n)
+	actual := n.inferred
 	if !actual.Known() || actual&allowed != 0 {
 		return nil
 	}
@@ -315,7 +322,7 @@ func checkBinary(n *node) error {
 // checkAddOperands mirrors vm.go's Add: a string left operand requires a
 // string right operand; anything else runs both through number()
 func checkAddOperands(left, right *node) error {
-	leftType := inferType(left)
+	leftType := left.inferred
 	if !leftType.Known() {
 		return nil
 	}
@@ -335,7 +342,7 @@ func checkAddOperands(left, right *node) error {
 // checkComparisonOperands mirrors vm.go's Lt/Lte/Gt/Gte, the same dual
 // string-or-number path as checkAddOperands without string concatenation
 func checkComparisonOperands(op string, left, right *node) error {
-	leftType := inferType(left)
+	leftType := left.inferred
 	if !leftType.Known() {
 		return nil
 	}
@@ -372,7 +379,7 @@ func checkIndex(n *node) error {
 // effectiveReceiverType removes the nullish portion for an optional
 // access/index, since it short-circuits before the container check
 func effectiveReceiverType(n *node) TypeSet {
-	receiverType := inferType(n.children[0])
+	receiverType := n.children[0].inferred
 	if n.optional {
 		receiverType &^= nullishSet
 	}
@@ -416,7 +423,7 @@ func checkSpreads(n *node, want TypeTag) error {
 // checkContainerSource mirrors vm.go's Concat/Merge: a nullish source is
 // skipped outright, so only its non-nullish portion is checked
 func checkContainerSource(n *node, want TypeTag, what string) error {
-	sourceType := inferType(n) &^ nullishSet
+	sourceType := n.inferred &^ nullishSet
 	if !sourceType.Known() || sourceType == 0 {
 		return nil
 	}
