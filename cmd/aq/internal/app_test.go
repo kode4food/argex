@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kode4food/argex"
-	app "github.com/kode4food/argex/cmd/argex/internal"
+	app "github.com/kode4food/argex/cmd/aq/internal"
 )
 
 type (
@@ -125,7 +125,7 @@ func TestRunHelp(t *testing.T) {
 	var out bytes.Buffer
 	err := app.Run([]string{"-h"}, strings.NewReader(""), &out)
 	assert.NoError(t, err)
-	assert.Contains(t, out.String(), "usage: argex")
+	assert.Contains(t, out.String(), "usage: aq")
 	assert.Contains(t, out.String(), "-c")
 }
 

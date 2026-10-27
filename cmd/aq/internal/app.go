@@ -20,7 +20,7 @@ type runner struct {
 	raw     bool
 }
 
-const usage = "usage: argex [-c] [-r] [-n] expression [file ...]"
+const usage = "usage: aq [-c] [-r] [-n] expression [file ...]"
 
 var (
 	ErrUsage = errors.New(usage)
@@ -30,7 +30,7 @@ var (
 // Run evaluates the expression in args against each JSON value read from the
 // named files, or from stdin when none are given, writing results to stdout
 func Run(args []string, stdin io.Reader, stdout io.Writer) error {
-	flags := flag.NewFlagSet("argex", flag.ContinueOnError)
+	flags := flag.NewFlagSet("aq", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	compact := flags.Bool("c", false, "compact output")
 	raw := flags.Bool("r", false, "print string results without quotes")

@@ -5,7 +5,7 @@ GO ?= go
 all: test
 
 install: test
-	$(GO) install github.com/kode4food/argex/cmd/argex
+	$(GO) install github.com/kode4food/argex/cmd/aq
 
 format: generate
 	$(GO) tool goimports -w .

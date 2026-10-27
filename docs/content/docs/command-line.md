@@ -5,21 +5,21 @@ weight: 15
 
 # Command Line
 
-`argex` evaluates an expression against JSON input.
+`aq` evaluates an expression against JSON input.
 
 ```sh
-go install github.com/kode4food/argex/cmd/argex@latest
+go install github.com/kode4food/argex/cmd/aq@latest
 ```
 
 ```sh
-argex [-c] [-r] [-n] expression [file ...]
+aq [-c] [-r] [-n] expression [file ...]
 ```
 
 Each JSON value read from the named files, or from standard input when none are given, becomes `this` for one evaluation. Results print as indented JSON.
 
 ```sh
 echo '{"items":[{"id":1,"price":12},{"id":2,"price":4}]}' |
-  argex 'items | filter i: i.price > 10 | map i: i.id'
+  aq 'items | filter i: i.price > 10 | map i: i.id'
 ```
 
 | Flag | Effect |

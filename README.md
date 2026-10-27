@@ -44,14 +44,14 @@ result, err := program(map[string]any{
 ## Command Line
 
 ```sh
-go install github.com/kode4food/argex/cmd/argex@latest
-echo '{"items":[1,20,150]}' | argex 'items | filter i: i > 10'
+go install github.com/kode4food/argex/cmd/aq@latest
+echo '{"items":[1,20,150]}' | aq 'items | filter i: i > 10'
 ```
 
 ## Documentation
 
 - [Getting started](https://kode4food.github.io/argex/docs/getting-started/) covers installation, the Go API, and value representation.
-- [Command line](https://kode4food.github.io/argex/docs/command-line/) covers the `argex` tool and its flags.
+- [Command line](https://kode4food.github.io/argex/docs/command-line/) covers the `aq` tool and its flags.
 - [Collections](https://kode4food.github.io/argex/docs/collections/) explains `map`, `filter`, `any`, `all`, and pipelines.
 - [Arrays and objects](https://kode4food.github.io/argex/docs/construction/) covers literals, spreads, and computed keys.
 - [Conditional selection](https://kode4food.github.io/argex/docs/case/) describes `case`.
