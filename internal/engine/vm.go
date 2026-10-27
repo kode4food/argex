@@ -589,19 +589,21 @@ func collectionEntries(receiver any, keyed bool) ([]any, []any, error) {
 		return keys, c, nil
 
 	case map[string]any:
-		if !keyed {
-			return nil, nil, operandError("collection receiver")
-		}
 		names := make([]string, 0, len(c))
 		for name := range c {
 			names = append(names, name)
 		}
 		slices.Sort(names)
-		keys := make([]any, len(names))
 		values := make([]any, len(names))
 		for i, name := range names {
-			keys[i] = name
 			values[i] = c[name]
+		}
+		if !keyed {
+			return nil, values, nil
+		}
+		keys := make([]any, len(names))
+		for i, name := range names {
+			keys[i] = name
 		}
 		return keys, values, nil
 

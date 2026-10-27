@@ -1,7 +1,7 @@
 expression     = pipeline ;
-pipeline       = logicalOr, { "|", operation, binding } ;
+pipeline       = logicalOr, { "|", operation, [ binding ], logicalOr } ;
 operation      = "map" | "filter" | "any" | "all" ;
-binding        = identifier, [ ",", identifier ], ":", logicalOr ;
+binding        = identifier, [ ",", identifier ], ":" ;
 logicalOr      = logicalAnd, { "||", logicalAnd } ;
 logicalAnd     = coalesce, { "&&", coalesce } ;
 coalesce       = equality, [ "??", coalesce ] ;
@@ -40,4 +40,7 @@ literal        = number | string | "true" | "false" | "null" ;
    identifier. this is the program's input.
    Whitespace is ignored between tokens and operators use longest match.
    The pipe is the lowest-precedence operator and chains left to right; a
-   binding body is a logicalOr, so a nested pipeline needs parentheses. *)
+   stage body is a logicalOr, so a nested pipeline needs parentheses.
+   A binding is recognized only as "name:" or "name, name:". A binding name
+   of _ binds nothing. Each stage body also sees the bindings of the earlier
+   stages in its pipeline. *)

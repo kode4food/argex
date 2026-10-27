@@ -28,7 +28,10 @@
     {"name":"unknown operation","expression":"[1] | unknown item: item","error":"syntax","phase":"parse"},
     {"name":"bare pipe","expression":"[1]|","error":"syntax","phase":"parse"},
     {"name":"pipe before property dot","expression":"[1] | .map item: item","error":"syntax","phase":"parse"},
-    {"name":"missing binding","expression":"[1] | map","error":"syntax","phase":"parse"},
+    {"name":"missing stage body","expression":"[1] | map","error":"syntax","phase":"parse"},
+    {"name":"missing body after binding","expression":"[1] | map x:","error":"syntax","phase":"parse"},
+    {"name":"binding name without colon","expression":"[1] | map x 1","error":"syntax","phase":"parse"},
+    {"name":"reserved key with discard","expression":"[1] | map this, _: 1","error":"syntax","phase":"parse"},
     {"name":"unknown empty operation","expression":"[] | reduce item: true","error":"syntax","phase":"parse"},
     {"name":"question map rejected","expression":"[1]?map item: item","error":"syntax","phase":"parse"},
     {"name":"question filter rejected","expression":"[1]?filter item: true","error":"syntax","phase":"parse"},
@@ -45,6 +48,6 @@
     {"name":"object all two names","expression":"{a:1,b:2} | all k, v: v > 0","result":true},
     {"name":"array two names any","expression":"[1,2,3] | any i, v: i == 2","result":true},
     {"name":"two name binding missing value name","expression":"[1] | map i,: i","error":"syntax","phase":"parse"},
-    {"name":"object single name rejected","expression":"{a:1} | map v: v","error":"type","phase":"eval"}
+    {"name":"object single name binds values","expression":"{a:1} | map v: v","result":[1]}
   ]
 }

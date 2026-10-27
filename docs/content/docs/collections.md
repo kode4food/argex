@@ -18,7 +18,7 @@ orders | filter order: order.status == "paid"
 
 ## Keys and Indexes
 
-A binding may name two identifiers, `key, value`, to also bind each element's position: the numeric index for an array receiver, or the property name for an object receiver, visited in sorted key order. The single-name form requires an array receiver. The two-name form accepts arrays and objects. Any other receiver, including null or a missing value, raises `ErrType`.
+A binding may name two identifiers, `key, value`, to also bind each element's position: the numeric index for an array receiver, or the property name for an object receiver. Object properties are visited in sorted key order. Both forms accept arrays and objects. Any other receiver, including null or a missing value, raises `ErrType`.
 
 ```javascript
 items | map index, item: {position: index, value: item}
@@ -26,6 +26,24 @@ totals | filter key, amount: amount > 100
 ```
 
 In a later stage of a pipeline, the index is the position in the array that the previous stage produced, so `items | filter x: x.active | map i, x: i` numbers only the retained elements.
+
+## Binding Forms
+
+Every stage of `map`, `filter`, `any`, and `all` accepts the same binding forms:
+
+| Form | Binds |
+| --- | --- |
+| `key, value: body` | The key or index and the incoming value |
+| `value: body` | The incoming value, the same as `_, value: body` |
+| `key, _: body` | The key or index only |
+| `body` | Nothing, the same as `_, _: body` |
+
+`_` discards its position. It binds no name and does not hide bindings from earlier stages. Reading `_` in a body resolves like any other unbound name. A stage without a binding is allowed anywhere, including the first stage:
+
+```javascript
+items | map 0
+items | filter item: item.active | any item.price > 100
+```
 
 ## Pipelines
 
@@ -35,7 +53,27 @@ In a later stage of a pipeline, the index is the position in the array that the 
 orders | filter order: order.status == "paid" | map order: order.id
 ```
 
-A pipeline runs element by element: each element passes through every stage before the next element starts, and a stage's binding names are visible only in that stage's body. Results are the same as running each stage over a complete array, but when a pipeline ends in `any` or `all`, evaluation stops as soon as the answer is known. Elements after that point never reach the earlier stages, so errors they would have raised are not reported:
+Each stage opens a nested scope. Its body sees the bindings of the earlier stages in the same pipeline, for the same element, and a new binding shadows an earlier one with the same name. Earlier bindings keep their original values. They never change to a later stage's output:
+
+```javascript
+[1, 2] | map x: x * 10 | map x + 1     // [2, 3]: x is still the original element
+[1, 2] | map x: x * 10 | map x: x + 1  // [11, 21]: the new x is the mapped value
+```
+
+This keeps an object's keys available after a `map`:
+
+```javascript
+prices | filter name, price: price > 10
+       | map {[name]: price}
+       | filter index, entry: entry[name] > 20 && index > 0
+       | map name
+```
+
+Here `name` and `price` keep the original property name and value. `entry` is the object `map` produced, and `index` is its position among the elements that reached the second `filter`.
+
+A parenthesized pipeline used as a receiver starts a new pipeline, so its bindings are not visible to the stages after it.
+
+A pipeline runs element by element: each element passes through every stage before the next element starts. Results are the same as running each stage over a complete array, but when a pipeline ends in `any` or `all`, evaluation stops as soon as the answer is known. Elements after that point never reach the earlier stages, so errors they would have raised are not reported:
 
 ```javascript
 [1, "a"] | map x: x + 1 | any y: y > 0

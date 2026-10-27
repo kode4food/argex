@@ -31,7 +31,11 @@ func TestNames(t *testing.T) {
 		},
 		{source: "x | map x: x", want: []string{"x"}},
 		{source: "obj | map k, v: [k, v, w]", want: []string{"obj", "w"}},
-		{source: "xs | map x: x | map y: x", want: []string{"x", "xs"}},
+		{source: "xs | map x: x | map y: x", want: []string{"xs"}},
+		{source: "xs | filter x: x | map x * k", want: []string{"k", "xs"}},
+		{source: "(xs | map x: x) | map y: x", want: []string{"x", "xs"}},
+		{source: "obj | map _, v: [v, _]", want: []string{"_", "obj"}},
+		{source: "xs | map ys", want: []string{"xs", "ys"}},
 		{source: "xs | filter x: x | any y: y > z", want: []string{"xs", "z"}},
 		{
 			source: "xs | map x: (ys | map y: x + y + z)",

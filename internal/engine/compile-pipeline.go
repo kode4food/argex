@@ -17,19 +17,29 @@ func (c *compiler) collection(n *node, depth int) error {
 	return c.pipeline(stages, depth)
 }
 
-// pipeline passes each stage's output to the next through a slot; later stages
-// only receive arrays, so they count their own index
+// pipeline passes each stage's output to the next through a slot. Later stages
+// count their own index and see earlier stages' bindings for the same element
 func (c *compiler) pipeline(stages []*node, depth int) error {
 	if err := c.compile(stages[0].children[0], depth+1); err != nil {
 		return err
 	}
 	mark := c.nextSlot
 	scopes := make([][]binding, len(stages))
+	visible := make([][]binding, len(stages))
+	counters := make([]int, len(stages))
 	for i, stage := range stages {
 		scopes[i] = []binding{{name: stage.valueBinding, slot: c.allocSlot()}}
 		if stage.keyBinding != "" {
 			key := binding{name: stage.keyBinding, slot: c.allocSlot()}
 			scopes[i] = append(scopes[i], key)
+			counters[i] = key.slot
+		}
+		if i > 0 && i < len(stages)-1 && stage.keyBinding != "" {
+			counters[i] = c.allocSlot()
+		}
+		visible[i] = scopes[i]
+		if stage.chained {
+			visible[i] = slices.Concat(visible[i-1], scopes[i])
 		}
 	}
 
@@ -41,9 +51,9 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 	index := len(c.program.iterations)
 	c.program.iterations = append(c.program.iterations, spec)
 	c.emit(isa.Iterate, isa.Operand(index), 0)
-	for _, names := range scopes[1:] {
+	for i, names := range scopes[1:] {
 		if len(names) > 1 {
-			c.emit(isa.Zero, isa.Operand(names[1].slot), 0)
+			c.emit(isa.Zero, isa.Operand(counters[i+1]), 0)
 		}
 	}
 
@@ -51,11 +61,16 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 	c.emit(isa.Fetch, isa.Operand(index), 0)
 	for i, stage := range stages {
 		names := scopes[i]
-		if err := c.scoped(names, stage.children[1], depth); err != nil {
+		// later stages read the key, so it can't be the counter Inc advances
+		if i > 0 && len(names) > 1 && counters[i] != names[1].slot {
+			c.emit(isa.Load, isa.Operand(counters[i]), 1)
+			c.emit(isa.Store, isa.Operand(names[1].slot), -1)
+		}
+		if err := c.scoped(visible[i], stage.children[1], depth); err != nil {
 			return err
 		}
 		if i > 0 && len(names) > 1 {
-			c.emit(isa.Inc, isa.Operand(names[1].slot), 0)
+			c.emit(isa.Inc, isa.Operand(counters[i]), 0)
 		}
 		if i == len(stages)-1 {
 			break
@@ -110,7 +125,7 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 }
 
 // scoped compiles body seeing the enclosing scope plus names, and nothing bound
-// by sibling stages
+// outside its pipeline
 func (c *compiler) scoped(names []binding, body *node, depth int) error {
 	outer := c.scope
 	c.scope = append(outer[:len(outer):len(outer)], names...)

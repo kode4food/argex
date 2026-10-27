@@ -2,6 +2,12 @@
 
 Notable changes to Argyll Expressions.
 
+## 0.1.1
+
+- Pipeline stages see earlier bindings
+- Bindings are optional, and `_` discards one
+- `map v:` works on objects
+
 ## 0.1
 
 First public release.

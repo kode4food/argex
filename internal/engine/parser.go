@@ -25,6 +25,7 @@ type (
 		value        any
 		children     []*node
 		optional     bool
+		chained      bool
 	}
 )
 
@@ -74,10 +75,14 @@ func (p *parser) take(kind string) bool {
 }
 
 func (p *parser) current() token {
-	if p.pos >= len(p.tokens) {
+	return p.peek(0)
+}
+
+func (p *parser) peek(offset int) token {
+	if p.pos+offset >= len(p.tokens) {
 		return p.tokens[len(p.tokens)-1]
 	}
-	return p.tokens[p.pos]
+	return p.tokens[p.pos+offset]
 }
 
 func (p *parser) error(message string) error {
@@ -85,7 +90,7 @@ func (p *parser) error(message string) error {
 }
 
 // collectNames scopes bindings as the compiler does: a collection's body sees
-// its own bindings, its receiver only the enclosing ones
+// its own and its pipeline's bindings, its receiver only the enclosing ones
 func collectNames(n *node, bound []string, seen map[string]bool) {
 	switch n.kind {
 	case "name":
@@ -96,14 +101,24 @@ func collectNames(n *node, bound []string, seen map[string]bool) {
 
 	case "map", "filter", "any", "all":
 		collectNames(n.children[0], bound, seen)
-		inner := append(bound[:len(bound):len(bound)], n.valueBinding)
-		if n.keyBinding != "" {
-			inner = append(inner, n.keyBinding)
-		}
+		inner := append(bound[:len(bound):len(bound)], stageNames(n)...)
 		collectNames(n.children[1], inner, seen)
 		return
 	}
 	for _, child := range n.children {
 		collectNames(child, bound, seen)
 	}
+}
+
+func stageNames(n *node) []string {
+	var names []string
+	if n.chained {
+		names = stageNames(n.children[0])
+	}
+	for _, name := range []string{n.valueBinding, n.keyBinding} {
+		if name != "" {
+			names = append(names, name)
+		}
+	}
+	return names
 }

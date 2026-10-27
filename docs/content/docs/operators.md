@@ -24,7 +24,7 @@ Highest first:
 
 `%` is a truncated remainder: the result takes the sign of the dividend, so `-5 % 3` returns `-2`. Like division, a zero divisor raises `ErrArithmetic`.
 
-Binary operators associate left to right except `??`, which associates right to left. Ordering comparisons cannot be chained without parentheses. `|` is the lowest-precedence operator and chains left to right. A collection binding body extends up to the next `|`, so a nested pipeline must be parenthesized.
+Binary operators associate left to right except `??`, which associates right to left. Ordering comparisons cannot be chained without parentheses. `|` is the lowest-precedence operator and chains left to right. A collection stage body extends up to the next `|`, so a nested pipeline must be parenthesized.
 
 ## Booleans
 

@@ -61,7 +61,6 @@ func TestErrors(t *testing.T) {
 		"max()":                       argex.ErrFunction,
 		"unknown(1)":                  argex.ErrFunction,
 		"[1] | map x: unknown()":      argex.ErrFunction,
-		"{a: 1} | map x: x":           argex.ErrType,
 		`startsWith(1, "a")`:          argex.ErrType,
 		`startsWith("a", 1)`:          argex.ErrType,
 		`endsWith(1, "a")`:            argex.ErrType,
