@@ -95,6 +95,13 @@ Array and object literals may include a `...` spread. Spreading an array into an
 
 Each spread produces a fresh value and never mutates its source. Object construction still omits fields whose value is missing, including entries drawn from a spread.
 
+A key in brackets is computed from an expression. It must evaluate to a string; any other value, including missing or null, is an `ErrType`. Like other entries, a computed key overrides an earlier field with the same name.
+
+```javascript
+{[record.kind]: record.value}
+entries | map e: {[e.name]: e.value}
+```
+
 ## Conditional selection
 
 ```text

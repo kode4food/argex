@@ -440,10 +440,12 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 			MEM[SP-1] = append(MEM[SP-1].([]any), value)
 
 		case isa.Put:
-			SP--
-			value := MEM[SP]
-			if !IsMissing(value) {
-				key := p.constants[op].(string)
+			SP -= 2
+			key, ok := MEM[SP].(string)
+			if !ok {
+				return nil, operandError("object key")
+			}
+			if value := MEM[SP+1]; !IsMissing(value) {
 				MEM[SP-1].(map[string]any)[key] = value
 			}
 

@@ -128,17 +128,23 @@ func (c *compiler) object(n *node, depth int) error {
 	}
 	c.emit(isa.Object, c.constant(keys), stackChange(1-len(keys)))
 	for _, child := range n.children[fixed:] {
-		if child.kind == "spread" {
+		switch child.kind {
+		case "spread":
 			if err := c.compile(child.children[0], depth+1); err != nil {
 				return err
 			}
 			c.emit(isa.Merge, 0, -1)
 			continue
+
+		case "field":
+			c.emit(isa.Const, c.constant(child.text), 1)
 		}
-		if err := c.compile(child.children[0], depth+1); err != nil {
-			return err
+		for _, part := range child.children {
+			if err := c.compile(part, depth+1); err != nil {
+				return err
+			}
 		}
-		c.emit(isa.Put, c.constant(child.text), -1)
+		c.emit(isa.Put, 0, -2)
 	}
 	return nil
 }

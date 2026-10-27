@@ -25,7 +25,8 @@ array          = "[", [ element, { ",", element }, [ "," ] ], "]" ;
 element        = [ "..." ], expression ;
 object         = "{", [ member, { ",", member }, [ "," ] ], "}" ;
 member         = field | "...", expression ;
-field          = (identifier | string), ":", expression ;
+field          = (identifier | string | "[", expression, "]"), ":",
+                 expression ;
 case           = "case", "{", arm, { ",", arm },
                  ",", expression, [ "," ], "}" ;
 arm            = expression, ":", expression ;

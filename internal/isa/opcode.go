@@ -68,7 +68,7 @@ const (
 	Array   // Pop values, push array (operand = count)
 	Object  // Pop values, push object (operand = property names index)
 	Push    // Pop a value, append it to the array being built
-	Put     // Pop a value, set it on the object being built (operand = name)
+	Put     // Pop a value and a string key, set it on the object being built
 	Concat  // Pop an array, append its elements to the array being built
 	Merge   // Pop an object, set its entries on the object being built
 	Iterate // Replace a collection with an iterator (operand = iteration index)

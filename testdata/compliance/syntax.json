@@ -47,7 +47,6 @@
     {"name":"duplicate equivalent keys","expression":"{a:1,\"a\":2}","error":"syntax","phase":"parse"},
     {"name":"duplicate escaped key","expression":"{a:1,\"\\u0061\":2}","error":"syntax","phase":"parse"},
     {"name":"numeric object key","expression":"{1:2}","error":"syntax","phase":"parse"},
-    {"name":"computed object key","expression":"{[\"a\"]:1}","error":"syntax","phase":"parse"},
     {"name":"object shorthand","expression":"{a}","error":"syntax","phase":"parse"},
     {"name":"missing property name","expression":"value.","error":"syntax","phase":"parse"},
     {"name":"missing index","expression":"value[]","error":"syntax","phase":"parse"},
