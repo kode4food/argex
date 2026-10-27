@@ -38,7 +38,7 @@ Every stage of `map`, `filter`, `any`, and `all` accepts the same binding forms:
 | `key, _: body` | The key or index only |
 | `body` | Nothing, the same as `_, _: body` |
 
-`_` discards its position. It binds no name and does not hide bindings from earlier stages. Reading `_` in a body resolves like any other unbound name. A stage without a binding is allowed anywhere, including the first stage:
+`_` discards a binding. Any stage may omit its bindings:
 
 ```javascript
 items | map 0
@@ -53,14 +53,14 @@ items | filter item: item.active | any item.price > 100
 orders | filter order: order.status == "paid" | map order: order.id
 ```
 
-Each stage opens a nested scope. Its body sees the bindings of the earlier stages in the same pipeline, for the same element, and a new binding shadows an earlier one with the same name. Earlier bindings keep their original values. They never change to a later stage's output:
+Each stage opens a nested scope. Its body sees the bindings of earlier stages in the same pipeline, and a binding with the same name shadows an earlier one:
 
 ```javascript
-[1, 2] | map x: x * 10 | map x + 1     // [2, 3]: x is still the original element
-[1, 2] | map x: x * 10 | map x: x + 1  // [11, 21]: the new x is the mapped value
+[1, 2] | map x: x * 10 | map x + 1     // [2, 3]: x is the original element
+[1, 2] | map x: x * 10 | map x: x + 1  // [11, 21]: x is the mapped value
 ```
 
-This keeps an object's keys available after a `map`:
+With an object receiver:
 
 ```javascript
 prices | filter name, price: price > 10
@@ -69,9 +69,9 @@ prices | filter name, price: price > 10
        | map name
 ```
 
-Here `name` and `price` keep the original property name and value. `entry` is the object `map` produced, and `index` is its position among the elements that reached the second `filter`.
+`name` and `price` are the original property name and value. `entry` is the mapped object, and `index` is its position in the second `filter`.
 
-A parenthesized pipeline used as a receiver starts a new pipeline, so its bindings are not visible to the stages after it.
+Bindings inside a parenthesized pipeline stay inside it.
 
 A pipeline runs element by element: each element passes through every stage before the next element starts. Results are the same as running each stage over a complete array, but when a pipeline ends in `any` or `all`, evaluation stops as soon as the answer is known. Elements after that point never reach the earlier stages, so errors they would have raised are not reported:
 
