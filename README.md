@@ -2,7 +2,7 @@
 
 ![Build Status](https://github.com/kode4food/argex/actions/workflows/build.yml/badge.svg) [![Code Coverage](https://qlty.sh/gh/kode4food/projects/argex/coverage.svg)](https://qlty.sh/gh/kode4food/projects/argex) [![Maintainability](https://qlty.sh/gh/kode4food/projects/argex/maintainability.svg)](https://qlty.sh/gh/kode4food/projects/argex) [![GitHub](https://img.shields.io/github/license/kode4food/argex)](https://github.com/kode4food/argex/blob/main/LICENSE)
 
-Argyll Expressions is a small, pure expression language for JSON objects with familiar JavaScript-style operators and access syntax. An expression reads the object's top-level properties as variables and can produce any JSON value. Expressions support arithmetic, comparisons, optional access, object and array construction, conditional selection, and explicit collection operations.
+Argyll Expressions is a small, pure expression language for JSON values with familiar JavaScript-style operators and access syntax. An expression reads its input as `this`, and the top-level properties of an object input by name. Expressions support arithmetic, comparisons, optional access, object and array construction, conditional selection, and explicit collection operations.
 
 ```javascript
 customer?.address?.country ?? "CH"
@@ -39,7 +39,7 @@ result, err := program(map[string]any{
 // result: []any{"medium", "large"}
 ```
 
-`Parse` returns an immutable `*Expression`, `Compile` returns a reusable `Program` that is safe for concurrent use, and `Eval(source, variables)` does all three for one-off expressions.
+`Parse` returns an immutable `*Expression`, `Compile` returns a reusable `Program` that is safe for concurrent use, and `Eval(source, this)` does all three for one-off expressions.
 
 ## Documentation
 
@@ -64,4 +64,4 @@ go test -run '^$' -bench . -benchmem
 
 The grammar is in [grammar.ebnf](docs/grammar.ebnf).
 
-The compliance corpus is in [testdata/compliance](testdata/compliance). Each JSON case specifies an expression, input variables, and an expected result, missing value, or error phase. `go test ./...` runs the corpus through both `Eval` and compiled programs, checks repeated execution, and verifies that inputs are unchanged.
+The compliance corpus is in [testdata/compliance](testdata/compliance). Each JSON case specifies an expression, an input, and an expected result, missing value, or error phase. `go test ./...` runs the corpus through both `Eval` and compiled programs, checks repeated execution, and verifies that inputs are unchanged.

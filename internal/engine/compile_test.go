@@ -51,7 +51,7 @@ func TestProgramFunction(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	var run func(map[string]any) (any, error) = program
+	var run func(any) (any, error) = program
 	value, err := run(map[string]any{"value": 2})
 	assert.NoError(t, err)
 	assert.Equal(t, float64(3), value)

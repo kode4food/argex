@@ -40,7 +40,10 @@ type (
 
 const inlineValues = 32
 
-func (p *program) evaluate(variables map[string]any) (any, error) {
+// evaluate runs the program with this as its input; bare names read the
+// properties of an object and are missing for any other value
+func (p *program) evaluate(this any) (any, error) {
+	variables, _ := this.(map[string]any)
 	var values [inlineValues]any
 	MEM := values[:]
 	var arguments []any
@@ -49,6 +52,7 @@ func (p *program) evaluate(variables map[string]any) (any, error) {
 	}
 	CODE := p.code
 	LP := p.stackSize
+	MEM[LP+rootSlot] = this
 	SP := 0
 	for PC := 0; PC < len(CODE); PC++ {
 		INST := CODE[PC]

@@ -22,10 +22,12 @@ type (
 		Name       string          `json:"name"`
 		Expression string          `json:"expression"`
 		Variables  map[string]any  `json:"variables"`
+		This       json.RawMessage `json:"this"`
 		Result     json.RawMessage `json:"result"`
 		Missing    bool            `json:"missing"`
 		Error      string          `json:"error"`
 		Phase      string          `json:"phase"`
+		this       any
 		want       any
 		wantErr    error
 	}
@@ -98,16 +100,19 @@ func runCompliance(t *testing.T, tc *complianceCase) {
 		!assert.Contains(t, []string{"parse", "compile", "eval"}, tc.Phase) {
 		return
 	}
-	before, err := json.Marshal(tc.Variables)
+	if !complianceThis(t, tc) {
+		return
+	}
+	before, err := json.Marshal(tc.this)
 	if !assert.NoError(t, err) {
 		return
 	}
 	defer func() {
-		after, err := json.Marshal(tc.Variables)
+		after, err := json.Marshal(tc.this)
 		assert.NoError(t, err)
 		assert.Equal(t, before, after)
 	}()
-	value, err := argex.Eval(tc.Expression, tc.Variables)
+	value, err := argex.Eval(tc.Expression, tc.this)
 	assertCompliance(t, tc, value, err)
 	expr, err := argex.Parse(tc.Expression)
 	if tc.Phase == "parse" {
@@ -126,15 +131,29 @@ func runCompliance(t *testing.T, tc *complianceCase) {
 		return
 	}
 	for range 2 {
-		value, err := program(tc.Variables)
+		value, err := program(tc.this)
 		assertCompliance(t, tc, value, err)
 	}
 	second, err := argex.Compile(expr)
 	if !assert.NoError(t, err) {
 		return
 	}
-	value, err = second(tc.Variables)
+	value, err = second(tc.this)
 	assertCompliance(t, tc, value, err)
+}
+
+// complianceThis uses a case's this when given, otherwise its variables
+// object; a case may not specify both
+func complianceThis(t *testing.T, tc *complianceCase) bool {
+	t.Helper()
+	if len(tc.This) == 0 {
+		tc.this = tc.Variables
+		return true
+	}
+	if !assert.Nil(t, tc.Variables) {
+		return false
+	}
+	return assert.NoError(t, json.Unmarshal(tc.This, &tc.this))
 }
 
 func assertCompliance(t *testing.T, tc *complianceCase, value any, err error) {

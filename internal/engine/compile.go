@@ -23,12 +23,18 @@ type (
 	stackChange int
 )
 
+// rootSlot holds the program's this, so it compiles to an ordinary local Load
+const rootSlot = 0
+
 // Compile prepares an expression for repeated evaluation
-func Compile(expr *Expression) (func(map[string]any) (any, error), error) {
+func Compile(expr *Expression) (func(any) (any, error), error) {
 	if expr == nil || expr.root == nil {
 		return nil, fmt.Errorf("%w: empty expression", ErrSyntax)
 	}
-	c := &compiler{program: &program{}}
+	c := &compiler{
+		program:  &program{localCount: rootSlot + 1},
+		nextSlot: rootSlot + 1,
+	}
 	if err := c.compile(expr.root, 0); err != nil {
 		return nil, err
 	}
@@ -46,6 +52,9 @@ func (c *compiler) compile(n *node, depth int) error {
 
 	case "name":
 		c.name(n.text)
+
+	case "root":
+		c.emit(isa.Load, rootSlot, 1)
 
 	case "binary":
 		err = c.binary(n, depth)

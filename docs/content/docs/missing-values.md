@@ -5,7 +5,7 @@ weight: 50
 
 # Missing Values
 
-An absent variable produces `Missing{}`, distinguishable from explicit JSON `null` using `IsMissing`. Missing equals missing and differs from null.
+A bare name with no matching input property, or any bare name when the input is not an object, produces `Missing{}`, distinguishable from explicit JSON `null` using `IsMissing`. Missing equals missing and differs from null.
 
 ## Ordinary Access
 

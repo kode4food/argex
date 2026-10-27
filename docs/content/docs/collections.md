@@ -7,7 +7,7 @@ weight: 20
 
 ## Map and Filter
 
-`| map` and `| filter` bind each element of their receiver to a name. The expression after `:` is evaluated in that scope. It can read outer bindings and input variables. An inner binding with the same name shadows the outer one.
+`| map` and `| filter` bind each element of their receiver to a name. The expression after `:` is evaluated in that scope. It can read outer bindings, the input as `this`, and the input's properties by name. An inner binding with the same name shadows the outer one.
 
 ```javascript
 orders | map order: order.total

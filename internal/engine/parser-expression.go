@@ -131,6 +131,9 @@ func (p *parser) named(name string) (*node, error) {
 	case "case":
 		return p.caseExpression()
 
+	case "this":
+		return &node{kind: "root"}, nil
+
 	default:
 		return &node{kind: "name", text: name}, nil
 	}

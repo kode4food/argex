@@ -4,7 +4,7 @@ title: "Argyll Expressions"
 
 # Argyll Expressions
 
-Argyll Expressions is a small, pure expression language for JSON objects with familiar JavaScript-style operators and access syntax. An expression reads the object's top-level properties as variables and can produce any JSON value. Expressions support arithmetic, comparisons, optional access, object and array construction, conditional selection, and explicit collection operations.
+Argyll Expressions is a small, pure expression language for JSON values with familiar JavaScript-style operators and access syntax. An expression reads its input as `this`, and the top-level properties of an object input by name. Expressions support arithmetic, comparisons, optional access, object and array construction, conditional selection, and explicit collection operations.
 
 ```javascript
 customer?.address?.country ?? "CH"

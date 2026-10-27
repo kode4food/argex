@@ -1,5 +1,13 @@
 package engine
 
+var reservedNames = map[string]bool{
+	"true":  true,
+	"false": true,
+	"null":  true,
+	"case":  true,
+	"this":  true,
+}
+
 // pipeline chains collection operations left to right; the pipe is the
 // lowest-precedence operator, so a binding body stops before the next pipe
 func (p *parser) pipeline() (*node, error) {
@@ -56,8 +64,7 @@ func (p *parser) bindingName() (string, error) {
 	if err := p.expect("name"); err != nil {
 		return "", err
 	}
-	if name.text == "true" || name.text == "false" ||
-		name.text == "null" || name.text == "case" {
+	if reservedNames[name.text] {
 		return "", syntax(name.pos, "reserved binding name")
 	}
 	return name.text, nil

@@ -5,7 +5,7 @@ import "github.com/kode4food/argex/internal/engine"
 
 type (
 	// Program is a compiled function, safe for concurrent calls
-	Program func(map[string]any) (any, error)
+	Program func(any) (any, error)
 
 	// Expression is an immutable parsed expression
 	Expression = engine.Expression
@@ -28,8 +28,8 @@ func Parse(source string) (*Expression, error) {
 	return engine.Parse(source)
 }
 
-// Eval evaluates source against named JSON values
-func Eval(source string, variables map[string]any) (any, error) {
+// Eval evaluates source with this as its JSON input value
+func Eval(source string, this any) (any, error) {
 	expr, err := Parse(source)
 	if err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func Eval(source string, variables map[string]any) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return program(variables)
+	return program(this)
 }
 
 // Compile prepares an expression for repeated evaluation

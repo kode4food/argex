@@ -107,7 +107,7 @@ func BenchmarkWorkloads(b *testing.B) {
 		},
 		{
 			name:   "nested",
-			source: `items | map item: [1,2,3,4] | map inner: item + inner`,
+			source: `items | map item: ([1,2,3,4] | map inner: item + inner)`,
 		},
 	}
 	for _, tc := range cases {
