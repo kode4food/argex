@@ -56,7 +56,7 @@ func TestRun(t *testing.T) {
 			want:  "[1]\n",
 		},
 		{
-			name: "null input",
+			name: "no input",
 			args: []string{"-n", "this ?? 3"},
 			want: "3\n",
 		},

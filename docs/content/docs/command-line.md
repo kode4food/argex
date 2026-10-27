@@ -26,6 +26,6 @@ echo '{"items":[{"id":1,"price":12},{"id":2,"price":4}]}' |
 | --- | --- |
 | `-c` | Print compact JSON |
 | `-r` | Print string results without quotes |
-| `-n` | Evaluate once with `this` as null, reading no input |
+| `-n` | Evaluate once without reading input |
 
 A missing result prints nothing. Numbers keep their original text when they pass through unchanged, so `1.10` and large integers are not reformatted. Errors are reported on standard error with exit status 1.

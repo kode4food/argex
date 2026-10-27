@@ -34,7 +34,7 @@ func Run(args []string, stdin io.Reader, stdout io.Writer) error {
 	flags.SetOutput(io.Discard)
 	compact := flags.Bool("c", false, "compact output")
 	raw := flags.Bool("r", false, "print string results without quotes")
-	null := flags.Bool("n", false, "evaluate once with null, reading no input")
+	null := flags.Bool("n", false, "evaluate once without reading input")
 	err := flags.Parse(args)
 	if errors.Is(err, flag.ErrHelp) {
 		flags.SetOutput(stdout)
