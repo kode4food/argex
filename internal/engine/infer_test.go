@@ -41,6 +41,18 @@ func TestStaticType(t *testing.T) {
 			src:  `values | map v: v.x`,
 			want: "array",
 		},
+		"let body type":          {src: `let x = 1: [x]`, want: "array"},
+		"let name carries type":  {src: `let s = "a": s`, want: "string"},
+		"later let sees earlier": {src: `let x = 1, y = x: y`, want: "number"},
+		"stage shadows let": {
+			src:  `let x = 1: (xs | map x: x)[0]`,
+			want: "any",
+		},
+		"unbound name stays any": {src: `let x = 1: y`, want: "any"},
+		"subject case arms": {
+			src:  `case status { "a": 1, "b": "x", null }`,
+			want: "number|string|null",
+		},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -90,6 +102,7 @@ func TestParseRejectsStaticMismatches(t *testing.T) {
 		"case condition not bool":  `case { 1: true, false }`,
 		"filter body not bool":     `[1, 2] | filter x: 1`,
 		"computed key not string":  `{[1]: "x"}`,
+		"case value never matches": `case "a" { 1: true, false }`,
 		"unreachable operand":      `true || (1 && 2)`,
 	}
 	for name, src := range cases {

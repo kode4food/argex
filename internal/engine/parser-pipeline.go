@@ -8,6 +8,7 @@ var reservedNames = map[string]bool{
 	kwFalse: true,
 	kwNull:  true,
 	kwCase:  true,
+	kwLet:   true,
 	kwThis:  true,
 }
 
@@ -25,9 +26,13 @@ var collectionNames = map[nodeKind]string{
 	nodeAll:    "all",
 }
 
-// pipeline chains collection operations left to right. The pipe is the
-// lowest-precedence operator, so a binding body stops before the next pipe
+// pipeline chains collection operations left to right, and a stage body stops
+// before the next pipe. A let shares this level, so its body is a pipeline
 func (p *parser) pipeline() (*node, error) {
+	if p.current().kind == kindName && p.current().text == kwLet {
+		p.pos++
+		return p.letBinding()
+	}
 	left, err := p.expression(precedenceOr)
 	if err != nil {
 		return nil, err

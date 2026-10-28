@@ -142,3 +142,17 @@ func (c *compiler) branch(n *node, depth int) error {
 	}
 	return nil
 }
+
+// let stores its value in a fresh slot that only its body can see
+func (c *compiler) let(n *node, depth int) error {
+	if err := c.compile(n.children[0], depth+1); err != nil {
+		return err
+	}
+	mark := c.nextSlot
+	slot := c.allocSlot()
+	c.emit(isa.Store, isa.Operand(slot), -1)
+	bound := []binding{{name: n.valueBinding, slot: slot}}
+	err := c.scoped(bound, n.children[1], depth)
+	c.nextSlot = mark
+	return err
+}

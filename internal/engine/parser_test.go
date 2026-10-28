@@ -24,6 +24,7 @@ func TestNames(t *testing.T) {
 		{source: "this.a + this[k]", want: []string{"k"}},
 		{source: "{[k]: v, ...rest}", want: []string{"k", "rest", "v"}},
 		{source: "case { a: b, c }", want: []string{"a", "b", "c"}},
+		{source: "case s { a: b, c }", want: []string{"a", "b", "c", "s"}},
 		{source: "items | map i: i.id", want: []string{"items"}},
 		{
 			source: "items | map i: i + offset",
@@ -41,6 +42,11 @@ func TestNames(t *testing.T) {
 			source: "xs | map x: (ys | map y: x + y + z)",
 			want:   []string{"xs", "ys", "z"},
 		},
+		{source: "let x = a: x + b", want: []string{"a", "b"}},
+		{source: "let x = x: x", want: []string{"x"}},
+		{source: "let x = 1, y = x: y + z", want: []string{"z"}},
+		{source: "(let x = 1: x) + x", want: []string{"x"}},
+		{source: "let x = 1: xs | map y: x + y", want: []string{"xs"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.source, func(t *testing.T) {

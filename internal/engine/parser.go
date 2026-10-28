@@ -48,6 +48,7 @@ const (
 	nodeSpread
 	nodeComputed
 	nodeCase
+	nodeLet
 	nodeMap
 	nodeFilter
 	nodeAny
@@ -70,14 +71,15 @@ func Parse(source string) (*Expression, error) {
 	if err := p.expect(kindEOF); err != nil {
 		return nil, err
 	}
-	if err := annotateType(root); err != nil {
+	if err := annotateType(root, nil); err != nil {
 		return nil, err
 	}
 	return &Expression{root: root}, nil
 }
 
 // Names reports the input properties the expression reads by bare name, sorted.
-// Names bound by collection operations and reads through this are excluded
+// Names bound by let or collection operations and reads through this are
+// excluded
 func (e *Expression) Names() []string {
 	if e == nil || e.root == nil {
 		return nil
@@ -130,6 +132,12 @@ func collectNames(n *node, bound []string, seen map[string]bool) {
 	case nodeMap, nodeFilter, nodeAny, nodeAll:
 		collectNames(n.children[0], bound, seen)
 		inner := append(bound[:len(bound):len(bound)], stageNames(n)...)
+		collectNames(n.children[1], inner, seen)
+		return
+
+	case nodeLet:
+		collectNames(n.children[0], bound, seen)
+		inner := append(bound[:len(bound):len(bound)], n.valueBinding)
 		collectNames(n.children[1], inner, seen)
 		return
 	}

@@ -62,6 +62,9 @@ func (c *compiler) compile(n *node, depth int) error {
 	case nodeCase:
 		err = c.branch(n, depth)
 
+	case nodeLet:
+		err = c.let(n, depth)
+
 	case nodeMap, nodeFilter, nodeAny, nodeAll:
 		err = c.collection(n, depth)
 

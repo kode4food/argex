@@ -34,6 +34,8 @@ func TestLimits(t *testing.T) {
 			"1" + strings.Repeat(")", expressionDepth),
 	)
 	assert.ErrorIs(t, err, argex.ErrLimit)
+	_, err = argex.Parse(strings.Repeat("let x = 1: ", expressionDepth+1) + "1")
+	assert.ErrorIs(t, err, argex.ErrLimit)
 	expr, err := argex.Parse("1" + strings.Repeat("+1", expressionDepth+1))
 	if !assert.NoError(t, err) {
 		return

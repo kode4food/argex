@@ -2,6 +2,7 @@ package engine
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -17,6 +18,12 @@ type (
 		owner string
 		role  string
 		index int // 1-based argument position, or 0 for other operands
+	}
+
+	// typedName is a let or stage binding visible to the node being annotated
+	typedName struct {
+		name     string
+		inferred TypeSet
 	}
 )
 
@@ -94,24 +101,59 @@ func (o operand) String() string {
 }
 
 // annotateType infers each node's type bottom-up and rejects any operand whose
-// known type can never succeed
-func annotateType(n *node) error {
-	for _, child := range n.children {
-		if err := annotateType(child); err != nil {
-			return err
-		}
+// known type can never succeed. A let name carries its value's type
+func annotateType(n *node, scope []typedName) error {
+	if err := annotateChildren(n, scope); err != nil {
+		return err
 	}
-	n.inferred = computeType(n)
+	n.inferred = computeType(n, scope)
 	return checkNode(n)
 }
 
-func computeType(n *node) TypeSet {
+// annotateChildren scopes bindings as collectNames does
+func annotateChildren(n *node, scope []typedName) error {
+	switch n.kind {
+	case nodeMap, nodeFilter, nodeAny, nodeAll:
+		if err := annotateType(n.children[0], scope); err != nil {
+			return err
+		}
+		inner := scope[:len(scope):len(scope)]
+		for _, name := range stageNames(n) {
+			unknown := typedName{name: name, inferred: TypeSet(TypeAny)}
+			inner = append(inner, unknown)
+		}
+		return annotateType(n.children[1], inner)
+
+	case nodeLet:
+		value := n.children[0]
+		if err := annotateType(value, scope); err != nil {
+			return err
+		}
+		bound := typedName{name: n.valueBinding, inferred: value.inferred}
+		inner := append(scope[:len(scope):len(scope)], bound)
+		return annotateType(n.children[1], inner)
+	}
+	for _, child := range n.children {
+		if err := annotateType(child, scope); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func computeType(n *node, scope []typedName) TypeSet {
 	switch n.kind {
 	case nodeLiteral:
 		return literalType(n.value)
 
-	case nodeName, nodeRoot:
+	case nodeName:
+		return nameType(n.text, scope)
+
+	case nodeRoot:
 		return TypeSet(TypeAny)
+
+	case nodeLet:
+		return n.children[1].inferred
 
 	case nodeAccess, nodeIndex:
 		if n.optional {
@@ -168,6 +210,15 @@ func literalType(value any) TypeSet {
 	default:
 		return TypeSet(TypeAny)
 	}
+}
+
+func nameType(name string, scope []typedName) TypeSet {
+	for _, bound := range slices.Backward(scope) {
+		if bound.name == name {
+			return bound.inferred
+		}
+	}
+	return TypeSet(TypeAny)
 }
 
 func inferBinaryType(n *node) TypeSet {
@@ -238,6 +289,11 @@ func checkNode(n *node) error {
 
 	case nodeCase:
 		return checkCase(n)
+
+	case nodeLet:
+		if n.valueBinding == caseSubject {
+			return checkMatch(n)
+		}
 
 	case nodeAny, nodeAll, nodeFilter:
 		return checkBoolBody(n)
@@ -416,6 +472,24 @@ func checkCase(n *node) error {
 	for i := 0; i < last; i += 2 {
 		condition := n.children[i]
 		if err := requireType(condition, TypeSet(TypeBool), what); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkMatch mirrors vm.go's Eq: values of different types are never equal, so
+// an arm whose value can't share a type with the subject never matches
+func checkMatch(n *node) error {
+	subject := n.children[0].inferred
+	if !subject.Known() {
+		return nil
+	}
+	arms := n.children[1].children
+	what := operand{owner: "case", role: "value"}
+	for i := 0; i < len(arms)-1; i += 2 {
+		value := arms[i].children[1]
+		if err := requireType(value, subject, what); err != nil {
 			return err
 		}
 	}

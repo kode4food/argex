@@ -5,6 +5,7 @@ const (
 	kwFalse = "false"
 	kwNull  = "null"
 	kwCase  = "case"
+	kwLet   = "let"
 	kwThis  = "this"
 )
 
@@ -138,6 +139,9 @@ func (p *parser) named(name string) (*node, error) {
 
 	case kwCase:
 		return p.caseExpression()
+
+	case kwLet:
+		return nil, syntax(p.peek(-1).pos, "let requires parentheses")
 
 	case kwThis:
 		return &node{kind: nodeRoot}, nil

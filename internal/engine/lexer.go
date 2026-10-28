@@ -38,6 +38,7 @@ const (
 	kindColon
 	kindPipe
 	kindSpread
+	kindAssign
 
 	// operators. kindIn never comes from the lexer, only from the parser
 	kindIn
@@ -119,6 +120,7 @@ var singleCharKinds = map[rune]tokenKind{
 	'!': kindNot,
 	'<': kindLt,
 	'>': kindGt,
+	'=': kindAssign,
 }
 
 var punctuationText = map[tokenKind]string{
@@ -137,6 +139,7 @@ var punctuationText = map[tokenKind]string{
 	kindColon:   ":",
 	kindPipe:    "|",
 	kindSpread:  "...",
+	kindAssign:  "=",
 }
 
 var pairKinds = map[string]tokenKind{

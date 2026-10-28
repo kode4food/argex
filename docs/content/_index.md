@@ -25,6 +25,7 @@ items | filter item: item.price > 10 | map item: {
 - Optional access and a `??` fallback that distinguish missing values from JSON `null`
 - Object and array construction with spreads and computed keys
 - `case` for conditional selection
+- `let` for naming intermediate values
 - `map`, `filter`, `any`, and `all` collection operations chained with `|`
 - A fixed set of pure functions for strings, numbers, and objects
 - Compilation to a reusable Go function that is safe for concurrent use

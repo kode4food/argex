@@ -25,3 +25,27 @@ case {
     {model: "fast", max_tokens: 1000},
 }
 ```
+
+## Matching a Subject
+
+A subject between `case` and `{` turns each arm into a `value: result` pair. The subject is evaluated once, then compared with each value using `==`, in order. The first equal value selects its result, and the fallback is evaluated only if no value matches.
+
+```javascript
+case order.status {
+    "paid": "ship",
+    "pending": "wait",
+    "cancelled",
+}
+```
+
+Values are ordinary expressions, so they can read the input or compute a result. Later values and unselected results are not evaluated. Values of different types are never equal, so an arm whose value can never have the subject's type fails during parsing, as in `case 1 { "a": true, false }`.
+
+The subject has the same precedence as an operand of `||`, so a pipeline subject needs parentheses. A subject that begins with `{` also needs parentheses, since `case {` always starts the boolean form. This selects a result from the names of the failed checks:
+
+```javascript
+case (checks | filter check: !check.passed | map check.name) {
+    []: "approved",
+    ["lint"]: "approved with warnings",
+    "rejected",
+}
+```

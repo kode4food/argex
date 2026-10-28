@@ -141,8 +141,8 @@ func (c *compiler) allocSlot() int {
 	return slot
 }
 
-// chainable reports whether n can feed a later stage of the same pipeline;
-// any and all produce booleans, so they can only end one
+// chainable reports whether n can feed a later stage of the same pipeline. Any
+// and all produce booleans, so they can only end one
 func chainable(n *node) bool {
 	return n.kind == nodeMap || n.kind == nodeFilter
 }

@@ -2,6 +2,11 @@
 
 Notable changes to Argyll Expressions.
 
+## 0.1.4
+
+- Name intermediate values with `let` and reuse them anywhere in an expression
+- Match one value against a list of candidates with `case value { ... }`
+
 ## 0.1.3
 
 - Type errors that can never succeed are reported when an expression is parsed
