@@ -39,7 +39,7 @@ const (
 	kindPipe
 	kindSpread
 
-	// operators; kindIn never comes from the lexer, only from the parser
+	// operators. kindIn never comes from the lexer, only from the parser
 	kindIn
 	kindNot
 	kindAdd

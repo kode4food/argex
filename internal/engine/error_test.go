@@ -56,7 +56,7 @@ func TestErrors(t *testing.T) {
 		"max(1,true)":                 argex.ErrType,
 		"max(true,1)":                 argex.ErrType,
 		"abs()":                       argex.ErrFunction,
-		"length(1,2)":                 argex.ErrFunction,
+		`length("a","b")`:             argex.ErrFunction,
 		"min()":                       argex.ErrFunction,
 		"max()":                       argex.ErrFunction,
 		"unknown(1)":                  argex.ErrFunction,

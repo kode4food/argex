@@ -11,6 +11,13 @@ type (
 
 	// TypeSet is the union of every TypeTag an expression might evaluate to
 	TypeSet uint16
+
+	// operand names a checked operand, rendered only when its check fails
+	operand struct {
+		owner string
+		role  string
+		index int // 1-based argument position, or 0 for other operands
+	}
 )
 
 const (
@@ -71,7 +78,7 @@ func (s TypeSet) String() string {
 }
 
 // StaticType infers the set of types this expression's result can take without
-// evaluating it; reading runtime input widens the result to include TypeAny
+// evaluating it. Reading runtime input widens the result to include TypeAny
 func (e *Expression) StaticType() TypeSet {
 	if e == nil || e.root == nil {
 		return TypeSet(TypeAny)
@@ -79,21 +86,23 @@ func (e *Expression) StaticType() TypeSet {
 	return e.root.inferred
 }
 
-// Check statically validates every operator and builtin call operand whose type
-// is fully known without `this`, catching a mismatch that can never succeed
-// (e.g. length(-1)) without evaluating anything
-func (e *Expression) Check() error {
-	if e == nil || e.root == nil {
-		return nil
+func (o operand) String() string {
+	if o.index > 0 {
+		return fmt.Sprintf("%s %s %d", o.owner, o.role, o.index)
 	}
-	return checkNode(e.root)
+	return o.owner + " " + o.role
 }
 
-func annotateType(n *node) {
+// annotateType infers each node's type bottom-up and rejects any operand whose
+// known type can never succeed
+func annotateType(n *node) error {
 	for _, child := range n.children {
-		annotateType(child)
+		if err := annotateType(child); err != nil {
+			return err
+		}
 	}
 	n.inferred = computeType(n)
+	return checkNode(n)
 }
 
 func computeType(n *node) TypeSet {
@@ -199,18 +208,6 @@ func inferCaseType(n *node) TypeSet {
 }
 
 func checkNode(n *node) error {
-	if err := checkNodeSelf(n); err != nil {
-		return err
-	}
-	for _, child := range n.children {
-		if err := checkNode(child); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func checkNodeSelf(n *node) error {
 	switch n.kind {
 	case nodeCall:
 		if fn, ok := builtins[n.text]; ok {
@@ -236,7 +233,8 @@ func checkNodeSelf(n *node) error {
 		return checkSpreads(n, TypeObject)
 
 	case nodeComputed:
-		return checkKeyType(n.children[0], "computed member")
+		what := operand{owner: "computed member", role: "key"}
+		return requireType(n.children[0], TypeSet(TypeString), what)
 
 	case nodeCase:
 		return checkCase(n)
@@ -247,7 +245,7 @@ func checkNodeSelf(n *node) error {
 	return nil
 }
 
-// paramType returns the declared type for argument i of fn; a variadic
+// paramType returns the declared type for argument i of fn. A variadic
 // function's last declared entry also covers every argument past it
 func paramType(fn builtin, i int) TypeSet {
 	if i < len(fn.params) {
@@ -259,7 +257,7 @@ func paramType(fn builtin, i int) TypeSet {
 func checkCallArgs(n *node, fn builtin) error {
 	for i, child := range n.children {
 		expected := paramType(fn, i)
-		what := fmt.Sprintf("%s argument %d", n.text, i+1)
+		what := operand{owner: n.text, role: "argument", index: i + 1}
 		if err := requireType(child, expected, what); err != nil {
 			return err
 		}
@@ -268,21 +266,21 @@ func checkCallArgs(n *node, fn builtin) error {
 }
 
 // requireType fails when n's known type has no overlap with allowed
-func requireType(n *node, allowed TypeSet, what string) error {
+func requireType(n *node, allowed TypeSet, what operand) error {
 	actual := n.inferred
 	if !actual.Known() || actual&allowed != 0 {
 		return nil
 	}
-	return fmt.Errorf(
-		"%w: %s must be %s, not %s", ErrType, what, allowed, actual,
-	)
+	return fmt.Errorf("%w: %s must be %s, not %s",
+		ErrType, what, allowed, actual)
 }
 
 func checkUnary(n *node) error {
+	what := operand{owner: n.text, role: "operand"}
 	if n.text == opNot {
-		return requireType(n.children[0], TypeSet(TypeBool), opNot+" operand")
+		return requireType(n.children[0], TypeSet(TypeBool), what)
 	}
-	return requireType(n.children[0], numericSet, n.text+" operand")
+	return requireType(n.children[0], numericSet, what)
 }
 
 func checkBinary(n *node) error {
@@ -290,73 +288,50 @@ func checkBinary(n *node) error {
 	right := n.children[1]
 	switch n.text {
 	case opAnd, opOr:
-		what := n.text + " left operand"
+		what := operand{owner: n.text, role: "left operand"}
 		if err := requireType(left, TypeSet(TypeBool), what); err != nil {
 			return err
 		}
-		what = n.text + " right operand"
+		what.role = "right operand"
 		return requireType(right, TypeSet(TypeBool), what)
 
 	case opIn:
-		return requireType(right, TypeSet(TypeArray), opIn+" right operand")
+		what := operand{owner: opIn, role: "right operand"}
+		return requireType(right, TypeSet(TypeArray), what)
 
 	case opEq, opNeq, opCoalesce:
 		return nil // structural equality and coalesce accept any type
 
-	case opAdd:
-		return checkAddOperands(left, right)
-
 	case opSub, opMul, opDiv, opMod:
-		what := n.text + " left operand"
+		what := operand{owner: n.text, role: "left operand"}
 		if err := requireType(left, numericSet, what); err != nil {
 			return err
 		}
-		what = n.text + " right operand"
+		what.role = "right operand"
 		return requireType(right, numericSet, what)
 
-	default: // opLt, opLte, opGt, opGte
-		return checkComparisonOperands(n.text, left, right)
+	default: // opAdd, opLt, opLte, opGt, opGte
+		return checkStringOrNumber(n.text, left, right)
 	}
 }
 
-// checkAddOperands mirrors vm.go's Add: a string left operand requires a
-// string right operand; anything else runs both through number()
-func checkAddOperands(left, right *node) error {
+// checkStringOrNumber mirrors vm.go's Add/Lt/Lte/Gt/Gte. A string left operand
+// requires a string right operand. Anything else runs both through number()
+func checkStringOrNumber(op string, left, right *node) error {
 	leftType := left.inferred
 	if !leftType.Known() {
 		return nil
 	}
+	what := operand{owner: op, role: "right operand"}
 	if leftType.Is(TypeString) {
-		return requireType(right, TypeSet(TypeString), "+ right operand")
+		return requireType(right, TypeSet(TypeString), what)
 	}
 	if leftType&numericSet == 0 {
 		allowed := numericSet | TypeSet(TypeString)
-		return fmt.Errorf(
-			"%w: + left operand must be %s, not %s",
-			ErrType, allowed, leftType,
-		)
+		return fmt.Errorf("%w: %s left operand must be %s, not %s",
+			ErrType, op, allowed, leftType)
 	}
-	return requireType(right, numericSet, "+ right operand")
-}
-
-// checkComparisonOperands mirrors vm.go's Lt/Lte/Gt/Gte, the same dual
-// string-or-number path as checkAddOperands without string concatenation
-func checkComparisonOperands(op string, left, right *node) error {
-	leftType := left.inferred
-	if !leftType.Known() {
-		return nil
-	}
-	if leftType.Is(TypeString) {
-		return requireType(right, TypeSet(TypeString), op+" right operand")
-	}
-	if leftType&numericSet == 0 {
-		allowed := numericSet | TypeSet(TypeString)
-		return fmt.Errorf(
-			"%w: %s left operand must be %s, not %s",
-			ErrType, op, allowed, leftType,
-		)
-	}
-	return requireType(right, numericSet, op+" right operand")
+	return requireType(right, numericSet, what)
 }
 
 func checkIndex(n *node) error {
@@ -364,12 +339,13 @@ func checkIndex(n *node) error {
 		return err
 	}
 	key := n.children[1]
+	what := operand{owner: "index", role: "key"}
 	switch receiverType := effectiveReceiverType(n); {
 	case receiverType.Is(TypeObject):
-		return requireType(key, TypeSet(TypeString), "index key")
+		return requireType(key, TypeSet(TypeString), what)
 
 	case receiverType.Is(TypeArray):
-		return requireType(key, numericSet, "index key")
+		return requireType(key, numericSet, what)
 
 	default:
 		return nil
@@ -397,10 +373,8 @@ func checkReceiver(n *node, allowed TypeSet) error {
 		return fmt.Errorf("%w: access receiver is always null", ErrMissing)
 	}
 	if receiverType&allowed == 0 {
-		return fmt.Errorf(
-			"%w: access receiver must be %s, not %s",
-			ErrType, allowed, receiverType,
-		)
+		return fmt.Errorf("%w: access receiver must be %s, not %s",
+			ErrType, allowed, receiverType)
 	}
 	return nil
 }
@@ -413,7 +387,7 @@ func checkSpreads(n *node, want TypeTag) error {
 			continue
 		}
 		source := child.children[0]
-		if err := checkContainerSource(source, want, "spread"); err != nil {
+		if err := checkContainerSource(source, want); err != nil {
 			return err
 		}
 	}
@@ -422,30 +396,25 @@ func checkSpreads(n *node, want TypeTag) error {
 
 // checkContainerSource mirrors vm.go's Concat/Merge: a nullish source is
 // skipped outright, so only its non-nullish portion is checked
-func checkContainerSource(n *node, want TypeTag, what string) error {
+func checkContainerSource(n *node, want TypeTag) error {
 	sourceType := n.inferred &^ nullishSet
 	if !sourceType.Known() || sourceType == 0 {
 		return nil
 	}
 	if !sourceType.Has(want) {
-		return fmt.Errorf(
-			"%w: %s source must be %s, not %s",
-			ErrType, what, TypeSet(want), sourceType,
+		return fmt.Errorf("%w: spread source must be %s, not %s",
+			ErrType, TypeSet(want), sourceType,
 		)
 	}
 	return nil
 }
 
-func checkKeyType(n *node, what string) error {
-	return requireType(n, TypeSet(TypeString), what+" key")
-}
-
 // checkCase mirrors vm.go's CondJump: every arm's condition must be boolean
 func checkCase(n *node) error {
 	last := len(n.children) - 1
+	what := operand{owner: "case", role: "condition"}
 	for i := 0; i < last; i += 2 {
 		condition := n.children[i]
-		what := "case condition"
 		if err := requireType(condition, TypeSet(TypeBool), what); err != nil {
 			return err
 		}
@@ -456,6 +425,6 @@ func checkCase(n *node) error {
 // checkBoolBody mirrors vm.go's CondJump: any/all/filter re-check their
 // body as a condition on every iteration
 func checkBoolBody(n *node) error {
-	what := collectionNames[n.kind] + " body"
+	what := operand{owner: collectionNames[n.kind], role: "body"}
 	return requireType(n.children[1], TypeSet(TypeBool), what)
 }

@@ -68,7 +68,7 @@ func TestStaticTypeKnown(t *testing.T) {
 	assert.False(t, expr.StaticType().Known())
 }
 
-func TestCheckCatchesStaticMismatches(t *testing.T) {
+func TestParseRejectsStaticMismatches(t *testing.T) {
 	cases := map[string]string{
 		"length of a number":       `length(-1)`,
 		"bool plus number":         `true + 1`,
@@ -90,19 +90,17 @@ func TestCheckCatchesStaticMismatches(t *testing.T) {
 		"case condition not bool":  `case { 1: true, false }`,
 		"filter body not bool":     `[1, 2] | filter x: 1`,
 		"computed key not string":  `{[1]: "x"}`,
+		"unreachable operand":      `true || (1 && 2)`,
 	}
 	for name, src := range cases {
 		t.Run(name, func(t *testing.T) {
-			expr, err := argex.Parse(src)
-			if !assert.NoError(t, err) {
-				return
-			}
-			assert.Error(t, expr.Check())
+			_, err := argex.Parse(src)
+			assert.Error(t, err)
 		})
 	}
 }
 
-func TestCheckAllowsRuntimeDependentValues(t *testing.T) {
+func TestParseAllowsRuntimeDependentValues(t *testing.T) {
 	cases := map[string]string{
 		"bare name access":         `value.status`,
 		"optional chained access":  `value?.x.y`,
@@ -123,16 +121,13 @@ func TestCheckAllowsRuntimeDependentValues(t *testing.T) {
 	}
 	for name, src := range cases {
 		t.Run(name, func(t *testing.T) {
-			expr, err := argex.Parse(src)
-			if !assert.NoError(t, err) {
-				return
-			}
-			assert.NoError(t, expr.Check())
+			_, err := argex.Parse(src)
+			assert.NoError(t, err)
 		})
 	}
 }
 
-func TestCheckAllowsSuccessfulOperands(t *testing.T) {
+func TestParseAllowsSuccessfulOperands(t *testing.T) {
 	cases := map[string]string{
 		"both numbers compare":  `1 < 2`,
 		"both strings compare":  `"a" < "b"`,
@@ -146,21 +141,16 @@ func TestCheckAllowsSuccessfulOperands(t *testing.T) {
 	}
 	for name, src := range cases {
 		t.Run(name, func(t *testing.T) {
-			expr, err := argex.Parse(src)
-			if !assert.NoError(t, err) {
-				return
-			}
-			assert.NoError(t, expr.Check())
+			_, err := argex.Parse(src)
+			assert.NoError(t, err)
 		})
 	}
 }
 
-func TestCheckOnEmptyExpression(t *testing.T) {
+func TestStaticTypeOnEmptyExpression(t *testing.T) {
 	var nilExpr *argex.Expression
-	assert.NoError(t, nilExpr.Check())
 	assert.Equal(t, "any", nilExpr.StaticType().String())
 
 	var zero argex.Expression
-	assert.NoError(t, zero.Check())
 	assert.Equal(t, "any", zero.StaticType().String())
 }

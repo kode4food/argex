@@ -25,7 +25,7 @@ var collectionNames = map[nodeKind]string{
 	nodeAll:    "all",
 }
 
-// pipeline chains collection operations left to right; the pipe is the
+// pipeline chains collection operations left to right. The pipe is the
 // lowest-precedence operator, so a binding body stops before the next pipe
 func (p *parser) pipeline() (*node, error) {
 	left, err := p.expression(precedenceOr)

@@ -40,7 +40,7 @@ var (
 	ErrLimit      error = engine.ErrLimit
 )
 
-// Parse parses a complete expression; whitespace never determines grouping
+// Parse parses a complete expression. Whitespace never determines grouping
 func Parse(source string) (*Expression, error) {
 	return engine.Parse(source)
 }

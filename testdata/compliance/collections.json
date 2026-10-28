@@ -16,7 +16,7 @@
     {"name":"filter predicate","expression":"[1,2,3] | filter item:item>1","result":[2,3]},
     {"name":"filter preserves order","expression":"[3,1,2,3] | filter item:item>1","result":[3,2,3]},
     {"name":"filter empty","expression":"[] | filter item:true","result":[]},
-    {"name":"filter empty skips predicate","expression":"[] | filter item:1/0","result":[]},
+    {"name":"filter empty skips predicate","expression":"[] | filter item:1/0 > 0","result":[]},
     {"name":"filter preserves objects","expression":"[{a:1},{a:2}] | filter item:item.a>1","result":[{"a":2}]},
     {"name":"filter preserves null","expression":"[null,1] | filter item:item==null","result":[null]},
     {"name":"filter then map","expression":"([1,11,20] | filter item:item>10) | map item:item*2","result":[22,40]},
@@ -91,10 +91,10 @@
     {"name":"filter string receiver","expression":"\"abc\" | filter item:true","error":"type","phase":"eval"},
     {"name":"filter numeric predicate","expression":"[1] | filter item:item","error":"type","phase":"eval"},
     {"name":"filter missing predicate","expression":"[1] | filter item:absent","error":"type","phase":"eval"},
-    {"name":"filter null predicate","expression":"[1] | filter item:null","error":"type","phase":"eval"},
+    {"name":"filter null predicate","expression":"[1] | filter item:null","error":"type","phase":"parse"},
     {"name":"map body failure","expression":"[1] | map item:1/0","error":"arithmetic","phase":"eval"},
     {"name":"filter body failure","expression":"[1] | filter item:absent.field","error":"missing","phase":"eval"},
     {"name":"one failed element fails map","expression":"[1,0] | map item:1/item","error":"arithmetic","phase":"eval"},
-    {"name":"computed filter predicate rejected","expression":"[1] | filter item:item+1","error":"type","phase":"eval"}
+    {"name":"computed filter predicate rejected","expression":"[1] | filter item:item+1","error":"type","phase":"parse"}
   ]
 }

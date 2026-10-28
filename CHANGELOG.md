@@ -2,6 +2,12 @@
 
 Notable changes to Argyll Expressions.
 
+## 0.1.3
+
+- Type errors that can never succeed are reported when an expression is parsed
+- Inspect the possible result types of an expression without evaluating it
+- Type error messages name the operand and the type it needs
+
 ## 0.1.2
 
 - `//` line comments

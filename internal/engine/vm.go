@@ -40,7 +40,7 @@ type (
 
 const inlineValues = 32
 
-// evaluate runs the program with this as its input; bare names read the
+// evaluate runs the program with this as its input. Bare names read the
 // properties of an object and are missing for any other value
 func (p *program) evaluate(this any) (any, error) {
 	variables, _ := this.(map[string]any)
@@ -598,7 +598,7 @@ func accessChild(container, key any) (any, bool, error) {
 }
 
 // collectionEntries materializes a comprehension receiver into parallel
-// key/value slices; keys is nil when the binding form doesn't need it
+// key/value slices. keys is nil when the binding form doesn't need it
 func collectionEntries(receiver any, keyed bool) ([]any, []any, error) {
 	switch c := receiver.(type) {
 	case []any:

@@ -3,7 +3,7 @@ package engine
 import "github.com/kode4food/argex/internal/isa"
 
 // array builds an array literal. A leading run of plain elements uses one Array
-// op; each later element folds in with Push, each spread with Concat
+// op. Each later element folds in with Push, each spread with Concat
 func (c *compiler) array(n *node, depth int) error {
 	fixed := 0
 	for fixed < len(n.children) && n.children[fixed].kind != nodeSpread {
@@ -30,7 +30,7 @@ func (c *compiler) array(n *node, depth int) error {
 }
 
 // object builds an object literal. A leading run of plain fields uses one
-// Object op; each later field folds in with Put, each spread with Merge
+// Object op. Each later field folds in with Put, each spread with Merge
 func (c *compiler) object(n *node, depth int) error {
 	var keys []string
 	fixed := 0

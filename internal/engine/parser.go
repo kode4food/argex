@@ -56,7 +56,7 @@ const (
 
 const maxDepth = 256
 
-// Parse parses a complete expression; whitespace never determines grouping
+// Parse parses a complete expression. Whitespace never determines grouping
 func Parse(source string) (*Expression, error) {
 	tokens, err := lex(source)
 	if err != nil {
@@ -70,7 +70,9 @@ func Parse(source string) (*Expression, error) {
 	if err := p.expect(kindEOF); err != nil {
 		return nil, err
 	}
-	annotateType(root)
+	if err := annotateType(root); err != nil {
+		return nil, err
+	}
 	return &Expression{root: root}, nil
 }
 
