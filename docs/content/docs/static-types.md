@@ -1,9 +1,9 @@
 ---
-title: "Static Type Checking"
+title: "Type Checking"
 weight: 75
 ---
 
-# Static Type Checking
+# Type Checking
 
 `expression.StaticType()` infers the set of types an expression's result can take without evaluating it. Operators and `case` arms whose result type doesn't depend on the input, such as literals, comparisons, arithmetic, and builtin calls, narrow exactly. Anything that reads the input, such as a bare name, `this`, member or index access, or a call to a function with no fixed return type, widens the result to `TypeAny`, since argex has no schema for `this` to check that against.
 
