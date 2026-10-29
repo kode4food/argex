@@ -48,45 +48,46 @@ func (c *compiler) compile(n *node, depth int) error {
 	if depth > maxDepth {
 		return ErrLimit
 	}
-	var err error
 	switch n.kind {
 	case nodeLiteral:
 		c.emit(isa.Const, c.constant(n.value))
+		return nil
 
 	case nodeName:
 		c.name(n.text)
+		return nil
 
 	case nodeRoot:
 		c.emit(isa.Load, rootSlot)
+		return nil
 
 	case nodeBinary:
-		err = c.binary(n, depth)
+		return c.binary(n, depth)
 
 	case nodeCase:
-		err = c.branch(n, depth)
+		return c.branch(n, depth)
 
 	case nodeLet:
-		err = c.let(n, depth)
+		return c.let(n, depth)
 
 	case nodeMap, nodeFilter, nodeAny, nodeAll:
-		err = c.collection(n, depth)
+		return c.collection(n, depth)
 
 	case nodeIndex:
-		err = c.index(n, depth)
+		return c.index(n, depth)
 
 	case nodeCall:
-		err = c.call(n, depth)
+		return c.call(n, depth)
 
 	case nodeArray:
-		err = c.array(n, depth)
+		return c.array(n, depth)
 
 	case nodeObject:
-		err = c.object(n, depth)
+		return c.object(n, depth)
 
 	default:
-		err = c.operation(n, depth)
+		return c.operation(n, depth)
 	}
-	return err
 }
 
 func (c *compiler) name(name string) {
