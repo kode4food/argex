@@ -241,6 +241,119 @@ func TestOperators(t *testing.T) {
 	}
 }
 
+func TestComparisonJumps(t *testing.T) {
+	variables := map[string]any{
+		"n":     5,
+		"s":     "m",
+		"flag":  true,
+		"items": []any{1, 5, 11},
+	}
+	cases := []evaluationCase{
+		{source: `case { n < 5: "a", "b" }`, want: "b"},
+		{source: `case { n <= 5: "a", "b" }`, want: "a"},
+		{source: `case { n > 5: "a", "b" }`, want: "b"},
+		{source: `case { n >= 5: "a", "b" }`, want: "a"},
+		{source: `case { s < "n": "a", "b" }`, want: "a"},
+		{source: `case { s >= "n": "a", "b" }`, want: "b"},
+		{source: "items | filter x: x > 4", want: []any{5, 11}},
+		{
+			source: "(items | filter x: x >= 5) | map x: x * 2",
+			want:   []any{float64(10), float64(22)},
+		},
+		{source: "items | any x: x > 10", want: true},
+		{source: "items | any x: x > 11", want: false},
+		{source: "items | all x: x >= 1", want: true},
+		{source: "items | all x: x < 11", want: false},
+		{source: `case { flag ?? n < 1: "a", "b" }`, want: "a"},
+		{source: `case { case { n < 1: false, n > 1 }: "a", "b" }`, want: "a"},
+		{source: `case { case { n > 1: false, n > 1 }: "a", "b" }`, want: "b"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.source, func(t *testing.T) {
+			value, err := argex.Eval(tc.source, variables)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.want, value)
+		})
+	}
+}
+
+func TestComparisonJumpErrors(t *testing.T) {
+	variables := map[string]any{
+		"n":     5,
+		"s":     "m",
+		"flag":  true,
+		"items": []any{1, 5, 11},
+	}
+	sources := []string{
+		`case { s < n: "a", "b" }`,
+		`case { flag < n: "a", "b" }`,
+		`case { n < s: "a", "b" }`,
+		`case { s <= n: "a", "b" }`,
+		`case { flag > n: "a", "b" }`,
+		`case { n >= s: "a", "b" }`,
+		`items | filter x: x > s`,
+		`items | any x: s >= x`,
+		`items | all x: x >= s`,
+	}
+	for _, source := range sources {
+		t.Run(source, func(t *testing.T) {
+			_, err := argex.Eval(source, variables)
+			assert.ErrorIs(t, err, argex.ErrType)
+		})
+	}
+}
+
+func TestLoopNames(t *testing.T) {
+	variables := map[string]any{
+		"t":     true,
+		"f":     false,
+		"x":     1,
+		"r":     10,
+		"items": []any{1, 2},
+	}
+	cases := []evaluationCase{
+		{
+			source: "[items | map i: i + r, r]",
+			want:   []any{[]any{float64(11), float64(12)}, 10},
+		},
+		{source: "items | map i: items", want: []any{
+			[]any{1, 2}, []any{1, 2},
+		}},
+		{source: "[[] | map i: x, x]", want: []any{[]any{}, 1}},
+		{
+			source: "case { t: items | map i: r, 0 }",
+			want:   []any{10, 10},
+		},
+		{source: "case { f: items | map i: r, x }", want: 1},
+		{
+			source: "items | map i: (items | map j: i * r)",
+			want: []any{
+				[]any{float64(10), float64(10)},
+				[]any{float64(20), float64(20)},
+			},
+		},
+		{
+			source: "items | map i: (let r = 2: i * r)",
+			want:   []any{float64(2), float64(4)},
+		},
+		{
+			source: "items | map i: case { i > 1: x, absent }",
+			want:   []any{argex.Missing{}, 1},
+		},
+		{
+			source: "[items | map i: r, items | filter i: i < x]",
+			want:   []any{[]any{10, 10}, []any{}},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.source, func(t *testing.T) {
+			value, err := argex.Eval(tc.source, variables)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.want, value)
+		})
+	}
+}
+
 func TestWideStack(t *testing.T) {
 	var elements []string
 	want := make([]any, wideStackSize)

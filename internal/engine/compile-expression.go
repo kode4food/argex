@@ -40,14 +40,14 @@ func (c *compiler) operation(n *node, depth int) error {
 		case opSub:
 			op = isa.Neg
 		}
-		c.emit(op, 0, 0)
+		c.emit(op, 0)
 
 	case nodeAccess:
 		op := isa.Access
 		if n.optional {
 			op = isa.OptionalAccess
 		}
-		c.emit(op, c.constant(n.text), 0)
+		c.emit(op, c.constant(n.text))
 
 	default:
 		return fmt.Errorf("%w: unknown expression", ErrSyntax)
@@ -70,7 +70,7 @@ func (c *compiler) call(n *node, depth int) error {
 		}
 	}
 	spec := callSpec{call: fn.call, arity: arity}
-	c.emit(isa.Call, c.constant(spec), stackChange(1-arity))
+	c.emit(isa.Call, c.constant(spec))
 	return nil
 }
 
@@ -79,21 +79,22 @@ func (c *compiler) binary(n *node, depth int) error {
 		return err
 	}
 	op := binaryOpcodes[n.text]
-	jump := -1
-	if op == isa.And || op == isa.Or || op == isa.Coalesce {
-		jump = c.emit(op, 0, -1)
+	if op != isa.And && op != isa.Or && op != isa.Coalesce {
+		if err := c.compile(n.children[1], depth+1); err != nil {
+			return err
+		}
+		c.emit(op, 0)
+		return nil
 	}
+	end := c.newLabel()
+	c.emit(op, end)
 	if err := c.compile(n.children[1], depth+1); err != nil {
 		return err
 	}
-	if jump < 0 {
-		c.emit(op, 0, -1)
-		return nil
-	}
 	if op != isa.Coalesce {
-		c.emit(isa.Boolean, c.constant(n.text), 0)
+		c.emit(isa.Boolean, 0)
 	}
-	c.patch(jump)
+	c.emit(isa.Label, end)
 	return nil
 }
 
@@ -101,45 +102,41 @@ func (c *compiler) index(n *node, depth int) error {
 	if err := c.compile(n.children[0], depth+1); err != nil {
 		return err
 	}
-	jump := -1
-	if n.optional {
-		jump = c.emit(isa.Optional, 0, 0)
+	if !n.optional {
+		if err := c.compile(n.children[1], depth+1); err != nil {
+			return err
+		}
+		c.emit(isa.Index, 0)
+		return nil
 	}
+	end := c.newLabel()
+	c.emit(isa.Optional, end)
 	if err := c.compile(n.children[1], depth+1); err != nil {
 		return err
 	}
-	op := isa.Index
-	if n.optional {
-		op = isa.OptionalIndex
-	}
-	c.emit(op, 0, -1)
-	if jump >= 0 {
-		c.patch(jump)
-	}
+	c.emit(isa.OptionalIndex, 0)
+	c.emit(isa.Label, end)
 	return nil
 }
 
 func (c *compiler) branch(n *node, depth int) error {
-	base := c.height
-	var exits []int
+	end := c.newLabel()
 	for i := 0; i < len(n.children)-1; i += 2 {
 		if err := c.compile(n.children[i], depth+1); err != nil {
 			return err
 		}
-		next := c.emit(isa.CondJump, 0, -1)
+		next := c.newLabel()
+		c.emit(isa.CondJump, next)
 		if err := c.compile(n.children[i+1], depth+1); err != nil {
 			return err
 		}
-		exits = append(exits, c.emit(isa.Jump, 0, 0))
-		c.height = base
-		c.patch(next)
+		c.emit(isa.Jump, end)
+		c.emit(isa.Label, next)
 	}
 	if err := c.compile(n.children[len(n.children)-1], depth+1); err != nil {
 		return err
 	}
-	for _, exit := range exits {
-		c.patch(exit)
-	}
+	c.emit(isa.Label, end)
 	return nil
 }
 
@@ -150,7 +147,7 @@ func (c *compiler) let(n *node, depth int) error {
 	}
 	mark := c.nextSlot
 	slot := c.allocSlot()
-	c.emit(isa.Store, isa.Operand(slot), -1)
+	c.emit(isa.Store, isa.Operand(slot))
 	bound := []binding{{name: n.valueBinding, slot: slot}}
 	err := c.scoped(bound, n.children[1], depth)
 	c.nextSlot = mark

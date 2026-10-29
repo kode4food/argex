@@ -44,7 +44,7 @@ const (
 	And      // If false, jump. Otherwise pop left operand
 	Or       // If true, jump. Otherwise pop left operand
 	Coalesce // If present and non-null, jump. Otherwise pop left operand
-	Boolean  // Check Boolean operand (operand = error context index)
+	Boolean  // Check that the top of the stack is a Boolean
 
 	// Numeric operations
 	Pos // Convert operand to a number
@@ -63,8 +63,13 @@ const (
 	Call // Call a resolved function (operand = call specification index)
 
 	// Control flow
-	CondJump // Pop condition, jump if false (operand = destination)
-	Jump     // Jump unconditionally (operand = destination)
+	CondJump  // Pop condition, jump if false (operand = destination)
+	Jump      // Jump unconditionally (operand = destination)
+	JumpIf    // Pop condition, jump if true (operand = destination)
+	JumpIfLt  // Pop two values, jump if left < right, comparing like Lt
+	JumpIfLte // Pop two values, jump if left <= right, comparing like Lte
+	JumpIfGt  // Pop two values, jump if left > right, comparing like Gt
+	JumpIfGte // Pop two values, jump if left >= right, comparing like Gte
 
 	// Construction and iteration
 	Array   // Pop values, push array (operand = count)
@@ -74,9 +79,12 @@ const (
 	Concat  // Pop an array, append its elements to the array being built
 	Merge   // Pop an object, set its entries on the object being built
 	Iterate // Replace a collection with an iterator (operand = iteration index)
-	Fetch   // Bind the iterator's next element and advance, or jump to end
+	Fetch   // Bind the iterator's next element and jump to the loop top, if any
 	Append  // Pop a value, append it to the iterator's result
 	Result  // Replace the iterator with its accumulated result
+
+	// Compilation only
+	Label // Mark a jump destination, removed when compiling finishes
 )
 
 // New packs the opcode and operand into an instruction

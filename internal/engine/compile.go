@@ -9,18 +9,20 @@ import (
 
 type (
 	compiler struct {
-		program  *program
-		scope    []binding
-		nextSlot int
-		height   int
+		program   *program
+		scope     []binding
+		loopRefs  []int
+		hoisted   []string
+		loopBase  int
+		nextSlot  int
+		nextLabel isa.Operand
+		looping   bool
 	}
 
 	binding struct {
 		name string
 		slot int
 	}
-
-	stackChange int
 )
 
 // rootSlot holds the program's this, so it compiles to an ordinary local Load
@@ -38,6 +40,7 @@ func Compile(expr *Expression) (func(any) (any, error), error) {
 	if err := c.compile(expr.root, 0); err != nil {
 		return nil, err
 	}
+	c.finalize()
 	return c.program.evaluate, nil
 }
 
@@ -48,13 +51,13 @@ func (c *compiler) compile(n *node, depth int) error {
 	var err error
 	switch n.kind {
 	case nodeLiteral:
-		c.emit(isa.Const, c.constant(n.value), 1)
+		c.emit(isa.Const, c.constant(n.value))
 
 	case nodeName:
 		c.name(n.text)
 
 	case nodeRoot:
-		c.emit(isa.Load, rootSlot, 1)
+		c.emit(isa.Load, rootSlot)
 
 	case nodeBinary:
 		err = c.binary(n, depth)
@@ -89,20 +92,21 @@ func (c *compiler) compile(n *node, depth int) error {
 func (c *compiler) name(name string) {
 	for _, b := range slices.Backward(c.scope) {
 		if b.name == name {
-			c.emit(isa.Load, isa.Operand(b.slot), 1)
+			c.emit(isa.Load, isa.Operand(b.slot))
 			return
 		}
 	}
-	c.emit(isa.Global, c.constant(name), 1)
+	if c.looping {
+		load := c.emit(isa.Load, c.loopSlot(name))
+		c.loopRefs = append(c.loopRefs, load)
+		return
+	}
+	c.emit(isa.Global, c.constant(name))
 }
 
-func (c *compiler) emit(
-	op isa.Opcode, operand isa.Operand, change stackChange,
-) int {
+func (c *compiler) emit(op isa.Opcode, operand isa.Operand) int {
 	index := len(c.program.code)
 	c.program.code = append(c.program.code, op.New(operand))
-	c.height += int(change)
-	c.program.stackSize = max(c.program.stackSize, c.height)
 	return index
 }
 
@@ -112,7 +116,21 @@ func (c *compiler) constant(value any) isa.Operand {
 	return index
 }
 
-func (c *compiler) patch(index int) {
-	inst := c.program.code[index]
-	c.program.code[index] = inst.Opcode().New(isa.Operand(len(c.program.code)))
+// newLabel allocates a label for a jump. Emitting a Label with it marks the
+// destination
+func (c *compiler) newLabel() isa.Operand {
+	label := c.nextLabel
+	c.nextLabel++
+	return label
+}
+
+// loopSlot returns the slot holding the input variable name inside the
+// outermost loop being compiled, which loads it once before it starts
+func (c *compiler) loopSlot(name string) isa.Operand {
+	i := slices.Index(c.hoisted, name)
+	if i < 0 {
+		i = len(c.hoisted)
+		c.hoisted = append(c.hoisted, name)
+	}
+	return isa.Operand(c.loopBase + i)
 }

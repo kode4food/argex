@@ -12,19 +12,19 @@ func (c *compiler) array(n *node, depth int) error {
 		}
 		fixed++
 	}
-	c.emit(isa.Array, isa.Operand(fixed), stackChange(1-fixed))
+	c.emit(isa.Array, isa.Operand(fixed))
 	for _, child := range n.children[fixed:] {
 		if child.kind == nodeSpread {
 			if err := c.compile(child.children[0], depth+1); err != nil {
 				return err
 			}
-			c.emit(isa.Concat, 0, -1)
+			c.emit(isa.Concat, 0)
 			continue
 		}
 		if err := c.compile(child, depth+1); err != nil {
 			return err
 		}
-		c.emit(isa.Push, 0, -1)
+		c.emit(isa.Push, 0)
 	}
 	return nil
 }
@@ -42,25 +42,25 @@ func (c *compiler) object(n *node, depth int) error {
 		}
 		fixed++
 	}
-	c.emit(isa.Object, c.constant(keys), stackChange(1-len(keys)))
+	c.emit(isa.Object, c.constant(keys))
 	for _, child := range n.children[fixed:] {
 		switch child.kind {
 		case nodeSpread:
 			if err := c.compile(child.children[0], depth+1); err != nil {
 				return err
 			}
-			c.emit(isa.Merge, 0, -1)
+			c.emit(isa.Merge, 0)
 			continue
 
 		case nodeField:
-			c.emit(isa.Const, c.constant(child.text), 1)
+			c.emit(isa.Const, c.constant(child.text))
 		}
 		for _, part := range child.children {
 			if err := c.compile(part, depth+1); err != nil {
 				return err
 			}
 		}
-		c.emit(isa.Put, 0, -2)
+		c.emit(isa.Put, 0)
 	}
 	return nil
 }

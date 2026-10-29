@@ -20,7 +20,7 @@ type (
 	iterationSpec struct {
 		valueSlot int
 		keySlot   int
-		end       int
+		top       int
 		keyed     bool
 	}
 
@@ -39,6 +39,18 @@ type (
 )
 
 const inlineValues = 32
+
+// Type errors the VM raises name only the type it needed
+const (
+	expectNumber         = "expected number"
+	expectNumberOrString = "expected number or string"
+	expectString         = "expected string"
+	expectBoolean        = "expected Boolean"
+	expectArray          = "expected array"
+	expectObject         = "expected object"
+	expectInteger        = "expected integer"
+	expectCollection     = "expected array or object"
+)
 
 // evaluate runs the program with this as its input. Bare names read the
 // properties of an object and are missing for any other value
@@ -160,21 +172,21 @@ func (p *program) evaluate(this any) (any, error) {
 		case isa.Not:
 			value, ok := MEM[SP-1].(bool)
 			if !ok {
-				return nil, operandError("! operand must be a Boolean")
+				return nil, operandError(expectBoolean)
 			}
 			MEM[SP-1] = !value
 
 		case isa.Pos:
 			value := number(MEM[SP-1])
 			if value-value != 0 {
-				return nil, operandError("+ operand must be a number")
+				return nil, operandError(expectNumber)
 			}
 			MEM[SP-1] = value
 
 		case isa.Neg:
 			value := number(MEM[SP-1])
 			if value-value != 0 {
-				return nil, operandError("- operand must be a number")
+				return nil, operandError(expectNumber)
 			}
 			MEM[SP-1] = -value
 
@@ -182,9 +194,7 @@ func (p *program) evaluate(this any) (any, error) {
 			if a, ok := MEM[SP-2].(string); ok {
 				b, ok := MEM[SP-1].(string)
 				if !ok {
-					return nil, operandError(
-						"+ right operand must be a string when the left is",
-					)
+					return nil, operandError(expectString)
 				}
 				SP--
 				MEM[SP-1] = a + b
@@ -192,13 +202,11 @@ func (p *program) evaluate(this any) (any, error) {
 			}
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError(
-					"+ left operand must be a number or a string",
-				)
+				return nil, operandError(expectNumberOrString)
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError("+ right operand must be a number")
+				return nil, operandError(expectNumber)
 			}
 			value := a + b
 			if math.IsNaN(value) || math.IsInf(value, 0) {
@@ -210,11 +218,11 @@ func (p *program) evaluate(this any) (any, error) {
 		case isa.Sub:
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError("- left operand must be a number")
+				return nil, operandError(expectNumber)
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError("- right operand must be a number")
+				return nil, operandError(expectNumber)
 			}
 			value := a - b
 			if math.IsNaN(value) || math.IsInf(value, 0) {
@@ -226,11 +234,11 @@ func (p *program) evaluate(this any) (any, error) {
 		case isa.Mul:
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError("* left operand must be a number")
+				return nil, operandError(expectNumber)
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError("* right operand must be a number")
+				return nil, operandError(expectNumber)
 			}
 			value := a * b
 			if math.IsNaN(value) || math.IsInf(value, 0) {
@@ -242,11 +250,11 @@ func (p *program) evaluate(this any) (any, error) {
 		case isa.Div:
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError("/ left operand must be a number")
+				return nil, operandError(expectNumber)
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError("/ right operand must be a number")
+				return nil, operandError(expectNumber)
 			}
 			value := a / b
 			if math.IsNaN(value) || math.IsInf(value, 0) {
@@ -258,11 +266,11 @@ func (p *program) evaluate(this any) (any, error) {
 		case isa.Mod:
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError("% left operand must be a number")
+				return nil, operandError(expectNumber)
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError("% right operand must be a number")
+				return nil, operandError(expectNumber)
 			}
 			value := math.Mod(a, b)
 			if math.IsNaN(value) || math.IsInf(value, 0) {
@@ -287,7 +295,7 @@ func (p *program) evaluate(this any) (any, error) {
 			left := MEM[SP-2]
 			candidates, ok := MEM[SP-1].([]any)
 			if !ok {
-				return nil, operandError("in right operand must be an array")
+				return nil, operandError(expectArray)
 			}
 			matched := false
 			for _, candidate := range candidates {
@@ -303,9 +311,7 @@ func (p *program) evaluate(this any) (any, error) {
 			if a, ok := MEM[SP-2].(string); ok {
 				b, ok := MEM[SP-1].(string)
 				if !ok {
-					return nil, operandError(
-						"< right operand must be a string when the left is",
-					)
+					return nil, operandError(expectString)
 				}
 				SP--
 				MEM[SP-1] = a < b
@@ -313,13 +319,11 @@ func (p *program) evaluate(this any) (any, error) {
 			}
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError(
-					"< left operand must be a number or a string",
-				)
+				return nil, operandError(expectNumberOrString)
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError("< right operand must be a number")
+				return nil, operandError(expectNumber)
 			}
 			SP--
 			MEM[SP-1] = a < b
@@ -328,9 +332,7 @@ func (p *program) evaluate(this any) (any, error) {
 			if a, ok := MEM[SP-2].(string); ok {
 				b, ok := MEM[SP-1].(string)
 				if !ok {
-					return nil, operandError(
-						"<= right operand must be a string when the left is",
-					)
+					return nil, operandError(expectString)
 				}
 				SP--
 				MEM[SP-1] = a <= b
@@ -338,13 +340,11 @@ func (p *program) evaluate(this any) (any, error) {
 			}
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError(
-					"<= left operand must be a number or a string",
-				)
+				return nil, operandError(expectNumberOrString)
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError("<= right operand must be a number")
+				return nil, operandError(expectNumber)
 			}
 			SP--
 			MEM[SP-1] = a <= b
@@ -353,9 +353,7 @@ func (p *program) evaluate(this any) (any, error) {
 			if a, ok := MEM[SP-2].(string); ok {
 				b, ok := MEM[SP-1].(string)
 				if !ok {
-					return nil, operandError(
-						"> right operand must be a string when the left is",
-					)
+					return nil, operandError(expectString)
 				}
 				SP--
 				MEM[SP-1] = a > b
@@ -363,13 +361,11 @@ func (p *program) evaluate(this any) (any, error) {
 			}
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError(
-					"> left operand must be a number or a string",
-				)
+				return nil, operandError(expectNumberOrString)
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError("> right operand must be a number")
+				return nil, operandError(expectNumber)
 			}
 			SP--
 			MEM[SP-1] = a > b
@@ -378,9 +374,7 @@ func (p *program) evaluate(this any) (any, error) {
 			if a, ok := MEM[SP-2].(string); ok {
 				b, ok := MEM[SP-1].(string)
 				if !ok {
-					return nil, operandError(
-						">= right operand must be a string when the left is",
-					)
+					return nil, operandError(expectString)
 				}
 				SP--
 				MEM[SP-1] = a >= b
@@ -388,13 +382,11 @@ func (p *program) evaluate(this any) (any, error) {
 			}
 			a := number(MEM[SP-2])
 			if a-a != 0 {
-				return nil, operandError(
-					">= left operand must be a number or a string",
-				)
+				return nil, operandError(expectNumberOrString)
 			}
 			b := number(MEM[SP-1])
 			if b-b != 0 {
-				return nil, operandError(">= right operand must be a number")
+				return nil, operandError(expectNumber)
 			}
 			SP--
 			MEM[SP-1] = a >= b
@@ -402,7 +394,7 @@ func (p *program) evaluate(this any) (any, error) {
 		case isa.And:
 			value, ok := MEM[SP-1].(bool)
 			if !ok {
-				return nil, operandError("&& left operand must be a Boolean")
+				return nil, operandError(expectBoolean)
 			}
 			if !value {
 				PC = op - 1
@@ -413,7 +405,7 @@ func (p *program) evaluate(this any) (any, error) {
 		case isa.Or:
 			value, ok := MEM[SP-1].(bool)
 			if !ok {
-				return nil, operandError("|| left operand must be a Boolean")
+				return nil, operandError(expectBoolean)
 			}
 			if value {
 				PC = op - 1
@@ -430,17 +422,14 @@ func (p *program) evaluate(this any) (any, error) {
 
 		case isa.Boolean:
 			if _, ok := MEM[SP-1].(bool); !ok {
-				symbol := p.constants[op].(string)
-				return nil, operandError(
-					symbol + " right operand must be a Boolean",
-				)
+				return nil, operandError(expectBoolean)
 			}
 
 		case isa.CondJump:
 			SP--
 			value, ok := MEM[SP].(bool)
 			if !ok {
-				return nil, operandError("condition must be a Boolean")
+				return nil, operandError(expectBoolean)
 			}
 			if !value {
 				PC = op - 1
@@ -448,6 +437,112 @@ func (p *program) evaluate(this any) (any, error) {
 
 		case isa.Jump:
 			PC = op - 1
+
+		case isa.JumpIf:
+			SP--
+			value, ok := MEM[SP].(bool)
+			if !ok {
+				return nil, operandError(expectBoolean)
+			}
+			if value {
+				PC = op - 1
+			}
+
+		case isa.JumpIfLt:
+			SP -= 2
+			if a, ok := MEM[SP].(string); ok {
+				b, ok := MEM[SP+1].(string)
+				if !ok {
+					return nil, operandError(expectString)
+				}
+				if a < b {
+					PC = op - 1
+				}
+				continue
+			}
+			a := number(MEM[SP])
+			if a-a != 0 {
+				return nil, operandError(expectNumberOrString)
+			}
+			b := number(MEM[SP+1])
+			if b-b != 0 {
+				return nil, operandError(expectNumber)
+			}
+			if a < b {
+				PC = op - 1
+			}
+
+		case isa.JumpIfLte:
+			SP -= 2
+			if a, ok := MEM[SP].(string); ok {
+				b, ok := MEM[SP+1].(string)
+				if !ok {
+					return nil, operandError(expectString)
+				}
+				if a <= b {
+					PC = op - 1
+				}
+				continue
+			}
+			a := number(MEM[SP])
+			if a-a != 0 {
+				return nil, operandError(expectNumberOrString)
+			}
+			b := number(MEM[SP+1])
+			if b-b != 0 {
+				return nil, operandError(expectNumber)
+			}
+			if a <= b {
+				PC = op - 1
+			}
+
+		case isa.JumpIfGt:
+			SP -= 2
+			if a, ok := MEM[SP].(string); ok {
+				b, ok := MEM[SP+1].(string)
+				if !ok {
+					return nil, operandError(expectString)
+				}
+				if a > b {
+					PC = op - 1
+				}
+				continue
+			}
+			a := number(MEM[SP])
+			if a-a != 0 {
+				return nil, operandError(expectNumberOrString)
+			}
+			b := number(MEM[SP+1])
+			if b-b != 0 {
+				return nil, operandError(expectNumber)
+			}
+			if a > b {
+				PC = op - 1
+			}
+
+		case isa.JumpIfGte:
+			SP -= 2
+			if a, ok := MEM[SP].(string); ok {
+				b, ok := MEM[SP+1].(string)
+				if !ok {
+					return nil, operandError(expectString)
+				}
+				if a >= b {
+					PC = op - 1
+				}
+				continue
+			}
+			a := number(MEM[SP])
+			if a-a != 0 {
+				return nil, operandError(expectNumberOrString)
+			}
+			b := number(MEM[SP+1])
+			if b-b != 0 {
+				return nil, operandError(expectNumber)
+			}
+			if a >= b {
+				PC = op - 1
+			}
 
 		case isa.Array:
 			RES := SP - op
@@ -476,7 +571,7 @@ func (p *program) evaluate(this any) (any, error) {
 			SP -= 2
 			key, ok := MEM[SP].(string)
 			if !ok {
-				return nil, operandError("object key")
+				return nil, operandError(expectString)
 			}
 			if value := MEM[SP+1]; !IsMissing(value) {
 				MEM[SP-1].(map[string]any)[key] = value
@@ -489,7 +584,7 @@ func (p *program) evaluate(this any) (any, error) {
 			}
 			source, ok := MEM[SP].([]any)
 			if !ok {
-				return nil, operandError("spread")
+				return nil, operandError(expectArray)
 			}
 			MEM[SP-1] = append(MEM[SP-1].([]any), source...)
 
@@ -500,7 +595,7 @@ func (p *program) evaluate(this any) (any, error) {
 			}
 			source, ok := MEM[SP].(map[string]any)
 			if !ok {
-				return nil, operandError("spread")
+				return nil, operandError(expectObject)
 			}
 			target := MEM[SP-1].(map[string]any)
 			for key, value := range source {
@@ -542,18 +637,18 @@ func (p *program) evaluate(this any) (any, error) {
 			}
 
 		case isa.Fetch:
-			spec := p.iterations[op]
 			it := MEM[SP-1].(*iterator)
 			if len(it.values) == 0 {
-				PC = spec.end - 1
 				continue
 			}
+			spec := &p.iterations[op]
 			MEM[LP+spec.valueSlot] = it.values[0]
 			it.values = it.values[1:]
 			if spec.keyed {
 				MEM[LP+spec.keySlot] = it.keys[0]
 				it.keys = it.keys[1:]
 			}
+			PC = spec.top - 1
 
 		case isa.Append:
 			SP--
@@ -577,7 +672,7 @@ func accessChild(container, key any) (any, bool, error) {
 	case map[string]any:
 		name, ok := key.(string)
 		if !ok {
-			return nil, false, operandError("object key")
+			return nil, false, operandError(expectString)
 		}
 		child, ok := c[name]
 		return child, ok, nil
@@ -585,7 +680,7 @@ func accessChild(container, key any) (any, bool, error) {
 	case []any:
 		index := number(key)
 		if index-index != 0 || math.Trunc(index) != index {
-			return nil, false, operandError("array index")
+			return nil, false, operandError(expectInteger)
 		}
 		if index >= 0 && index < float64(len(c)) {
 			return c[int(index)], true, nil
@@ -593,7 +688,7 @@ func accessChild(container, key any) (any, bool, error) {
 		return nil, false, nil
 
 	default:
-		return nil, false, operandError("access")
+		return nil, false, operandError(expectCollection)
 	}
 }
 
@@ -631,6 +726,6 @@ func collectionEntries(receiver any, keyed bool) ([]any, []any, error) {
 		return keys, values, nil
 
 	default:
-		return nil, nil, operandError("collection receiver")
+		return nil, nil, operandError(expectCollection)
 	}
 }

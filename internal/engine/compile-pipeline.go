@@ -23,6 +23,8 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 	if err := c.compile(stages[0].children[0], depth+1); err != nil {
 		return err
 	}
+	looping := c.looping
+	c.looping = true
 	mark := c.nextSlot
 	scopes := make([][]binding, len(stages))
 	visible := make([][]binding, len(stages))
@@ -43,85 +45,113 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 		}
 	}
 
-	spec := iterationSpec{valueSlot: scopes[0][0].slot}
+	// the loop is entered at its Fetch, which sits at the bottom and jumps back
+	// to the top while elements remain. Skipped elements jump to it too
+	top := c.newLabel()
+	next := c.newLabel()
+	entry := c.newLabel()
+	done := c.newLabel()
+	spec := iterationSpec{valueSlot: scopes[0][0].slot, top: int(top)}
 	if len(scopes[0]) > 1 {
 		spec.keySlot = scopes[0][1].slot
 		spec.keyed = true
 	}
-	index := len(c.program.iterations)
+	index := isa.Operand(len(c.program.iterations))
 	c.program.iterations = append(c.program.iterations, spec)
-	c.emit(isa.Iterate, isa.Operand(index), 0)
+	c.emit(isa.Iterate, index)
 	for i, names := range scopes[1:] {
 		if len(names) > 1 {
-			c.emit(isa.Zero, isa.Operand(counters[i+1]), 0)
+			c.emit(isa.Zero, isa.Operand(counters[i+1]))
 		}
 	}
-
-	loopTop := len(c.program.code)
-	c.emit(isa.Fetch, isa.Operand(index), 0)
+	c.emit(isa.Jump, entry)
+	c.emit(isa.Label, top)
 	for i, stage := range stages {
 		names := scopes[i]
 		// later stages read the key, so it can't be the counter Inc advances
 		if i > 0 && len(names) > 1 && counters[i] != names[1].slot {
-			c.emit(isa.Load, isa.Operand(counters[i]), 1)
-			c.emit(isa.Store, isa.Operand(names[1].slot), -1)
+			c.emit(isa.Load, isa.Operand(counters[i]))
+			c.emit(isa.Store, isa.Operand(names[1].slot))
 		}
 		if err := c.scoped(visible[i], stage.children[1], depth); err != nil {
 			return err
 		}
 		if i > 0 && len(names) > 1 {
-			c.emit(isa.Inc, isa.Operand(counters[i]), 0)
+			c.emit(isa.Inc, isa.Operand(counters[i]))
 		}
 		if i == len(stages)-1 {
 			break
 		}
 		if stage.kind == nodeFilter {
-			c.emit(isa.CondJump, isa.Operand(loopTop), -1)
-			c.emit(isa.Load, isa.Operand(names[0].slot), 1)
+			c.emit(isa.CondJump, next)
+			c.emit(isa.Load, isa.Operand(names[0].slot))
 		}
-		c.emit(isa.Store, isa.Operand(scopes[i+1][0].slot), -1)
+		c.emit(isa.Store, isa.Operand(scopes[i+1][0].slot))
 	}
 
-	switch stages[len(stages)-1].kind {
+	final := stages[len(stages)-1].kind
+	switch final {
 	case nodeMap:
-		c.emit(isa.Append, 0, -1)
-		c.emit(isa.Jump, isa.Operand(loopTop), 0)
-		c.program.iterations[index].end = len(c.program.code)
-		c.emit(isa.Result, 0, 0)
+		c.emit(isa.Append, 0)
 
 	case nodeFilter:
-		skip := c.emit(isa.CondJump, 0, -1)
-		c.emit(isa.Load, isa.Operand(scopes[len(scopes)-1][0].slot), 1)
-		c.emit(isa.Append, 0, -1)
-		c.patch(skip)
-		c.emit(isa.Jump, isa.Operand(loopTop), 0)
-		c.program.iterations[index].end = len(c.program.code)
-		c.emit(isa.Result, 0, 0)
+		c.emit(isa.CondJump, next)
+		c.emit(isa.Load, isa.Operand(scopes[len(scopes)-1][0].slot))
+		c.emit(isa.Append, 0)
 
 	case nodeAny:
-		c.emit(isa.CondJump, isa.Operand(loopTop), -1)
-		c.emit(isa.Pop, 0, -1)
-		c.emit(isa.Const, c.constant(true), 1)
-		done := c.emit(isa.Jump, 0, 0)
-		c.program.iterations[index].end = len(c.program.code)
-		c.emit(isa.Pop, 0, -1)
-		c.emit(isa.Const, c.constant(false), 1)
-		c.patch(done)
+		c.emit(isa.CondJump, next)
+		c.emit(isa.Pop, 0)
+		c.emit(isa.Const, c.constant(true))
+		c.emit(isa.Jump, done)
 
 	case nodeAll:
-		fail := c.emit(isa.CondJump, 0, -1)
-		c.emit(isa.Jump, isa.Operand(loopTop), 0)
-		c.patch(fail)
-		c.emit(isa.Pop, 0, -1)
-		c.emit(isa.Const, c.constant(false), 1)
-		done := c.emit(isa.Jump, 0, 0)
-		c.program.iterations[index].end = len(c.program.code)
-		c.emit(isa.Pop, 0, -1)
-		c.emit(isa.Const, c.constant(true), 1)
-		c.patch(done)
+		c.emit(isa.JumpIf, next)
+		c.emit(isa.Pop, 0)
+		c.emit(isa.Const, c.constant(false))
+		c.emit(isa.Jump, done)
 	}
+
+	preload := !looping && len(c.hoisted) > 0
+	if !preload {
+		c.emit(isa.Label, entry)
+	}
+	c.emit(isa.Label, next)
+	c.emit(isa.Fetch, index)
+	switch final {
+	case nodeAny:
+		c.emit(isa.Pop, 0)
+		c.emit(isa.Const, c.constant(false))
+
+	case nodeAll:
+		c.emit(isa.Pop, 0)
+		c.emit(isa.Const, c.constant(true))
+
+	default:
+		c.emit(isa.Result, 0)
+	}
+	if preload {
+		c.preload(entry, next, done)
+	}
+	c.emit(isa.Label, done)
 	c.nextSlot = mark
+	c.looping = looping
 	return nil
+}
+
+// preload loads the names an outermost loop read into their slots, in a block
+// after the loop that its entry jump passes through on the way to Fetch
+func (c *compiler) preload(entry, next, done isa.Operand) {
+	c.emit(isa.Jump, done)
+	c.emit(isa.Label, entry)
+	for i, name := range c.hoisted {
+		c.emit(isa.Global, c.constant(name))
+		slot := isa.Operand(c.loopBase + i)
+		c.loopRefs = append(c.loopRefs, c.emit(isa.Store, slot))
+	}
+	c.loopBase += len(c.hoisted)
+	c.hoisted = nil
+	c.emit(isa.Jump, next)
 }
 
 // scoped compiles body seeing the enclosing scope plus names, and nothing bound
