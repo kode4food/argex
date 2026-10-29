@@ -2,6 +2,10 @@
 
 Notable changes to Argyll Expressions.
 
+## 0.1.5
+
+- Faster conditions, filters, and collection pipelines
+
 ## 0.1.4
 
 - Name intermediate values with `let` and reuse them anywhere in an expression
