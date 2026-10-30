@@ -2,6 +2,12 @@
 
 Notable changes to Argyll Expressions.
 
+## 0.1.6
+
+- Faster pipelines that build results with `map` and `filter`, with fewer allocations
+- Faster parsing with fewer allocations
+- String literals containing invalid UTF-8 or unpaired surrogate escapes are rejected instead of silently altered
+
 ## 0.1.5
 
 - Faster conditions, filters, and collection pipelines
