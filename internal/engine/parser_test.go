@@ -65,6 +65,7 @@ func TestSyntax(t *testing.T) {
 	cases := []string{
 		"", " ", "1 2", "01", "1e", "1e9999", "1.", "1..2",
 		`"unterminated`, `"bad\x20"`, "\"bad\nstring\"",
+		"\"bad\xffutf8\"", `"\ud800"`, "\"tab\there\"",
 		"'single'", "@", "$", "x = 2", "x++", "x => x", "x |> f",
 		"[1", "[1 2]", "[1,,2]", "{x:}", "{x 1}", "{x:1 x:2}",
 		"{x:1,x:2}", "{1:2}", "{true + 1: 2}", "{",

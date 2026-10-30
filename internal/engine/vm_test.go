@@ -80,6 +80,8 @@ func TestValues(t *testing.T) {
 		{source: `"hello\n\u263a"`, want: "hello\n☺"},
 		{source: `"\ud83d\ude00"`, want: "😀"},
 		{source: `"a\\b\"c"`, want: "a\\b\"c"},
+		{source: `"héllo 世界"`, want: "héllo 世界"},
+		{source: `""`, want: ""},
 		{source: "世界", want: "hello"},
 		{source: "trueValue", want: 9},
 		{source: "customer.address.country", want: "CH"},

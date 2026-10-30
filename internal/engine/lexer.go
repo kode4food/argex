@@ -1,11 +1,12 @@
 package engine
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
 	"fmt"
 	"strconv"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 type (
@@ -17,6 +18,14 @@ type (
 		text  string
 		value any
 		pos   int
+	}
+
+	// scanner walks the source by byte offset and counts characters, so error
+	// positions match what the author sees
+	scanner struct {
+		source     string
+		byteOffset int
+		charPos    int
 	}
 )
 
@@ -78,6 +87,14 @@ const (
 	opAnd      = "&&"
 	opOr       = "||"
 	opCoalesce = "??"
+)
+
+const (
+	// pairLength is the length of every operator in pairKinds
+	pairLength = 2
+
+	// minUnescaped is the lowest byte JSON allows unescaped in a string
+	minUnescaped = 0x20
 )
 
 // operatorText maps an operator token back to its symbol, for storing on the
@@ -162,118 +179,164 @@ func (k tokenKind) String() string {
 }
 
 func lex(source string) ([]token, error) {
-	src := []rune(source)
+	s := &scanner{source: source}
 	var result []token
-	pos := skipIgnored(src, 0)
-	for pos < len(src) {
-		item, next, err := scan(src, pos)
+	s.skipIgnored()
+	for s.byteOffset < len(s.source) {
+		item, err := s.scan()
 		if err != nil {
 			return nil, err
 		}
 		result = append(result, item)
-		pos = skipIgnored(src, next)
+		s.skipIgnored()
 	}
-	return append(result, token{kind: kindEOF, pos: len(src)}), nil
+	return append(result, token{kind: kindEOF, pos: s.charPos}), nil
 }
 
-// skipIgnored returns the next token's position, past whitespace and comments
-func skipIgnored(src []rune, pos int) int {
-	for pos < len(src) {
-		switch {
-		case unicode.IsSpace(src[pos]):
-			pos++
+func (s *scanner) advance(size int) {
+	end := s.byteOffset + size
+	s.charPos += utf8.RuneCountInString(s.source[s.byteOffset:end])
+	s.byteOffset = end
+}
 
-		case src[pos] == '/' && pos+1 < len(src) && src[pos+1] == '/':
-			for pos < len(src) && src[pos] != '\n' {
-				pos++
+// skipIgnored advances past whitespace and comments to the next token
+func (s *scanner) skipIgnored() {
+	for s.byteOffset < len(s.source) {
+		rest := s.source[s.byteOffset:]
+		if strings.HasPrefix(rest, "//") {
+			end := strings.IndexByte(rest, '\n')
+			if end < 0 {
+				end = len(rest)
 			}
-
-		default:
-			return pos
+			s.advance(end)
+			continue
 		}
+		r, size := utf8.DecodeRuneInString(rest)
+		if !unicode.IsSpace(r) {
+			return
+		}
+		s.advance(size)
 	}
-	return pos
 }
 
-func scan(src []rune, pos int) (token, int, error) {
-	start := pos
-	r := src[pos]
+func (s *scanner) scan() (token, error) {
+	start := s.charPos
+	rest := s.source[s.byteOffset:]
+	r, size := utf8.DecodeRuneInString(rest)
 	if isNameStart(r) {
-		pos++
-		for pos < len(src) && isNamePart(src[pos]) {
-			pos++
+		n := size
+		for n < len(rest) {
+			next, width := utf8.DecodeRuneInString(rest[n:])
+			if !isNamePart(next) {
+				break
+			}
+			n += width
 		}
-		return token{
-			kind: kindName,
-			text: string(src[start:pos]),
-			pos:  start,
-		}, pos, nil
+		s.advance(n)
+		return token{kind: kindName, text: rest[:n], pos: start}, nil
 	}
 	if r >= '0' && r <= '9' {
-		return scanNumber(src, start)
+		return s.scanNumber()
 	}
 	if r == '"' {
-		return scanString(src, start)
+		return s.scanString()
 	}
-	if pos+2 < len(src) && src[pos] == '.' && src[pos+1] == '.' &&
-		src[pos+2] == '.' {
-		return token{kind: kindSpread, pos: start}, pos + 3, nil
+	if strings.HasPrefix(rest, "...") {
+		s.advance(len("..."))
+		return token{kind: kindSpread, pos: start}, nil
 	}
-	if pos+1 < len(src) {
-		pair := string(src[pos : pos+2])
-		if kind, ok := pairKinds[pair]; ok {
-			return token{kind: kind, pos: start}, pos + 2, nil
+	if len(rest) >= pairLength {
+		if kind, ok := pairKinds[rest[:pairLength]]; ok {
+			s.advance(pairLength)
+			return token{kind: kind, pos: start}, nil
 		}
 	}
 	if kind, ok := singleCharKinds[r]; ok {
-		return token{kind: kind, pos: start}, pos + 1, nil
+		s.advance(size)
+		return token{kind: kind, pos: start}, nil
 	}
-	return token{}, pos, syntax(start, "unexpected character")
+	return token{}, syntax(start, "unexpected character")
 }
 
-func scanNumber(src []rune, start int) (token, int, error) {
-	pos := start
-	for pos < len(src) {
-		r := src[pos]
-		if strings.ContainsRune("0123456789.eE", r) {
-			pos++
+func (s *scanner) scanNumber() (token, error) {
+	start := s.charPos
+	rest := s.source[s.byteOffset:]
+	n := 0
+	for n < len(rest) {
+		c := rest[n]
+		if strings.IndexByte("0123456789.eE", c) >= 0 {
+			n++
 			continue
 		}
-		if (r == '+' || r == '-') && pos > start &&
-			(src[pos-1] == 'e' || src[pos-1] == 'E') {
-			pos++
+		if (c == '+' || c == '-') && n > 0 &&
+			(rest[n-1] == 'e' || rest[n-1] == 'E') {
+			n++
 			continue
 		}
 		break
 	}
-	raw := string(src[start:pos])
-	if !json.Valid([]byte(raw)) {
-		return token{}, pos, syntax(start, "invalid number")
+	raw := rest[:n]
+	s.advance(n)
+	if !isNumber(raw) {
+		return token{}, syntax(start, "invalid number")
 	}
 	value, err := strconv.ParseFloat(raw, 64)
 	if err != nil {
-		return token{}, pos, syntax(start, "number out of range")
+		return token{}, syntax(start, "number out of range")
 	}
-	return token{kind: kindLiteral, value: value, pos: start}, pos, nil
+	return token{kind: kindLiteral, value: value, pos: start}, nil
 }
 
-func scanString(src []rune, start int) (token, int, error) {
-	for pos := start + 1; pos < len(src); pos++ {
-		if src[pos] == '\\' {
-			pos++
+// scanString skips escaped bytes. UTF-8 continuation bytes are never a quote or
+// backslash, so skipping one byte of a multibyte escape is safe
+func (s *scanner) scanString() (token, error) {
+	start := s.charPos
+	rest := s.source[s.byteOffset:]
+	for n := 1; n < len(rest); n++ {
+		if rest[n] == '\\' {
+			n++
 			continue
 		}
-		if src[pos] != '"' {
+		if rest[n] != '"' {
 			continue
 		}
-		var value string
-		err := json.Unmarshal([]byte(string(src[start:pos+1])), &value)
+		value, err := unquote(rest[:n+1])
+		s.advance(n + 1)
 		if err != nil {
-			return token{}, pos, syntax(start, "invalid string")
+			return token{}, syntax(start, "invalid string")
 		}
-		return token{kind: kindLiteral, value: value, pos: start}, pos + 1, nil
+		return token{kind: kindLiteral, value: value, pos: start}, nil
 	}
-	return token{}, len(src), syntax(start, "unterminated string")
+	s.advance(len(rest))
+	return token{}, syntax(start, "unterminated string")
+}
+
+func isNumber(text string) bool {
+	_, err := jsontext.AppendFormat(nil, text)
+	return err == nil
+}
+
+// unquote decodes a JSON string literal. Without escapes or control bytes, a
+// valid literal is its own text, so it is returned without copying
+func unquote(quoted string) (string, error) {
+	body := quoted[1 : len(quoted)-1]
+	if isPlain(body) && utf8.ValidString(body) {
+		return body, nil
+	}
+	value, err := jsontext.AppendUnquote(nil, quoted)
+	if err != nil {
+		return "", err
+	}
+	return string(value), nil
+}
+
+func isPlain(body string) bool {
+	for i := range len(body) {
+		if body[i] == '\\' || body[i] < minUnescaped {
+			return false
+		}
+	}
+	return true
 }
 
 func isNameStart(r rune) bool {
