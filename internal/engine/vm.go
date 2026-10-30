@@ -633,7 +633,6 @@ func (p *program) evaluate(this any) (any, error) {
 			MEM[SP-1] = &iterator{
 				keys:   keys,
 				values: values,
-				result: []any{},
 			}
 
 		case isa.Fetch:
@@ -654,10 +653,16 @@ func (p *program) evaluate(this any) (any, error) {
 			SP--
 			value := MEM[SP]
 			it := MEM[SP-1].(*iterator)
+			if it.result == nil {
+				it.result = make([]any, 0, len(it.values)+1)
+			}
 			it.result = append(it.result, value)
 
 		case isa.Result:
 			it := MEM[SP-1].(*iterator)
+			if it.result == nil {
+				it.result = []any{}
+			}
 			MEM[SP-1] = it.result
 
 		case isa.Pop:
