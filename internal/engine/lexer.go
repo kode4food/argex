@@ -26,6 +26,7 @@ type (
 		source     string
 		byteOffset int
 		charPos    int
+		scratch    []byte
 	}
 )
 
@@ -95,6 +96,10 @@ const (
 
 	// minUnescaped is the lowest byte JSON allows unescaped in a string
 	minUnescaped = 0x20
+
+	// bytesPerToken is a low estimate of source bytes per token, so the token
+	// slice is sized once and rarely regrows
+	bytesPerToken = 4
 )
 
 // operatorText maps an operator token back to its symbol, for storing on the
@@ -180,7 +185,7 @@ func (k tokenKind) String() string {
 
 func lex(source string) ([]token, error) {
 	s := &scanner{source: source}
-	var result []token
+	result := make([]token, 0, len(source)/bytesPerToken+1)
 	s.skipIgnored()
 	for s.byteOffset < len(s.source) {
 		item, err := s.scan()
@@ -277,7 +282,7 @@ func (s *scanner) scanNumber() (token, error) {
 	}
 	raw := rest[:n]
 	s.advance(n)
-	if !isNumber(raw) {
+	if !s.isNumber(raw) {
 		return token{}, syntax(start, "invalid number")
 	}
 	value, err := strconv.ParseFloat(raw, 64)
@@ -300,7 +305,7 @@ func (s *scanner) scanString() (token, error) {
 		if rest[n] != '"' {
 			continue
 		}
-		value, err := unquote(rest[:n+1])
+		value, err := s.unquote(rest[:n+1])
 		s.advance(n + 1)
 		if err != nil {
 			return token{}, syntax(start, "invalid string")
@@ -311,23 +316,25 @@ func (s *scanner) scanString() (token, error) {
 	return token{}, syntax(start, "unterminated string")
 }
 
-func isNumber(text string) bool {
-	_, err := jsontext.AppendFormat(nil, text)
+func (s *scanner) isNumber(text string) bool {
+	var err error
+	s.scratch, err = jsontext.AppendFormat(s.scratch[:0], text)
 	return err == nil
 }
 
 // unquote decodes a JSON string literal. Without escapes or control bytes, a
 // valid literal is its own text, so it is returned without copying
-func unquote(quoted string) (string, error) {
+func (s *scanner) unquote(quoted string) (string, error) {
 	body := quoted[1 : len(quoted)-1]
 	if isPlain(body) && utf8.ValidString(body) {
 		return body, nil
 	}
-	value, err := jsontext.AppendUnquote(nil, quoted)
+	var err error
+	s.scratch, err = jsontext.AppendUnquote(s.scratch[:0], quoted)
 	if err != nil {
 		return "", err
 	}
-	return string(value), nil
+	return string(s.scratch), nil
 }
 
 func isPlain(body string) bool {
