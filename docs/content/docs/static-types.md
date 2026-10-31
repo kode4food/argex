@@ -22,7 +22,7 @@ program.StaticType().Is(argex.TypeBool) // true
 
 ## Type Errors
 
-`env.Compile` rejects any operator, global call argument with a known position, or condition whose type is fully known and can never succeed, such as `length(-1)`, `true + 1`, or `false || "hello"`. `Parse` checks syntax only. Operands that read the input and arguments after a spread are checked when the expression is evaluated.
+`env.Compile` rejects any operator, global call argument with a known position, or condition whose type is fully known and can never succeed, such as `length(-1)`, `true + 1`, or `false || "hello"`. `Parse` checks syntax only. Operands that read the input are checked when the expression is evaluated. Arguments after a spread are checked against function parameters at evaluation; invalid expressions within those arguments, such as `true + 1`, still fail compilation.
 
 The check covers the whole expression, including branches that would never run. `true || (1 && 2)` is a type error even though `||` would skip its right side.
 

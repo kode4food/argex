@@ -51,7 +51,7 @@ ceil(number(usage.tokens) / 1000)
 keys(response) | any key: startsWith(key, "x-")
 ```
 
-Use `...` to spread an array into the arguments, as in `max(...prices)` or `max(0, ...prices)`. Spreading a missing or null value contributes no arguments, and spreading any other non-array value is an `ErrType`. Counts that depend on a spread's length are checked at evaluation and fail with `ErrFunction`. A direct global call with too many fixed arguments, such as `abs(1, 2, ...[])`, fails during compilation. Argument types after the first spread are checked at evaluation.
+Use `...` to spread an array into the arguments, as in `max(...prices)` or `max(0, ...prices)`. Spreading a missing or null value contributes no arguments, and spreading any other non-array value is an `ErrType`. Counts that depend on a spread's length are checked at evaluation and fail with `ErrFunction`, even for literal spreads such as `abs(...[1, 2])`. A direct global call with too many fixed arguments, such as `abs(1, 2, ...[])`, fails during compilation. Arguments after the first spread are checked against function parameters at evaluation; invalid expressions within those arguments still fail compilation.
 
 Functions compare by identity, so `length == length` is true and `length == abs` is false. They can appear in arrays and objects, but serializing a function to JSON returns `ErrType`.
 
