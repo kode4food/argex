@@ -2,6 +2,13 @@
 
 Notable changes to Argyll Expressions.
 
+## 0.1.7
+
+- Immutable environments with custom functions and global bindings
+- Functions as values, argument spreads, and object shorthand
+- Breaking Go API changes: compile through an environment, evaluate with `Program.Eval`, and inspect types with `Program.StaticType`
+- Type checking now happens during compilation instead of parsing
+
 ## 0.1.6
 
 - Faster pipelines that build results with `map` and `filter`, with fewer allocations

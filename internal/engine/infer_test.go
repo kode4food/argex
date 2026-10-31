@@ -38,7 +38,7 @@ func TestStaticType(t *testing.T) {
 		"array literal":            {src: `[1, 2, 3]`, want: "array"},
 		"object literal":           {src: `{a: 1}`, want: "object"},
 		"map is always array": {
-			src:  `values | map v: v.x`,
+			src:  `items | map v: v.x`,
 			want: "array",
 		},
 		"let body type":          {src: `let x = 1: [x]`, want: "array"},
@@ -53,6 +53,8 @@ func TestStaticType(t *testing.T) {
 			src:  `case status { "a": 1, "b": "x", null }`,
 			want: "number|string|null",
 		},
+		"global function":    {src: `length`, want: "function"},
+		"let shadows global": {src: `let length = 1: length`, want: "number"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -60,7 +62,11 @@ func TestStaticType(t *testing.T) {
 			if !assert.NoError(t, err) {
 				return
 			}
-			assert.Equal(t, tc.want, expr.StaticType().String())
+			program, err := argex.DefaultEnv().Compile(expr)
+			if !assert.NoError(t, err) {
+				return
+			}
+			assert.Equal(t, tc.want, program.StaticType().String())
 		})
 	}
 }
@@ -70,17 +76,49 @@ func TestStaticTypeKnown(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	assert.True(t, expr.StaticType().Known())
-	assert.True(t, expr.StaticType().Is(argex.TypeBool))
+	program, err := argex.DefaultEnv().Compile(expr)
+	if !assert.NoError(t, err) {
+		return
+	}
+	result := program.StaticType()
+	assert.True(t, result.Known())
+	assert.True(t, result.Is(argex.TypeBool))
 
 	expr, err = argex.Parse(`value.status`)
 	if !assert.NoError(t, err) {
 		return
 	}
-	assert.False(t, expr.StaticType().Known())
+	program, err = argex.DefaultEnv().Compile(expr)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.False(t, program.StaticType().Known())
 }
 
-func TestParseRejectsStaticMismatches(t *testing.T) {
+func TestStaticTypeEnv(t *testing.T) {
+	ns := argex.NewEnv()
+	ns, err := ns.Bind("limit", 10.0)
+	if !assert.NoError(t, err) {
+		return
+	}
+	expr, err := argex.Parse(`limit`)
+	if !assert.NoError(t, err) {
+		return
+	}
+	program, err := ns.Compile(expr)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.True(t, program.StaticType().Is(argex.TypeNumber))
+	expr, err = argex.Parse(`limit + "x"`)
+	if !assert.NoError(t, err) {
+		return
+	}
+	_, err = ns.Compile(expr)
+	assert.ErrorIs(t, err, argex.ErrType)
+}
+
+func TestCompileRejectsStaticMismatches(t *testing.T) {
 	cases := map[string]string{
 		"length of a number":       `length(-1)`,
 		"bool plus number":         `true + 1`,
@@ -94,7 +132,6 @@ func TestParseRejectsStaticMismatches(t *testing.T) {
 		"number and a bool":        `1 && true`,
 		"in with a string":         `1 in "x"`,
 		"dot access on a bool":     `true.x`,
-		"dot access on null":       `null.x`,
 		"index an object by name":  `{a: 1}[1]`,
 		"index an array by bool":   `[1, 2][true]`,
 		"spread a number in array": `[...1]`,
@@ -104,16 +141,21 @@ func TestParseRejectsStaticMismatches(t *testing.T) {
 		"computed key not string":  `{[1]: "x"}`,
 		"case value never matches": `case "a" { 1: true, false }`,
 		"unreachable operand":      `true || (1 && 2)`,
+		"global function plus one": `length + 1`,
+		"call a number":            `(1)(2)`,
+		"call a non-function":      `true(1)`,
 	}
 	for name, src := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := argex.Parse(src)
-			assert.Error(t, err)
+			assert.ErrorIs(t, compileSource(t, src), argex.ErrType)
 		})
 	}
+	t.Run("dot access on null", func(t *testing.T) {
+		assert.ErrorIs(t, compileSource(t, "null.x"), argex.ErrMissing)
+	})
 }
 
-func TestParseAllowsRuntimeDependentValues(t *testing.T) {
+func TestCompileAllowsRuntimeDependentValues(t *testing.T) {
 	cases := map[string]string{
 		"bare name access":         `value.status`,
 		"optional chained access":  `value?.x.y`,
@@ -131,16 +173,16 @@ func TestParseAllowsRuntimeDependentValues(t *testing.T) {
 		"any over bound element":   `[1, 2] | any x: x`,
 		"unknown left comparison":  `value < 1`,
 		"ambiguous index receiver": `(case { true: [1], {a: 1} })[0]`,
+		"apply an unknown value":   `value.f(1)`,
 	}
 	for name, src := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := argex.Parse(src)
-			assert.NoError(t, err)
+			assert.NoError(t, compileSource(t, src))
 		})
 	}
 }
 
-func TestParseAllowsSuccessfulOperands(t *testing.T) {
+func TestCompileAllowsSuccessfulOperands(t *testing.T) {
 	cases := map[string]string{
 		"both numbers compare":  `1 < 2`,
 		"both strings compare":  `"a" < "b"`,
@@ -151,19 +193,52 @@ func TestParseAllowsSuccessfulOperands(t *testing.T) {
 		"object key by name":    `{a: 1}["a"]`,
 		"array key by number":   `[1, 2][0]`,
 		"min over many numbers": `min(1, 2, 3)`,
+		"functions are equal":   `length == length`,
 	}
 	for name, src := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := argex.Parse(src)
-			assert.NoError(t, err)
+			assert.NoError(t, compileSource(t, src))
 		})
 	}
 }
 
-func TestStaticTypeOnEmptyExpression(t *testing.T) {
-	var nilExpr *argex.Expression
-	assert.Equal(t, "any", nilExpr.StaticType().String())
+func TestStaticTypeDoesNotEvaluate(t *testing.T) {
+	calls := 0
+	fn := &argex.Function{
+		Call: func(...any) (any, error) {
+			calls++
+			return float64(42), nil
+		},
+		Result: argex.TypeNumber,
+	}
+	env, err := argex.DefaultEnv().Bind("answer", fn)
+	if !assert.NoError(t, err) {
+		return
+	}
+	expr, err := argex.Parse("answer()")
+	if !assert.NoError(t, err) {
+		return
+	}
+	program, err := env.Compile(expr)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.True(t, program.StaticType().Is(argex.TypeNumber))
+	assert.Zero(t, calls)
+	value, err := program.Eval(nil)
+	assert.NoError(t, err)
+	assert.Equal(t, float64(42), value)
+	assert.Equal(t, 1, calls)
+	assert.True(t, program.StaticType().Is(argex.TypeNumber))
+	assert.Equal(t, 1, calls)
+}
 
-	var zero argex.Expression
-	assert.Equal(t, "any", zero.StaticType().String())
+func compileSource(t *testing.T, src string) error {
+	t.Helper()
+	expr, err := argex.Parse(src)
+	if err != nil {
+		return err
+	}
+	_, err = argex.DefaultEnv().Compile(expr)
+	return err
 }

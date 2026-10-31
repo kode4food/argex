@@ -30,14 +30,14 @@ func BenchmarkExpressions(b *testing.B) {
 			if err != nil {
 				b.Fatal(err)
 			}
-			program, err := argex.Compile(expr)
+			program, err := argex.DefaultEnv().Compile(expr)
 			if err != nil {
 				b.Fatal(err)
 			}
 			b.Run("compiled", func(b *testing.B) {
 				b.ReportAllocs()
 				for b.Loop() {
-					_, err := program(variables)
+					_, err := program.Eval(variables)
 					if err != nil {
 						b.Fatal(err)
 					}
@@ -116,13 +116,13 @@ func BenchmarkWorkloads(b *testing.B) {
 			if err != nil {
 				b.Fatal(err)
 			}
-			program, err := argex.Compile(expr)
+			program, err := argex.DefaultEnv().Compile(expr)
 			if err != nil {
 				b.Fatal(err)
 			}
 			b.ReportAllocs()
 			for b.Loop() {
-				_, err := program(variables)
+				_, err := program.Eval(variables)
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -150,13 +150,13 @@ func BenchmarkMembership(b *testing.B) {
 				if err != nil {
 					b.Fatal(err)
 				}
-				program, err := argex.Compile(expr)
+				program, err := argex.DefaultEnv().Compile(expr)
 				if err != nil {
 					b.Fatal(err)
 				}
 				b.ReportAllocs()
 				for b.Loop() {
-					if _, err := program(variables); err != nil {
+					if _, err := program.Eval(variables); err != nil {
 						b.Fatal(err)
 					}
 				}
@@ -170,25 +170,27 @@ func BenchmarkFunctions(b *testing.B) {
 		"status": " APPROVED ",
 		"cost":   "0.025",
 		"object": map[string]any{"b": 2, "a": 1},
+		"prices": []any{3.0, 1.0, 2.0},
 	}
 	for _, source := range []string{
 		`startsWith(status, " ")`,
 		`lower(trim(status)) == "approved"`,
 		`number(cost) * 1000`,
 		`keys(object)`,
+		`max(...prices)`,
 	} {
 		b.Run(source, func(b *testing.B) {
 			expr, err := argex.Parse(source)
 			if err != nil {
 				b.Fatal(err)
 			}
-			program, err := argex.Compile(expr)
+			program, err := argex.DefaultEnv().Compile(expr)
 			if err != nil {
 				b.Fatal(err)
 			}
 			b.ReportAllocs()
 			for b.Loop() {
-				if _, err := program(variables); err != nil {
+				if _, err := program.Eval(variables); err != nil {
 					b.Fatal(err)
 				}
 			}

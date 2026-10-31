@@ -79,8 +79,15 @@ func TestErrors(t *testing.T) {
 			assert.ErrorIs(t, err, want)
 		})
 	}
-	_, err := argex.Compile(nil)
+	var absent *argex.Env
+	_, err := absent.Compile(nil)
 	assert.ErrorIs(t, err, argex.ErrSyntax)
-	_, err = argex.Compile(&argex.Expression{})
+	_, err = absent.Compile(&argex.Expression{})
 	assert.ErrorIs(t, err, argex.ErrSyntax)
+	expr, err := argex.Parse("1")
+	if !assert.NoError(t, err) {
+		return
+	}
+	_, err = absent.Compile(expr)
+	assert.ErrorIs(t, err, argex.ErrFunction)
 }

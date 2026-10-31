@@ -48,6 +48,7 @@ const (
 	nodeSpread
 	nodeComputed
 	nodeCase
+	nodeMatch
 	nodeLet
 	nodeMap
 	nodeFilter
@@ -71,22 +72,27 @@ func Parse(source string) (*Expression, error) {
 	if err := p.expect(kindEOF); err != nil {
 		return nil, err
 	}
-	if err := annotateType(root, nil); err != nil {
-		return nil, err
-	}
 	return &Expression{root: root}, nil
 }
 
-// Names reports the input properties the expression reads by bare name, sorted.
-// Names bound by let or collection operations and reads through this are
-// excluded
-func (e *Expression) Names() []string {
-	if e == nil || e.root == nil {
+// Names reports the input properties expr reads by bare name, sorted. Local
+// bindings, globals, and reads through this are excluded
+func (e *Env) Names(expr *Expression) []string {
+	if expr == nil || expr.root == nil || e == nil {
 		return nil
 	}
 	seen := map[string]bool{}
-	collectNames(e.root, nil, seen)
+	collectNames(expr.root, nil, seen, e)
 	return slices.Sorted(maps.Keys(seen))
+}
+
+func (n *node) clone() *node {
+	result := *n
+	result.children = make([]*node, len(n.children))
+	for i, child := range n.children {
+		result.children[i] = child.clone()
+	}
+	return &result
 }
 
 func (p *parser) expect(kind tokenKind) error {
@@ -121,28 +127,31 @@ func (p *parser) error(message string) error {
 
 // collectNames scopes bindings as the compiler does: a collection's body sees
 // its own and its pipeline's bindings, its receiver only the enclosing ones
-func collectNames(n *node, bound []string, seen map[string]bool) {
+func collectNames(
+	n *node, bound []string, seen map[string]bool, env *Env,
+) {
 	switch n.kind {
 	case nodeName:
-		if !slices.Contains(bound, n.text) {
+		if _, ok := env.resolve(n.text); !ok &&
+			!slices.Contains(bound, n.text) {
 			seen[n.text] = true
 		}
 		return
 
 	case nodeMap, nodeFilter, nodeAny, nodeAll:
-		collectNames(n.children[0], bound, seen)
+		collectNames(n.children[0], bound, seen, env)
 		inner := append(bound[:len(bound):len(bound)], stageNames(n)...)
-		collectNames(n.children[1], inner, seen)
+		collectNames(n.children[1], inner, seen, env)
 		return
 
 	case nodeLet:
-		collectNames(n.children[0], bound, seen)
+		collectNames(n.children[0], bound, seen, env)
 		inner := append(bound[:len(bound):len(bound)], n.valueBinding)
-		collectNames(n.children[1], inner, seen)
+		collectNames(n.children[1], inner, seen, env)
 		return
 	}
 	for _, child := range n.children {
-		collectNames(child, bound, seen)
+		collectNames(child, bound, seen, env)
 	}
 }
 

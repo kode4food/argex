@@ -26,8 +26,8 @@
     {"name":"value failure","expression":"let x=absent.field:1","error":"missing","phase":"eval"},
     {"name":"let as property name","expression":"this.let","variables":{"let":1},"result":1},
     {"name":"let as object key","expression":"{let:1}","result":{"let":1}},
-    {"name":"bound type checked","expression":"let s=\"a\":s-1","error":"type","phase":"parse"},
-    {"name":"later value type checked","expression":"let x=\"a\",y=x*2:y","error":"type","phase":"parse"},
+    {"name":"bound type checked","expression":"let s=\"a\":s-1","error":"type","phase":"compile"},
+    {"name":"later value type checked","expression":"let x=\"a\",y=x*2:y","error":"type","phase":"compile"},
     {"name":"shadowed type not checked","expression":"let x=1:[\"a\"]|map x:x+\"b\"","result":["ab"]},
     {"name":"let as operand","expression":"1+let x=2:x","error":"syntax","phase":"parse"},
     {"name":"let as stage body","expression":"[1]|map v:let w=v:w","error":"syntax","phase":"parse"},
@@ -40,7 +40,7 @@
     {"name":"no bindings","expression":"let:1","error":"syntax","phase":"parse"},
     {"name":"no value","expression":"let x=:1","error":"syntax","phase":"parse"},
     {"name":"unknown function in value","expression":"let x=unknown():1","error":"function","phase":"compile"},
-    {"name":"stage receiver type checked","expression":"(1-\"a\")|map x:x","error":"type","phase":"parse"},
+    {"name":"stage receiver type checked","expression":"(1-\"a\")|map x:x","error":"type","phase":"compile"},
     {"name":"single equals is not equality","expression":"1=1","error":"syntax","phase":"parse"}
   ]
 }

@@ -9,7 +9,7 @@ import (
 
 type (
 	compiler struct {
-		program   *program
+		program   *Program
 		scope     []binding
 		loopRefs  []int
 		hoisted   []string
@@ -25,23 +25,36 @@ type (
 	}
 )
 
-// rootSlot holds the program's this, so it compiles to an ordinary local Load
-const rootSlot = 0
+const (
+	// rootSlot holds this so it compiles to an ordinary local Load
+	rootSlot = 0
 
-// Compile prepares an expression for repeated evaluation
-func Compile(expr *Expression) (func(any) (any, error), error) {
+	// caseSubject is a subject case's hidden binding, outside identifier syntax
+	caseSubject = "case subject"
+)
+
+// Compile resolves an expression's names, checks its types, and
+// prepares it for repeated evaluation
+func (e *Env) Compile(expr *Expression) (*Program, error) {
 	if expr == nil || expr.root == nil {
 		return nil, fmt.Errorf("%w: empty expression", ErrSyntax)
 	}
+	root, err := expr.resolve(e)
+	if err != nil {
+		return nil, err
+	}
 	c := &compiler{
-		program:  &program{localCount: rootSlot + 1},
+		program: &Program{
+			localCount: rootSlot + 1,
+			resultType: root.inferred,
+		},
 		nextSlot: rootSlot + 1,
 	}
-	if err := c.compile(expr.root, 0); err != nil {
+	if err := c.compile(root, 0); err != nil {
 		return nil, err
 	}
 	c.finalize()
-	return c.program.evaluate, nil
+	return c.program, nil
 }
 
 func (c *compiler) compile(n *node, depth int) error {
@@ -80,7 +93,7 @@ func (c *compiler) compile(n *node, depth int) error {
 		return c.call(n, depth)
 
 	case nodeArray:
-		return c.array(n, depth)
+		return c.array(n.children, depth)
 
 	case nodeObject:
 		return c.object(n, depth)
@@ -91,11 +104,9 @@ func (c *compiler) compile(n *node, depth int) error {
 }
 
 func (c *compiler) name(name string) {
-	for _, b := range slices.Backward(c.scope) {
-		if b.name == name {
-			c.emit(isa.Load, isa.Operand(b.slot))
-			return
-		}
+	if slot, ok := c.local(name); ok {
+		c.emit(isa.Load, isa.Operand(slot))
+		return
 	}
 	if c.looping {
 		load := c.emit(isa.Load, c.loopSlot(name))
@@ -103,6 +114,15 @@ func (c *compiler) name(name string) {
 		return
 	}
 	c.emit(isa.Global, c.constant(name))
+}
+
+func (c *compiler) local(name string) (int, bool) {
+	for _, b := range slices.Backward(c.scope) {
+		if b.name == name {
+			return b.slot, true
+		}
+	}
+	return 0, false
 }
 
 func (c *compiler) emit(op isa.Opcode, operand isa.Operand) int {
@@ -134,4 +154,33 @@ func (c *compiler) loopSlot(name string) isa.Operand {
 		c.hoisted = append(c.hoisted, name)
 	}
 	return isa.Operand(c.loopBase + i)
+}
+
+// lowerNode rewrites source forms on the compiler's copy before type checking
+func lowerNode(n *node) {
+	for _, child := range n.children {
+		lowerNode(child)
+	}
+	switch n.kind {
+	case nodeMatch:
+		n.kind = nodeLet
+		n.valueBinding = caseSubject
+		arms := n.children[1]
+		for i := 0; i < len(arms.children)-1; i += 2 {
+			name := &node{kind: nodeName, text: caseSubject}
+			arms.children[i] = &node{
+				kind:     nodeBinary,
+				text:     opEq,
+				children: []*node{name, arms.children[i]},
+			}
+		}
+
+	case nodeComputed:
+		key := n.children[0]
+		if name, ok := key.value.(string); key.kind == nodeLiteral && ok {
+			n.kind = nodeField
+			n.text = name
+			n.children = n.children[1:]
+		}
+	}
 }

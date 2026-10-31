@@ -54,25 +54,19 @@ func (p *parser) index(receiver *node, optional bool) (*node, error) {
 }
 
 func (p *parser) call(receiver *node) (*node, error) {
-	if receiver.kind != nodeName {
-		return nil, p.error("only named functions can be called")
-	}
 	p.pos++
-	children, err := p.list(kindRParen)
+	args, err := p.list(kindRParen)
 	if err != nil {
 		return nil, err
 	}
-	return &node{
-		kind:     nodeCall,
-		text:     receiver.text,
-		children: children,
-	}, nil
+	children := append([]*node{receiver}, args...)
+	return &node{kind: nodeCall, children: children}, nil
 }
 
 func (p *parser) list(end tokenKind) ([]*node, error) {
 	var children []*node
 	for !p.take(end) {
-		child, err := p.pipeline()
+		child, err := p.spreadable()
 		if err != nil {
 			return nil, err
 		}

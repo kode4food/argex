@@ -38,7 +38,7 @@ case order.status {
 }
 ```
 
-Values are ordinary expressions, so they can read the input or compute a result. Later values and unselected results are not evaluated. Values of different types are never equal, so an arm whose value can never have the subject's type fails during parsing, as in `case 1 { "a": true, false }`.
+Values are ordinary expressions, so they can read the input or compute a result. Later values and unselected results are not evaluated. Values of different types are never equal, so an arm whose value can never have the subject's type fails during compilation, as in `case 1 { "a": true, false }`.
 
 The subject has the same precedence as an operand of `||`, so a pipeline subject needs parentheses. A subject that begins with `{` also needs parentheses, since `case {` always starts the boolean form. This selects a result from the names of the failed checks:
 

@@ -86,6 +86,10 @@ func structuralEqual(left, right any) bool {
 			right, ok := pair.right.(string)
 			matched = ok && left == right
 
+		case *Function:
+			right, ok := pair.right.(*Function)
+			matched = ok && left == right
+
 		case []any:
 			right, ok := pair.right.([]any)
 			if !ok || len(left) != len(right) {

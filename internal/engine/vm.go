@@ -9,12 +9,14 @@ import (
 )
 
 type (
-	program struct {
+	// Program is a compiled expression, safe for concurrent evaluation
+	Program struct {
 		code       isa.Instructions
 		constants  []any
 		iterations []iterationSpec
 		stackSize  int
 		localCount int
+		resultType TypeSet
 	}
 
 	iterationSpec struct {
@@ -25,7 +27,7 @@ type (
 	}
 
 	callSpec struct {
-		call  function
+		call  func(...any) (any, error)
 		arity int
 	}
 
@@ -50,11 +52,12 @@ const (
 	expectObject         = "expected object"
 	expectInteger        = "expected integer"
 	expectCollection     = "expected array or object"
+	expectFunction       = "expected function"
 )
 
-// evaluate runs the program with this as its input. Bare names read the
-// properties of an object and are missing for any other value
-func (p *program) evaluate(this any) (any, error) {
+// Eval runs the program with this as its input. Bare names read the properties
+// of an object and are missing for any other value
+func (p *Program) Eval(this any) (any, error) {
 	variables, _ := this.(map[string]any)
 	var values [inlineValues]any
 	MEM := values[:]
@@ -621,6 +624,49 @@ func (p *program) evaluate(this any) (any, error) {
 			}
 			MEM[RES] = result
 			SP = RES + 1
+
+		case isa.CallDynamic:
+			RES := SP - op - 1
+			fn, ok := MEM[RES].(*Function)
+			if !ok {
+				return nil, operandError(expectFunction)
+			}
+			if !fn.valid() {
+				return nil, ErrFunction
+			}
+			if !fn.accepts(op) {
+				return nil, ErrFunction
+			}
+			if cap(arguments) < op {
+				arguments = make([]any, op)
+			}
+			args := arguments[:op]
+			copy(args, MEM[RES+1:SP])
+			result, err := fn.Call(args...)
+			if err != nil {
+				return nil, err
+			}
+			MEM[RES] = result
+			SP = RES + 1
+
+		case isa.CallWith:
+			SP--
+			fn, ok := MEM[SP-1].(*Function)
+			if !ok {
+				return nil, operandError(expectFunction)
+			}
+			if !fn.valid() {
+				return nil, ErrFunction
+			}
+			args := MEM[SP].([]any)
+			if !fn.accepts(len(args)) {
+				return nil, ErrFunction
+			}
+			result, err := fn.Call(args...)
+			if err != nil {
+				return nil, err
+			}
+			MEM[SP-1] = result
 
 		case isa.Iterate:
 			spec := p.iterations[op]

@@ -4,11 +4,17 @@ package argex
 import "github.com/kode4food/argex/internal/engine"
 
 type (
-	// Program is a compiled function, safe for concurrent calls
-	Program func(any) (any, error)
+	// Program is a compiled expression, safe for concurrent evaluation
+	Program = engine.Program
 
 	// Expression is an immutable parsed expression
 	Expression = engine.Expression
+
+	// Env holds immutable global bindings for compiling expressions
+	Env = engine.Env
+
+	// Function is a callable value in Argyll Expressions
+	Function = engine.Function
 
 	// Missing distinguishes absent data from an explicit JSON null
 	Missing = engine.Missing
@@ -21,14 +27,15 @@ type (
 )
 
 const (
-	TypeBool    TypeTag = engine.TypeBool
-	TypeNumber  TypeTag = engine.TypeNumber
-	TypeString  TypeTag = engine.TypeString
-	TypeArray   TypeTag = engine.TypeArray
-	TypeObject  TypeTag = engine.TypeObject
-	TypeNull    TypeTag = engine.TypeNull
-	TypeMissing TypeTag = engine.TypeMissing
-	TypeAny     TypeTag = engine.TypeAny
+	TypeBool     TypeTag = engine.TypeBool
+	TypeNumber   TypeTag = engine.TypeNumber
+	TypeString   TypeTag = engine.TypeString
+	TypeArray    TypeTag = engine.TypeArray
+	TypeObject   TypeTag = engine.TypeObject
+	TypeNull     TypeTag = engine.TypeNull
+	TypeMissing  TypeTag = engine.TypeMissing
+	TypeFunction TypeTag = engine.TypeFunction
+	TypeAny      TypeTag = engine.TypeAny
 )
 
 var (
@@ -40,27 +47,32 @@ var (
 	ErrLimit      error = engine.ErrLimit
 )
 
+// NewEnv returns an empty environment
+func NewEnv() *Env {
+	return engine.NewEnv()
+}
+
+// DefaultEnv returns the shared environment containing the builtin functions
+func DefaultEnv() *Env {
+	return engine.DefaultEnv()
+}
+
 // Parse parses a complete expression. Whitespace never determines grouping
 func Parse(source string) (*Expression, error) {
 	return engine.Parse(source)
 }
 
-// Eval evaluates source with this as its JSON input value
+// Eval evaluates source against the builtins with this as its JSON input
 func Eval(source string, this any) (any, error) {
 	expr, err := Parse(source)
 	if err != nil {
 		return nil, err
 	}
-	program, err := Compile(expr)
+	program, err := DefaultEnv().Compile(expr)
 	if err != nil {
 		return nil, err
 	}
-	return program(this)
-}
-
-// Compile prepares an expression for repeated evaluation
-func Compile(expr *Expression) (Program, error) {
-	return engine.Compile(expr)
+	return program.Eval(this)
 }
 
 // IsMissing reports whether a value represents absent data

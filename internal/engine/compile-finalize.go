@@ -40,7 +40,7 @@ func (c *compiler) finalize() {
 
 // layout finds where each label lands and the deepest the stack gets. Jumps
 // are structured, so a label sits at the depth its jumps carry, or the current
-func (p *program) layout(labels []labelSite) int {
+func (p *Program) layout(labels []labelSite) int {
 	depth := 0
 	deepest := 0
 	count := 0
@@ -71,28 +71,28 @@ func (p *program) layout(labels []labelSite) int {
 	return deepest
 }
 
-func (p *program) pops(inst isa.Instruction, effect isa.Effect) int {
+func (p *Program) pops(inst isa.Instruction, effect isa.Effect) int {
 	if !effect.DPop {
 		return effect.Pop
 	}
 	if effect.Operand == isa.Count {
-		return int(inst.Operand())
+		return effect.Pop + int(inst.Operand())
 	}
 	switch constant := p.constants[inst.Operand()].(type) {
 	case []string:
-		return len(constant)
+		return effect.Pop + len(constant)
 
 	case callSpec:
-		return constant.arity
+		return effect.Pop + constant.arity
 
 	default:
-		return 0
+		return effect.Pop
 	}
 }
 
 // resolveLabels drops the labels and points every jump, and every loop's Fetch,
 // at the instruction its label marks
-func (p *program) resolveLabels(labels []labelSite) {
+func (p *Program) resolveLabels(labels []labelSite) {
 	code := p.code[:0]
 	for _, inst := range p.code {
 		op := inst.Opcode()

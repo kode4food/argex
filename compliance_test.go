@@ -122,7 +122,7 @@ func runCompliance(t *testing.T, tc *complianceCase) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	program, err := argex.Compile(expr)
+	program, err := argex.DefaultEnv().Compile(expr)
 	if tc.Phase == "compile" {
 		assert.ErrorIs(t, err, tc.wantErr)
 		return
@@ -131,14 +131,14 @@ func runCompliance(t *testing.T, tc *complianceCase) {
 		return
 	}
 	for range 2 {
-		value, err := program(tc.this)
+		value, err := program.Eval(tc.this)
 		assertCompliance(t, tc, value, err)
 	}
-	second, err := argex.Compile(expr)
+	second, err := argex.DefaultEnv().Compile(expr)
 	if !assert.NoError(t, err) {
 		return
 	}
-	value, err = second(tc.this)
+	value, err = second.Eval(tc.this)
 	assertCompliance(t, tc, value, err)
 }
 

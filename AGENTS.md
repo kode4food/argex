@@ -30,7 +30,7 @@ This file defines repository-specific conventions for agents changing code and m
 - Organize files and packages around real concerns and reasons to change. File length alone is not a reason to split code.
 - Reuse existing mechanisms before adding new ones. Avoid generic dumping-ground packages, forwarding layers, and abstractions that do not solve an actual dependency problem.
 - Keep interfaces minimal and consumer-owned. A package boundary alone does not justify an interface.
-- Keep the exported surface small. Do not re-export another package's identifiers through variable aliases; reference the owner directly.
+- Keep the exported surface small. The public API may resurface internal package identifiers through aliases, including variable aliases. Elsewhere, reference the owner directly.
 - Compilation and optimization must leave caller-owned ASTs intact. Copy the necessary data before rewriting or capturing it; do not mutate shared nodes.
 
 ## File And Declaration Layout
@@ -138,7 +138,7 @@ For exported receiver types:
 
 - Mutable production package-level state is forbidden. Counters, caches, and mutable registries belong to the instance that owns their behavior.
 - Package-level variables are reserved for error sentinels, compile-time interface assertions, and genuinely immutable lookup data. An immutable binding does not make the referenced map, slice, or object immutable.
-- Never alias another package's variables to create a local re-export, including error sentinels. Import the owning package and use its identifier directly.
+- The public API may alias internal package variables, including error sentinels, to resurface them for consumers. Do not create variable re-exports elsewhere; import the owning package and use its identifier directly.
 
 ## Comments
 

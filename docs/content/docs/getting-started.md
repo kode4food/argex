@@ -23,19 +23,19 @@ expression, err := argex.Parse(`
 if err != nil {
     return err
 }
-program, err := argex.Compile(expression)
+program, err := argex.DefaultEnv().Compile(expression)
 if err != nil {
     return err
 }
-result, err := program(map[string]any{
+result, err := program.Eval(map[string]any{
     "items": []any{5, 20, 150},
 })
 // result: []any{"medium", "large"}
 ```
 
-`Parse` returns an immutable `*Expression`, and `Compile` returns a `Program`, defined as `func(any) (any, error)`. Call that function directly and reuse it for repeated evaluation. `Eval(source, this)` combines all three operations for one-off expressions.
+`Parse` checks syntax and returns an immutable `*Expression`. `DefaultEnv().Compile(expression)` resolves names and checks types, returning a `*Program`. Call `program.Eval(this)` for repeated evaluation and `program.StaticType()` for the result types inferred during compilation. `DefaultEnv()` supplies the shared builtin environment, while `NewEnv()` creates an empty environment. `Eval(source, this)` combines all three operations using the default environment.
 
-Compiled functions are safe for concurrent use. Callers must not concurrently mutate their input maps or arrays.
+Compiled programs are safe for concurrent use. Callers must not mutate bound values while they are in use or concurrently mutate input maps or arrays. Custom functions must also be safe for concurrent calls.
 
 ## Input
 
@@ -47,9 +47,9 @@ this.items[0]
 length(this)
 ```
 
-When the input is an object, its top-level properties can also be read by bare name, so `items` and `this.items` read the same property. A bare name with no matching property, or any bare name when the input is not an object, evaluates to a missing value. `this.name` follows the ordinary access rules, so an absent property fails instead. The result can be any JSON value.
+When the input is an object, its top-level properties can also be read by bare name. Names resolve to local bindings first, then environment globals, then input properties. Use `this.name` for an input property shadowed by a global, such as `this.length`. A bare name with no binding or matching input property evaluates to a missing value. `this.name` follows the ordinary access rules, so an absent property fails instead.
 
-`expression.Names()` returns the input properties an expression reads by bare name, sorted, so a caller can check them against a schema before evaluating. Names bound by collection operations are excluded, and reads through `this` are not reported.
+`env.Names(expression)` returns the input properties an expression reads by bare name, sorted, so a caller can check them against a schema before evaluating. Local bindings, environment globals, and reads through `this` are excluded.
 
 ## Values
 
@@ -57,4 +57,4 @@ Values use Go's JSON representation: `map[string]any`, `[]any`, strings, boolean
 
 A bare name with no value produces `Missing{}`, which is distinct from JSON `null`. Use `IsMissing` to test for it. See [Missing Values]({{< relref "/docs/missing-values" >}}) for how missing values flow through expressions.
 
-Expressions are pure and deterministic: their results depend only on the supplied values, and functions never change their arguments.
+The builtin functions are pure and deterministic. Custom functions should preserve those properties and must not change or retain their argument slice.

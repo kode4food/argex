@@ -56,4 +56,4 @@ items | map item: (let cost = item.price * item.quantity: {item: item.id, cost: 
 
 ## Types
 
-A bound name carries the static type of its value, so [Type Checking](../static-types/) still catches mistakes in the body. `let s = "a": s - 1` fails during parsing, just as `"a" - 1` does.
+A bound name carries the static type of its value, so [Type Checking](../static-types/) still catches mistakes in the body. `let s = "a": s - 1` fails during compilation, just as `"a" - 1` does.

@@ -368,17 +368,17 @@ func TestWideStack(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	program, err := argex.Compile(expr)
+	program, err := argex.DefaultEnv().Compile(expr)
 	if !assert.NoError(t, err) {
 		return
 	}
-	first, err := program(nil)
+	first, err := program.Eval(nil)
 	if !assert.NoError(t, err) {
 		return
 	}
 	assert.Equal(t, want, first)
 	first.([]any)[0] = "changed"
-	second, err := program(nil)
+	second, err := program.Eval(nil)
 	assert.NoError(t, err)
 	assert.Equal(t, want, second)
 }
@@ -487,7 +487,7 @@ func TestRemainder(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	program, err := argex.Compile(expr)
+	program, err := argex.DefaultEnv().Compile(expr)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -505,7 +505,7 @@ func TestRemainder(t *testing.T) {
 			}
 			variables["left"] = left
 			variables["right"] = right
-			value, err := program(variables)
+			value, err := program.Eval(variables)
 			if !assert.NoError(t, err) {
 				return
 			}
@@ -522,7 +522,7 @@ func TestRemainder(t *testing.T) {
 		}
 		variables["left"] = left
 		variables["right"] = right
-		value, err := program(variables)
+		value, err := program.Eval(variables)
 		if !assert.NoError(t, err) {
 			return
 		}

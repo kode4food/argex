@@ -25,9 +25,18 @@ func (o operand) String() string {
 func checkNode(n *node) error {
 	switch n.kind {
 	case nodeCall:
-		if fn, ok := builtins[n.text]; ok {
+		what := operand{owner: "call", role: "callee"}
+		callee := n.children[0]
+		if err := requireType(callee, TypeSet(TypeFunction), what); err != nil {
+			return err
+		}
+		if fn, ok := callee.value.(*Function); ok {
 			return checkCallArgs(n, fn)
 		}
+		if callee.kind == nodeLiteral {
+			return operandError(expectFunction)
+		}
+		return checkSpreads(n, TypeArray)
 
 	case nodeUnary:
 		return checkUnary(n)
@@ -65,19 +74,31 @@ func checkNode(n *node) error {
 	return nil
 }
 
-// paramType returns the declared type for argument i of fn. A variadic
-// function's last declared entry also covers every argument past it
-func paramType(fn builtin, i int) TypeSet {
-	if i < len(fn.params) {
-		return fn.params[i]
+// paramType accepts any value when types are undeclared and repeats the last
+// declared type for later arguments
+func paramType(fn *Function, i int) TypeSet {
+	if len(fn.Params) == 0 {
+		return ^TypeSet(0)
 	}
-	return fn.params[len(fn.params)-1]
+	if i < len(fn.Params) {
+		return fn.Params[i]
+	}
+	return fn.Params[len(fn.Params)-1]
 }
 
-func checkCallArgs(n *node, fn builtin) error {
-	for i, child := range n.children {
+// checkCallArgs checks arguments by position until the first spread, after
+// which positions are unknown, so only the spread sources are checked
+func checkCallArgs(n *node, fn *Function) error {
+	for i, child := range n.children[1:] {
+		if child.kind == nodeSpread {
+			return checkSpreads(n, TypeArray)
+		}
 		expected := paramType(fn, i)
-		what := operand{owner: n.text, role: "argument", index: i + 1}
+		what := operand{
+			owner: n.children[0].text,
+			role:  "argument",
+			index: i + 1,
+		}
 		if err := requireType(child, expected, what); err != nil {
 			return err
 		}
@@ -182,15 +203,15 @@ func effectiveReceiverType(n *node) TypeSet {
 	return receiverType
 }
 
-// checkReceiver mirrors vm.go/accessChild: a receiver known to be always null
-// fails with ErrMissing, not ErrType
+// checkReceiver mirrors accessChild: a receiver known to be nullish fails with
+// ErrMissing, not ErrType
 func checkReceiver(n *node, allowed TypeSet) error {
 	receiverType := effectiveReceiverType(n)
 	if !receiverType.Known() || receiverType == 0 {
 		return nil
 	}
-	if receiverType.Is(TypeNull) {
-		return fmt.Errorf("%w: access receiver is always null", ErrMissing)
+	if receiverType&^nullishSet == 0 {
+		return fmt.Errorf("%w: access receiver is always nullish", ErrMissing)
 	}
 	if receiverType&allowed == 0 {
 		return fmt.Errorf("%w: access receiver must be %s, not %s",
@@ -199,8 +220,7 @@ func checkReceiver(n *node, allowed TypeSet) error {
 	return nil
 }
 
-// checkSpreads validates every "...expr" entry directly inside an array (want
-// TypeArray) or object (want TypeObject) literal
+// checkSpreads validates spread entries in arrays, objects, and calls
 func checkSpreads(n *node, want TypeTag) error {
 	for _, child := range n.children {
 		if child.kind != nodeSpread {

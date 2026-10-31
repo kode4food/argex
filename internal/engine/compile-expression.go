@@ -55,22 +55,61 @@ func (c *compiler) operation(n *node, depth int) error {
 	return nil
 }
 
+// call resolves globals statically to avoid runtime lookups on direct calls
 func (c *compiler) call(n *node, depth int) error {
-	fn, ok := builtins[n.text]
-	if !ok {
-		return fmt.Errorf("%w: %s", ErrFunction, n.text)
+	callee := n.children[0]
+	args := n.children[1:]
+	if fn, ok := callee.value.(*Function); ok {
+		return c.callStatic(fn, args, depth)
 	}
-	arity := len(n.children)
-	if arity < fn.arity || !fn.variadic && arity != fn.arity {
-		return fmt.Errorf("%w: %s", ErrFunction, n.text)
+	if _, ok := c.local(callee.text); callee.kind == nodeName && !ok {
+		return fmt.Errorf("%w: %s", ErrFunction, callee.text)
 	}
-	for _, child := range n.children {
+	if err := c.compile(callee, depth+1); err != nil {
+		return err
+	}
+	return c.callDynamic(args, depth)
+}
+
+func (c *compiler) callStatic(fn *Function, args []*node, depth int) error {
+	spreads := countSpreads(args)
+	fixed := len(args) - spreads
+	if spreads == 0 && !fn.accepts(fixed) || !fn.Variadic && fixed > fn.Arity {
+		return ErrFunction
+	}
+	if spreads > 0 {
+		c.emit(isa.Const, c.constant(fn))
+		return c.callWith(args, depth)
+	}
+	for _, child := range args {
 		if err := c.compile(child, depth+1); err != nil {
 			return err
 		}
 	}
-	spec := callSpec{call: fn.call, arity: arity}
+	spec := callSpec{call: fn.Call, arity: fixed}
 	c.emit(isa.Call, c.constant(spec))
+	return nil
+}
+
+func (c *compiler) callDynamic(args []*node, depth int) error {
+	if countSpreads(args) > 0 {
+		return c.callWith(args, depth)
+	}
+	for _, arg := range args {
+		if err := c.compile(arg, depth+1); err != nil {
+			return err
+		}
+	}
+	c.emit(isa.CallDynamic, isa.Operand(len(args)))
+	return nil
+}
+
+// callWith shares array construction's nullish handling for argument spreads
+func (c *compiler) callWith(args []*node, depth int) error {
+	if err := c.array(args, depth); err != nil {
+		return err
+	}
+	c.emit(isa.CallWith, 0)
 	return nil
 }
 
@@ -152,4 +191,14 @@ func (c *compiler) let(n *node, depth int) error {
 	err := c.scoped(bound, n.children[1], depth)
 	c.nextSlot = mark
 	return err
+}
+
+func countSpreads(children []*node) int {
+	count := 0
+	for _, child := range children {
+		if child.kind == nodeSpread {
+			count++
+		}
+	}
+	return count
 }

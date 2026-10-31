@@ -19,7 +19,7 @@ access         = ".", identifier
                | "[", expression, "]"
                | "?.", "[", expression, "]" ;
 call           = "(", [ arguments ], ")" ;
-arguments      = expression, { ",", expression }, [ "," ] ;
+arguments      = element, { ",", element }, [ "," ] ;
 
 primary        = literal | identifier | "this" | "(", expression, ")"
                | array | object | case ;
@@ -28,27 +28,36 @@ element        = [ "..." ], expression ;
 object         = "{", [ member, { ",", member }, [ "," ] ], "}" ;
 member         = field | "...", expression ;
 field          = (identifier | string | "[", expression, "]"), ":",
-                 expression ;
+                 expression | identifier ;
 case           = "case", [ logicalOr ], "{", arm, { ",", arm },
                  ",", expression, [ "," ], "}" ;
 arm            = expression, ":", expression ;
 literal        = number | string | "true" | "false" | "null" ;
 
-(* Terminals: number is an unsigned JSON number (signs are unary operators).
-   string is a double-quoted JSON string. identifier is a Unicode letter or
-   underscore followed by letters, digits, or underscores. true, false, null,
-   case, let, and this are reserved as variable and binding names but remain
-   valid property names and object keys. in is contextual and also a valid
-   identifier. this is the program's input.
-   Whitespace is ignored between tokens and operators use longest match.
-   // starts a comment that runs to the end of the line.
-   The pipe is the lowest-precedence operator and chains left to right. A
-   stage body is a logicalOr, so a nested pipeline or let needs parentheses.
-   A binding is recognized only as "name:" or "name, name:". A binding name
-   of _ binds nothing. Each stage body also sees the bindings of the earlier
-   stages in its pipeline.
-   Each let value sees the earlier names in its let, and the body sees them
-   all. A let name of _ binds nothing, but its value is still evaluated.
-   A case with a subject compares it to each arm's leading expression with
-   ==. Without one, each leading expression is a boolean condition. A
-   subject that begins with "{" needs parentheses. *)
+(*
+## Terminals
+
+- `number`: unsigned JSON number; signs are unary operators.
+- `string`: double-quoted JSON string.
+- `identifier`: Unicode letter or underscore, followed by letters, digits,
+  or underscores.
+
+## Keywords
+
+- `true`, `false`, `null`, `case`, `let`, and `this` cannot be variable or
+  binding names, including shorthand fields.
+- Keywords remain valid property names and explicit object keys.
+- `in` is contextual and is also a valid identifier.
+
+## Tokenization
+
+- Whitespace is ignored between tokens.
+- Operators use longest match.
+- `//` starts a comment that runs to the end of the line.
+
+## Grouping
+
+- A stage body is a `logicalOr`; a nested pipeline or `let` needs parentheses.
+- A stage binding is recognized only as `name:` or `name, name:`.
+- A `case` subject beginning with `{` needs parentheses.
+*)

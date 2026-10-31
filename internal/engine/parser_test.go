@@ -15,6 +15,7 @@ type namesCase struct {
 const maxFuzzSourceSize = 4096
 
 func TestNames(t *testing.T) {
+	ns := argex.DefaultEnv()
 	cases := []namesCase{
 		{source: "1 + 2"},
 		{source: "a + b", want: []string{"a", "b"}},
@@ -47,6 +48,8 @@ func TestNames(t *testing.T) {
 		{source: "let x = 1, y = x: y + z", want: []string{"z"}},
 		{source: "(let x = 1: x) + x", want: []string{"x"}},
 		{source: "let x = 1: xs | map y: x + y", want: []string{"xs"}},
+		{source: "[length, n]", want: []string{"n"}},
+		{source: "let length = a: length", want: []string{"a"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.source, func(t *testing.T) {
@@ -54,11 +57,31 @@ func TestNames(t *testing.T) {
 			if !assert.NoError(t, err) {
 				return
 			}
-			assert.Equal(t, tc.want, expr.Names())
+			assert.Equal(t, tc.want, ns.Names(expr))
 		})
 	}
-	assert.Empty(t, (&argex.Expression{}).Names())
-	assert.Empty(t, (*argex.Expression)(nil).Names())
+	assert.Empty(t, ns.Names(&argex.Expression{}))
+	assert.Empty(t, ns.Names(nil))
+}
+
+func TestParseDefersSemanticChecks(t *testing.T) {
+	cases := map[string]error{
+		"true + 1":             argex.ErrType,
+		`case 1 { "a": 1, 2 }`: argex.ErrType,
+		"{[1]: 2}":             argex.ErrType,
+		"length(1)":            argex.ErrType,
+		"unknown()":            argex.ErrFunction,
+	}
+	for source, want := range cases {
+		t.Run(source, func(t *testing.T) {
+			expr, err := argex.Parse(source)
+			if !assert.NoError(t, err) {
+				return
+			}
+			_, err = argex.DefaultEnv().Compile(expr)
+			assert.ErrorIs(t, err, want)
+		})
+	}
 }
 
 func TestSyntax(t *testing.T) {
@@ -70,7 +93,7 @@ func TestSyntax(t *testing.T) {
 		"[1", "[1 2]", "[1,,2]", "{x:}", "{x 1}", "{x:1 x:2}",
 		"{x:1,x:2}", "{1:2}", "{true + 1: 2}", "{",
 		"foo(", "foo(1 2)", "(1", "(1))", "x[]", "x[1", "x.",
-		"x.[0]", "x.1", "x.method(1)",
+		"x.[0]", "x.1",
 		"x | map item item", "x | map true: 1",
 		"x | map false: 1", "x | map null: 1", "x | map case: 1",
 		"x?.map x: x", "x | map x:", "x | map |x| x",

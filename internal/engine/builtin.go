@@ -3,6 +3,7 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"math"
 	"slices"
 	"strconv"
@@ -10,17 +11,16 @@ import (
 	"unicode/utf8"
 )
 
-type (
-	builtin struct {
-		call     function
-		arity    int
-		variadic bool
-		params   []TypeSet
-		result   TypeTag
-	}
-
-	function func(...any) (any, error)
-)
+// Function is a callable value. Arity is exact, or a minimum when Variadic.
+// Params gives static types, repeating the last. A zero Result is unknown.
+// Call must validate runtime types and must not change or retain its args
+type Function struct {
+	Call     func(...any) (any, error)
+	Arity    int
+	Variadic bool
+	Params   []TypeSet
+	Result   TypeTag
+}
 
 const (
 	fnLength     = "length"
@@ -55,129 +55,149 @@ var (
 		TypeSet(TypeBool) | TypeSet(TypeNull)
 )
 
-var builtins = map[string]builtin{
-	fnLength: {
-		call:   length,
-		arity:  1,
-		params: []TypeSet{lengthableType},
-		result: TypeNumber,
+var builtins = map[string]any{
+	fnLength: &Function{
+		Call:   length,
+		Arity:  1,
+		Params: []TypeSet{lengthableType},
+		Result: TypeNumber,
 	},
-	fnAbs: {
-		call:   absolute,
-		arity:  1,
-		params: []TypeSet{numberType},
-		result: TypeNumber,
+	fnAbs: &Function{
+		Call:   absolute,
+		Arity:  1,
+		Params: []TypeSet{numberType},
+		Result: TypeNumber,
 	},
-	fnMin: {
-		call:     minimum,
-		arity:    1,
-		variadic: true,
-		params:   []TypeSet{numberType},
-		result:   TypeNumber,
+	fnMin: &Function{
+		Call:     minimum,
+		Arity:    1,
+		Variadic: true,
+		Params:   []TypeSet{numberType},
+		Result:   TypeNumber,
 	},
-	fnMax: {
-		call:     maximum,
-		arity:    1,
-		variadic: true,
-		params:   []TypeSet{numberType},
-		result:   TypeNumber,
+	fnMax: &Function{
+		Call:     maximum,
+		Arity:    1,
+		Variadic: true,
+		Params:   []TypeSet{numberType},
+		Result:   TypeNumber,
 	},
-	fnSum: {
-		call:   sum,
-		arity:  1,
-		params: []TypeSet{arrayType},
-		result: TypeNumber,
+	fnSum: &Function{
+		Call:   sum,
+		Arity:  1,
+		Params: []TypeSet{arrayType},
+		Result: TypeNumber,
 	},
-	fnRound: {
-		call:   round,
-		arity:  1,
-		params: []TypeSet{numberType},
-		result: TypeNumber,
+	fnRound: &Function{
+		Call:   round,
+		Arity:  1,
+		Params: []TypeSet{numberType},
+		Result: TypeNumber,
 	},
-	fnFloor: {
-		call:   floor,
-		arity:  1,
-		params: []TypeSet{numberType},
-		result: TypeNumber,
+	fnFloor: &Function{
+		Call:   floor,
+		Arity:  1,
+		Params: []TypeSet{numberType},
+		Result: TypeNumber,
 	},
-	fnCeil: {
-		call:   ceil,
-		arity:  1,
-		params: []TypeSet{numberType},
-		result: TypeNumber,
+	fnCeil: &Function{
+		Call:   ceil,
+		Arity:  1,
+		Params: []TypeSet{numberType},
+		Result: TypeNumber,
 	},
-	fnNumber: {
-		call:   toNumber,
-		arity:  1,
-		params: []TypeSet{stringType | numberType},
-		result: TypeNumber,
+	fnNumber: &Function{
+		Call:   toNumber,
+		Arity:  1,
+		Params: []TypeSet{stringType | numberType},
+		Result: TypeNumber,
 	},
-	fnString: {
-		call:   toString,
-		arity:  1,
-		params: []TypeSet{textableType},
-		result: TypeString,
+	fnString: &Function{
+		Call:   toString,
+		Arity:  1,
+		Params: []TypeSet{textableType},
+		Result: TypeString,
 	},
-	fnStartsWith: {
-		call:   startsWith,
-		arity:  2,
-		params: []TypeSet{stringType, stringType},
-		result: TypeBool,
+	fnStartsWith: &Function{
+		Call:   startsWith,
+		Arity:  2,
+		Params: []TypeSet{stringType, stringType},
+		Result: TypeBool,
 	},
-	fnEndsWith: {
-		call:   endsWith,
-		arity:  2,
-		params: []TypeSet{stringType, stringType},
-		result: TypeBool,
+	fnEndsWith: &Function{
+		Call:   endsWith,
+		Arity:  2,
+		Params: []TypeSet{stringType, stringType},
+		Result: TypeBool,
 	},
-	fnIncludes: {
-		call:   includes,
-		arity:  2,
-		params: []TypeSet{stringType, stringType},
-		result: TypeBool,
+	fnIncludes: &Function{
+		Call:   includes,
+		Arity:  2,
+		Params: []TypeSet{stringType, stringType},
+		Result: TypeBool,
 	},
-	fnLower: {
-		call:   lower,
-		arity:  1,
-		params: []TypeSet{stringType},
-		result: TypeString,
+	fnLower: &Function{
+		Call:   lower,
+		Arity:  1,
+		Params: []TypeSet{stringType},
+		Result: TypeString,
 	},
-	fnUpper: {
-		call:   upper,
-		arity:  1,
-		params: []TypeSet{stringType},
-		result: TypeString,
+	fnUpper: &Function{
+		Call:   upper,
+		Arity:  1,
+		Params: []TypeSet{stringType},
+		Result: TypeString,
 	},
-	fnTrim: {
-		call:   trim,
-		arity:  1,
-		params: []TypeSet{stringType},
-		result: TypeString,
+	fnTrim: &Function{
+		Call:   trim,
+		Arity:  1,
+		Params: []TypeSet{stringType},
+		Result: TypeString,
 	},
-	fnSplit: {
-		call:   split,
-		arity:  2,
-		params: []TypeSet{stringType, stringType},
-		result: TypeArray,
+	fnSplit: &Function{
+		Call:   split,
+		Arity:  2,
+		Params: []TypeSet{stringType, stringType},
+		Result: TypeArray,
 	},
-	fnJoin: {
-		call:   join,
-		arity:  2,
-		params: []TypeSet{arrayType, stringType},
-		result: TypeString,
+	fnJoin: &Function{
+		Call:   join,
+		Arity:  2,
+		Params: []TypeSet{arrayType, stringType},
+		Result: TypeString,
 	},
-	fnKeys: {
-		call:   keys,
-		arity:  1,
-		params: []TypeSet{objectType},
-		result: TypeArray,
+	fnKeys: &Function{
+		Call:   keys,
+		Arity:  1,
+		Params: []TypeSet{objectType},
+		Result: TypeArray,
 	},
-	fnValues: {
-		call:   values,
-		arity:  1,
-		params: []TypeSet{objectType},
-		result: TypeArray,
+	fnValues: &Function{
+		Call:   values,
+		Arity:  1,
+		Params: []TypeSet{objectType},
+		Result: TypeArray,
 	},
+}
+
+var defaultEnv = &Env{entries: maps.Clone(builtins)}
+
+// DefaultEnv returns the shared environment containing the builtin functions
+func DefaultEnv() *Env {
+	return defaultEnv
+}
+
+// MarshalJSON rejects functions, which JSON can't represent
+func (*Function) MarshalJSON() ([]byte, error) {
+	return nil, fmt.Errorf("%w: function", ErrType)
+}
+
+func (f *Function) accepts(arity int) bool {
+	return arity >= f.Arity && (f.Variadic || arity == f.Arity)
+}
+
+func (f *Function) valid() bool {
+	return f != nil && f.Call != nil && f.Arity >= 0
 }
 
 func length(args ...any) (any, error) {

@@ -7,7 +7,7 @@ type (
 		Operand ActOn // What the operand refers to
 		Pop     int   // Values popped
 		Push    int   // Values pushed
-		DPop    bool  // Pops a count the operand determines instead of Pop
+		DPop    bool  // Also pops a count the operand determines
 		Keep    bool  // Jumping leaves the popped value on the stack
 	}
 
@@ -56,6 +56,8 @@ var Effects = [...]Effect{
 	Gt:             {Pop: 2, Push: 1},
 	Gte:            {Pop: 2, Push: 1},
 	Call:           {DPop: true, Push: 1, Operand: Constants},
+	CallDynamic:    {Pop: 1, DPop: true, Push: 1, Operand: Count},
+	CallWith:       {Pop: 2, Push: 1},
 	CondJump:       {Pop: 1, Operand: Labels},
 	Jump:           {Operand: Labels},
 	JumpIf:         {Pop: 1, Operand: Labels},

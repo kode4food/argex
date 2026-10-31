@@ -18,7 +18,7 @@ Use `errors.Is` with these sentinels:
 | `ErrArithmetic` | Division by zero and non-finite results |
 | `ErrLimit` | Expressions nested beyond the limit |
 
-An `ErrType` mismatch between operands whose types are known without input fails during parsing, as described in [Type Checking]({{< relref "/docs/static-types" >}}). Function errors fail during compilation. Both apply even in an unchosen branch. Runtime errors occur only in expressions actually evaluated.
+An `ErrType` mismatch between operands whose types are known without input fails during compilation, as described in [Type Checking]({{< relref "/docs/static-types" >}}). Call arguments after the first spread are checked at evaluation because their positions depend on the spread. Unknown direct callees and provably incorrect argument counts in direct global calls also fail during compilation, including in an unchosen branch. Calls through computed values and counts that depend on spread lengths are checked at evaluation. Runtime errors occur only in expressions actually evaluated.
 
 ## Limits
 

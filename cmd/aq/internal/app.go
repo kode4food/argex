@@ -14,7 +14,7 @@ import (
 // runner evaluates one compiled program against each input value and writes the
 // results
 type runner struct {
-	program argex.Program
+	program *argex.Program
 	encoder *json.Encoder
 	out     io.Writer
 	raw     bool
@@ -106,7 +106,7 @@ func (r *runner) stream(input io.Reader) error {
 }
 
 func (r *runner) evaluate(this any) error {
-	result, err := r.program(this)
+	result, err := r.program.Eval(this)
 	if err != nil {
 		return err
 	}
@@ -120,10 +120,10 @@ func (r *runner) evaluate(this any) error {
 	return r.encoder.Encode(result)
 }
 
-func compile(source string) (argex.Program, error) {
+func compile(source string) (*argex.Program, error) {
 	expr, err := argex.Parse(source)
 	if err != nil {
 		return nil, err
 	}
-	return argex.Compile(expr)
+	return argex.DefaultEnv().Compile(expr)
 }

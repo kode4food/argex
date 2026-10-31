@@ -54,6 +54,9 @@ func (p *parser) objectMember(seen map[string]bool) (*node, error) {
 		return nil, syntax(key.pos, "duplicate object key")
 	}
 	seen[name] = true
+	if key.kind == kindName && p.current().kind != kindColon {
+		return shorthandField(key)
+	}
 	if err := p.expect(kindColon); err != nil {
 		return nil, err
 	}
@@ -64,8 +67,6 @@ func (p *parser) objectMember(seen map[string]bool) (*node, error) {
 	return &node{kind: nodeField, text: name, children: []*node{value}}, nil
 }
 
-// computedMember parses a [key]: value member. A string literal key is a plain
-// field, so it keeps the constant-key path and duplicate check
 func (p *parser) computedMember(seen map[string]bool) (*node, error) {
 	start := p.current()
 	p.pos++
@@ -83,16 +84,17 @@ func (p *parser) computedMember(seen map[string]bool) (*node, error) {
 	if err != nil {
 		return nil, err
 	}
+	children := []*node{key, value}
+	result := &node{kind: nodeComputed, children: children}
 	name, ok := key.value.(string)
 	if key.kind != nodeLiteral || !ok {
-		children := []*node{key, value}
-		return &node{kind: nodeComputed, children: children}, nil
+		return result, nil
 	}
 	if seen[name] {
 		return nil, syntax(start.pos, "duplicate object key")
 	}
 	seen[name] = true
-	return &node{kind: nodeField, text: name, children: []*node{value}}, nil
+	return result, nil
 }
 
 func (p *parser) spreadable() (*node, error) {
@@ -116,4 +118,12 @@ func (p *parser) objectKey() (string, error) {
 		return name, nil
 	}
 	return "", p.error("expected an object key")
+}
+
+func shorthandField(key token) (*node, error) {
+	if reservedNames[key.text] {
+		return nil, syntax(key.pos, "reserved binding name")
+	}
+	value := &node{kind: nodeName, text: key.text}
+	return &node{kind: nodeField, text: key.text, children: []*node{value}}, nil
 }

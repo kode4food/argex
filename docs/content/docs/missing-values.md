@@ -5,7 +5,7 @@ weight: 50
 
 # Missing Values
 
-A bare name with no matching input property, or any bare name when the input is not an object, produces `Missing{}`, distinguishable from explicit JSON `null` using `IsMissing`. Missing equals missing and differs from null.
+A bare name with no local or environment binding and no matching input property produces `Missing{}`, distinguishable from explicit JSON `null` using `IsMissing`. Missing equals missing and differs from null.
 
 ## Ordinary Access
 
@@ -22,7 +22,7 @@ customer.address.country
 ```javascript
 customer?.address?.country
 response.choices?.[0]?.message?.content ?? ""
-values?.[index] ?? 0
+items?.[index] ?? 0
 ```
 
 Optionality applies to each marked access: use `a?.b?.c` when both accesses may be absent. Optional indexing skips evaluation of the index when the receiver is null or missing.

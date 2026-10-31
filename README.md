@@ -29,17 +29,19 @@ expression, err := argex.Parse(`
 if err != nil {
     return err
 }
-program, err := argex.Compile(expression)
+program, err := argex.DefaultEnv().Compile(expression)
 if err != nil {
     return err
 }
-result, err := program(map[string]any{
+result, err := program.Eval(map[string]any{
     "items": []any{5, 20, 150},
 })
 // result: []any{"medium", "large"}
 ```
 
-`Parse` returns an immutable `*Expression`, `Compile` returns a reusable `Program` that is safe for concurrent use, and `Eval(source, this)` does all three for one-off expressions.
+`Parse` checks syntax and returns an immutable `*Expression`. `DefaultEnv().Compile(expression)` resolves names, checks types, and returns a reusable `*Program` that is safe for concurrent use. `program.Eval(this)` evaluates it, and `program.StaticType()` returns the result types inferred during compilation. `DefaultEnv()` provides the shared builtin environment, while `NewEnv()` creates an empty environment. `Eval(source, this)` combines parsing, compilation, and evaluation against the default environment.
+
+Environments have immutable bindings. `env, err := argex.DefaultEnv().Bind("limit", 10)` returns a new environment without changing the default. Names resolve to local bindings first, then environment globals, then input properties. Use `this.name` to read input shadowed by a global. Functions are ordinary values that can be bound locally, selected, and called.
 
 ## Command Line
 

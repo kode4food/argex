@@ -60,7 +60,9 @@ const (
 	Gte // Pop two numbers or strings, push left >= right
 
 	// Function calls
-	Call // Call a resolved function (operand = call specification index)
+	Call        // Call a resolved function (operand = call specification index)
+	CallDynamic // Pop function and N args, call it (operand = count)
+	CallWith    // Pop function and an array, call it with the array's elements
 
 	// Control flow
 	CondJump  // Pop condition, jump if false (operand = destination)

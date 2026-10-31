@@ -17,6 +17,8 @@ Object keys can be identifiers or double-quoted strings, and trailing commas are
 }
 ```
 
+An identifier key without a value is shorthand for a field of the same name, so `{ reason }` means `{ reason: reason }`. Reserved names such as `this` cannot be used this way.
+
 Object construction omits fields whose value is missing. Arrays retain missing elements.
 
 ## Spreads

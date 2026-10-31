@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"encoding/json"
+	"fmt"
 	"slices"
 	"strings"
 )
@@ -27,6 +29,7 @@ const (
 	TypeObject
 	TypeNull
 	TypeMissing
+	TypeFunction
 	TypeAny
 )
 
@@ -41,6 +44,7 @@ var typeTagNames = []struct {
 	{TypeObject, "object"},
 	{TypeNull, "null"},
 	{TypeMissing, "missing"},
+	{TypeFunction, "function"},
 	{TypeAny, "any"},
 }
 
@@ -70,30 +74,43 @@ func (s TypeSet) String() string {
 	return strings.Join(names, "|")
 }
 
-// StaticType infers the set of types this expression's result can take without
-// evaluating it. Reading runtime input widens the result to include TypeAny
-func (e *Expression) StaticType() TypeSet {
-	if e == nil || e.root == nil {
-		return TypeSet(TypeAny)
-	}
-	return e.root.inferred
+// StaticType returns the result types inferred during compilation
+func (p *Program) StaticType() TypeSet {
+	return p.resultType
 }
 
-// annotateType infers each node's type bottom-up and rejects any operand whose
-// known type can never succeed. A let name carries its value's type
-func annotateType(n *node, scope []typedName) error {
-	if err := annotateChildren(n, scope); err != nil {
+// resolve annotates a copy, keeping the expression reusable across environments
+func (e *Expression) resolve(env *Env) (*node, error) {
+	if env == nil {
+		return nil, fmt.Errorf("%w: no environment", ErrFunction)
+	}
+	root := e.root.clone()
+	lowerNode(root)
+	if err := annotateType(root, nil, env); err != nil {
+		return nil, err
+	}
+	return root, nil
+}
+
+// annotateType resolves globals, infers each node's type bottom-up, and rejects
+// any operand whose known type can never succeed
+func annotateType(n *node, scope []typedName, env *Env) error {
+	if err := annotateChildren(n, scope, env); err != nil {
 		return err
+	}
+	if value, ok := resolveGlobal(n, scope, env); ok {
+		n.kind = nodeLiteral
+		n.value = value
 	}
 	n.inferred = computeType(n, scope)
 	return checkNode(n)
 }
 
 // annotateChildren scopes bindings as collectNames does
-func annotateChildren(n *node, scope []typedName) error {
+func annotateChildren(n *node, scope []typedName, env *Env) error {
 	switch n.kind {
 	case nodeMap, nodeFilter, nodeAny, nodeAll:
-		if err := annotateType(n.children[0], scope); err != nil {
+		if err := annotateType(n.children[0], scope, env); err != nil {
 			return err
 		}
 		inner := scope[:len(scope):len(scope)]
@@ -101,19 +118,19 @@ func annotateChildren(n *node, scope []typedName) error {
 			unknown := typedName{name: name, inferred: TypeSet(TypeAny)}
 			inner = append(inner, unknown)
 		}
-		return annotateType(n.children[1], inner)
+		return annotateType(n.children[1], inner, env)
 
 	case nodeLet:
 		value := n.children[0]
-		if err := annotateType(value, scope); err != nil {
+		if err := annotateType(value, scope, env); err != nil {
 			return err
 		}
 		bound := typedName{name: n.valueBinding, inferred: value.inferred}
 		inner := append(scope[:len(scope):len(scope)], bound)
-		return annotateType(n.children[1], inner)
+		return annotateType(n.children[1], inner, env)
 	}
 	for _, child := range n.children {
-		if err := annotateType(child, scope); err != nil {
+		if err := annotateType(child, scope, env); err != nil {
 			return err
 		}
 	}
@@ -141,8 +158,9 @@ func computeType(n *node, scope []typedName) TypeSet {
 		return TypeSet(TypeAny)
 
 	case nodeCall:
-		if fn, ok := builtins[n.text]; ok && fn.result != 0 {
-			return TypeSet(fn.result)
+		callee := n.children[0]
+		if fn, ok := callee.value.(*Function); ok && fn.Result != 0 {
+			return TypeSet(fn.Result)
 		}
 		return TypeSet(TypeAny)
 
@@ -177,14 +195,26 @@ func literalType(value any) TypeSet {
 	case nil:
 		return TypeSet(TypeNull)
 
+	case Missing:
+		return TypeSet(TypeMissing)
+
 	case bool:
 		return TypeSet(TypeBool)
 
-	case float64:
+	case float64, int, json.Number:
 		return TypeSet(TypeNumber)
 
 	case string:
 		return TypeSet(TypeString)
+
+	case []any:
+		return TypeSet(TypeArray)
+
+	case map[string]any:
+		return TypeSet(TypeObject)
+
+	case *Function:
+		return TypeSet(TypeFunction)
 
 	default:
 		return TypeSet(TypeAny)
@@ -198,6 +228,18 @@ func nameType(name string, scope []typedName) TypeSet {
 		}
 	}
 	return TypeSet(TypeAny)
+}
+
+func resolveGlobal(n *node, scope []typedName, env *Env) (any, bool) {
+	if n.kind != nodeName {
+		return nil, false
+	}
+	for _, bound := range scope {
+		if bound.name == n.text {
+			return nil, false
+		}
+	}
+	return env.resolve(n.text)
 }
 
 func inferBinaryType(n *node) TypeSet {
