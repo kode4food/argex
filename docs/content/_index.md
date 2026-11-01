@@ -22,10 +22,10 @@ items | filter item: item.price > 10 | map item: {
 ## What It Provides
 
 - JavaScript-style paths, arithmetic, comparisons, and boolean logic
-- Optional access and a `??` fallback that distinguish missing values from JSON `null`
+- Optional access and `??` fallbacks
 - Object and array construction with spreads and computed keys
 - `case` for conditional selection
-- `let` for naming intermediate values
+- `let` bindings with destructuring and defaults
 - `map`, `filter`, `any`, and `all` collection operations chained with `|`
 - Pure builtin functions for strings, numbers, and objects, with custom functions supplied through immutable environments
 - Compilation to a reusable program that is safe for concurrent use

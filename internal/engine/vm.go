@@ -103,7 +103,7 @@ func (p *Program) Eval(this any) (any, error) {
 		case isa.Access:
 			key := p.constants[op]
 			value := MEM[SP-1]
-			if nullish(value) {
+			if value == nil || IsMissing(value) {
 				return nil, fmt.Errorf("%w: access %v", ErrMissing, key)
 			}
 			child, ok, err := accessChild(value, key)
@@ -118,9 +118,11 @@ func (p *Program) Eval(this any) (any, error) {
 		case isa.OptionalAccess:
 			key := p.constants[op]
 			value := MEM[SP-1]
-			if nullish(value) {
-				MEM[SP-1] = Missing{}
+			if IsMissing(value) {
 				continue
+			}
+			if value == nil {
+				return nil, fmt.Errorf("%w: access %v", ErrMissing, key)
 			}
 			child, ok, err := accessChild(value, key)
 			if err != nil {
@@ -136,7 +138,7 @@ func (p *Program) Eval(this any) (any, error) {
 			SP--
 			key := MEM[SP]
 			value := MEM[SP-1]
-			if nullish(value) {
+			if value == nil || IsMissing(value) {
 				return nil, fmt.Errorf("%w: access %v", ErrMissing, key)
 			}
 			child, ok, err := accessChild(value, key)
@@ -152,9 +154,11 @@ func (p *Program) Eval(this any) (any, error) {
 			SP--
 			key := MEM[SP]
 			value := MEM[SP-1]
-			if nullish(value) {
-				MEM[SP-1] = Missing{}
+			if IsMissing(value) {
 				continue
+			}
+			if value == nil {
+				return nil, fmt.Errorf("%w: access %v", ErrMissing, key)
 			}
 			child, ok, err := accessChild(value, key)
 			if err != nil {
@@ -167,10 +171,23 @@ func (p *Program) Eval(this any) (any, error) {
 			MEM[SP-1] = child
 
 		case isa.Optional:
-			if nullish(MEM[SP-1]) {
-				MEM[SP-1] = Missing{}
+			if IsMissing(MEM[SP-1]) {
 				PC = op - 1
 			}
+
+		case isa.AssertType:
+			actual := literalType(MEM[SP-1])
+			if actual&TypeSet(op) != 0 {
+				continue
+			}
+			if actual.Is(TypeMissing) || actual.Is(TypeNull) {
+				return nil, fmt.Errorf(
+					"%w: value is missing or null", ErrMissing,
+				)
+			}
+			return nil, fmt.Errorf(
+				"%w: expected %s, got %s", ErrType, TypeSet(op), actual,
+			)
 
 		case isa.Not:
 			value, ok := MEM[SP-1].(bool)
@@ -417,7 +434,7 @@ func (p *Program) Eval(this any) (any, error) {
 			}
 
 		case isa.Coalesce:
-			if !nullish(MEM[SP-1]) {
+			if !IsMissing(MEM[SP-1]) {
 				PC = op - 1
 			} else {
 				SP--
@@ -582,7 +599,7 @@ func (p *Program) Eval(this any) (any, error) {
 
 		case isa.Concat:
 			SP--
-			if nullish(MEM[SP]) {
+			if MEM[SP] == nil || IsMissing(MEM[SP]) {
 				continue
 			}
 			source, ok := MEM[SP].([]any)
@@ -593,7 +610,7 @@ func (p *Program) Eval(this any) (any, error) {
 
 		case isa.Merge:
 			SP--
-			if nullish(MEM[SP]) {
+			if MEM[SP] == nil || IsMissing(MEM[SP]) {
 				continue
 			}
 			source, ok := MEM[SP].(map[string]any)

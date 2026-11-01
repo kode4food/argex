@@ -17,7 +17,7 @@ Highest first:
 | `+`, `-` | Addition and subtraction, with `+` also joining two strings |
 | `<`, `<=`, `>`, `>=`, `in` | Numeric or string ordering and array membership |
 | `==`, `!=` | Equality by type and contents |
-| `??` | Missing/null fallback |
+| `??` | Missing-value fallback |
 | `&&` | Boolean conjunction |
 | `\|\|` | Boolean disjunction |
 | `\|` | Collection operation (`map`, `filter`, `any`, `all`) |

@@ -1,11 +1,12 @@
 package engine
 
-// letBinding nests one node per name, so later values see earlier bindings. Its
-// depth counts toward the limit that expression enforces on the value
+// letBinding nests one node per assignment, so later values see earlier names.
+// Its depth counts toward the limit that expression enforces on the value
 func (p *parser) letBinding() (*node, error) {
 	p.depth++
 	defer func() { p.depth-- }()
-	name, err := p.bindingName()
+	result := &node{kind: nodeLet}
+	pattern, err := p.bindingTarget(result)
 	if err != nil {
 		return nil, err
 	}
@@ -20,11 +21,11 @@ func (p *parser) letBinding() (*node, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &node{
-		kind:         nodeLet,
-		valueBinding: name,
-		children:     []*node{value, body},
-	}, nil
+	result.children = []*node{value, body}
+	if pattern != nil {
+		result.children = append(result.children, pattern)
+	}
+	return result, nil
 }
 
 func (p *parser) letBody() (*node, error) {

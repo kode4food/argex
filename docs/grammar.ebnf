@@ -1,9 +1,15 @@
 expression     = let | pipeline ;
 let            = "let", assignment, { ",", assignment }, ":", expression ;
-assignment     = identifier, "=", logicalOr ;
+assignment     = target, "=", logicalOr ;
 pipeline       = logicalOr, { "|", operation, [ binding ], logicalOr } ;
 operation      = "map" | "filter" | "any" | "all" ;
-binding        = identifier, [ ",", identifier ], ":" ;
+binding        = (target | identifier, ",", target), ":" ;
+target         = identifier | arrayPattern | objectPattern ;
+arrayPattern   = "[", [ [ patternElement ], { ",", [ patternElement ] } ], "]" ;
+objectPattern  = "{", [ patternField, { ",", patternField }, [ "," ] ], "}" ;
+patternField   = identifier, [ "=", logicalOr ]
+               | (identifier | string), ":", patternElement ;
+patternElement = target, [ "=", logicalOr ] ;
 logicalOr      = logicalAnd, { "||", logicalAnd } ;
 logicalAnd     = coalesce, { "&&", coalesce } ;
 coalesce       = equality, [ "??", coalesce ] ;
@@ -58,6 +64,7 @@ literal        = number | string | "true" | "false" | "null" ;
 ## Grouping
 
 - A stage body is a `logicalOr`; a nested pipeline or `let` needs parentheses.
-- A stage binding is recognized only as `name:` or `name, name:`.
+- A stage binding is recognized by the colon after its complete target or
+  `key, target` pair.
 - A `case` subject beginning with `{` needs parentheses.
 *)

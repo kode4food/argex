@@ -54,10 +54,6 @@ func jsonNumber(value any) float64 {
 	return result
 }
 
-func nullish(value any) bool {
-	return value == nil || IsMissing(value)
-}
-
 func operandError(operation string) error {
 	return fmt.Errorf("%w: %s", ErrType, operation)
 }

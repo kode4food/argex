@@ -20,6 +20,7 @@ const (
 	Constants       // A constant, which sets the count for a DPop
 	Count           // A count of values
 	Labels          // A label until compiling finishes, then a destination
+	Types           // A set of allowed value types
 )
 
 // Effects describes every opcode, indexed by opcode
@@ -36,6 +37,7 @@ var Effects = [...]Effect{
 	Index:          {Pop: 2, Push: 1},
 	OptionalIndex:  {Pop: 2, Push: 1},
 	Optional:       {Operand: Labels},
+	AssertType:     {Operand: Types},
 	Not:            {Pop: 1, Push: 1},
 	Eq:             {Pop: 2, Push: 1},
 	Neq:            {Pop: 2, Push: 1},

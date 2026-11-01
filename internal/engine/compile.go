@@ -43,8 +43,12 @@ func (e *Env) Compile(expr *Expression) (*Program, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Reserve room for control flow; constants mostly come from leaves
+	size := root.count()
 	c := &compiler{
 		program: &Program{
+			code:       make(isa.Instructions, 0, size+size/2),
+			constants:  make([]any, 0, size/2),
 			localCount: rootSlot + 1,
 			resultType: root.inferred,
 		},

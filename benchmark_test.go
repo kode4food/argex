@@ -1,6 +1,7 @@
 package argex_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/kode4food/argex"
@@ -12,6 +13,54 @@ type benchmarkCase struct {
 }
 
 const benchmarkCollectionSize = 256
+
+func BenchmarkCompile(b *testing.B) {
+	for _, tc := range []benchmarkCase{
+		{name: "literal", source: "1"},
+		{name: "input", source: "this"},
+		{name: "access", source: "a?.b?.c ?? false"},
+		{
+			name:   "arithmetic",
+			source: "(input * price + output * rate) * (1 + tax)",
+		},
+		{
+			name:   "pipeline",
+			source: "items | map x: x * 2 | filter y: y > 128 | any z: z > 256",
+		},
+		{
+			name:   "match",
+			source: `case status { "paid": "ship", "pending": "wait", "stop" }`,
+		},
+		{
+			name: "functions",
+			source: "let size = length: " +
+				"{count: size(items), peak: max(...items)}",
+		},
+		{
+			name:   "object",
+			source: `{["name"]: user.name, active: user.active, ...defaults}`,
+		},
+		{
+			name: "array256",
+			source: "[" +
+				strings.Repeat("item,", benchmarkCollectionSize) + "]",
+		},
+	} {
+		b.Run(tc.name, func(b *testing.B) {
+			expr, err := argex.Parse(tc.source)
+			if err != nil {
+				b.Fatal(err)
+			}
+			env := argex.DefaultEnv()
+			b.ReportAllocs()
+			for b.Loop() {
+				if _, err := env.Compile(expr); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}
 
 func BenchmarkExpressions(b *testing.B) {
 	variables := map[string]any{
@@ -52,6 +101,78 @@ func BenchmarkExpressions(b *testing.B) {
 					}
 				}
 			})
+		})
+	}
+}
+
+func BenchmarkBindingPatterns(b *testing.B) {
+	items := make([]any, benchmarkCollectionSize)
+	for i := range items {
+		items[i] = map[string]any{"x": i, "y": i + 1}
+	}
+	variables := map[string]any{
+		"input": map[string]any{"x": 2, "y": 3},
+		"pair":  []any{2, 3},
+		"items": items,
+		"empty": map[string]any{},
+		"none":  []any{},
+	}
+	for _, tc := range []benchmarkCase{
+		{
+			name:   "object/manual",
+			source: "let item = input, x = item.x, y = item.y: x + y",
+		},
+		{name: "object/pattern", source: "let {x, y} = input: x + y"},
+		{name: "object/known", source: "let {x, y} = {x: 2, y: 3}: x + y"},
+		{
+			name:   "object/default-present",
+			source: "let {x = 2, y = 3} = input: x + y",
+		},
+		{
+			name:   "object/default-missing",
+			source: "let {x = 2, y = 3} = empty: x + y",
+		},
+		{
+			name:   "array/manual",
+			source: "let item = pair, x = item[0], y = item[1]: x + y",
+		},
+		{name: "array/pattern", source: "let [x, y] = pair: x + y"},
+		{name: "array/known", source: "let [x, y] = [2, 3]: x + y"},
+		{
+			name:   "array/default-present",
+			source: "let [x = 2, y = 3] = pair: x + y",
+		},
+		{
+			name:   "array/default-missing",
+			source: "let [x = 2, y = 3] = none: x + y",
+		},
+		{name: "map256/direct", source: "items | map item: item.x + item.y"},
+		{
+			name: "map256/manual",
+			source: "items | map item: " +
+				"(let x = item.x, y = item.y: x + y)",
+		},
+		{name: "map256/pattern", source: "items | map {x, y}: x + y"},
+		{
+			name:   "map256/default-present",
+			source: "items | map {x = 0, y = 0}: x + y",
+		},
+	} {
+		b.Run(tc.name, func(b *testing.B) {
+			expr, err := argex.Parse(tc.source)
+			if err != nil {
+				b.Fatal(err)
+			}
+			program, err := argex.DefaultEnv().Compile(expr)
+			if err != nil {
+				b.Fatal(err)
+			}
+			b.ReportAllocs()
+			for b.Loop() {
+				if _, err := program.Eval(variables); err != nil {
+					b.Fatal(err)
+				}
+			}
 		})
 	}
 }

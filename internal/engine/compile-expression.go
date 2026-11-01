@@ -104,7 +104,7 @@ func (c *compiler) callDynamic(args []*node, depth int) error {
 	return nil
 }
 
-// callWith shares array construction's nullish handling for argument spreads
+// callWith uses array construction so missing and null spreads are skipped
 func (c *compiler) callWith(args []*node, depth int) error {
 	if err := c.array(args, depth); err != nil {
 		return err
@@ -188,7 +188,14 @@ func (c *compiler) let(n *node, depth int) error {
 	slot := c.allocSlot()
 	c.emit(isa.Store, isa.Operand(slot))
 	bound := []binding{{name: n.valueBinding, slot: slot}}
-	err := c.scoped(bound, n.children[1], depth)
+	var err error
+	if pattern := n.bindingPattern(); pattern != nil {
+		bound, err = c.bindPattern(pattern, slot, nil, depth)
+	}
+	if err != nil {
+		return err
+	}
+	err = c.scoped(bound, n.children[1], depth)
 	c.nextSlot = mark
 	return err
 }

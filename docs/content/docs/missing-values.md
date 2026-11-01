@@ -17,7 +17,7 @@ customer.address.country
 
 ## Optional Access
 
-`?.name` and `?.[index]` return missing for a null or absent receiver or an absent member. A wrong receiver type or an invalid index type produces `ErrType`.
+`?.name` and `?.[index]` return missing for a missing receiver or an absent member. A null receiver produces `ErrMissing`. A wrong receiver type or an invalid index type produces `ErrType`. A present member containing null returns null.
 
 ```javascript
 customer?.address?.country
@@ -25,11 +25,13 @@ response.choices?.[0]?.message?.content ?? ""
 items?.[index] ?? 0
 ```
 
-Optionality applies to each marked access: use `a?.b?.c` when both accesses may be absent. Optional indexing skips evaluation of the index when the receiver is null or missing.
+Optionality applies to each marked access: use `a?.b?.c` when both accesses may be absent. Optional indexing skips evaluation of the index only when the receiver is missing.
 
 ## Fallbacks
 
-`??` evaluates its right operand only when its left operand is missing or null. Zero, false, and the empty string are preserved.
+`??` evaluates its right operand only when its left operand is missing.
+
+[Destructuring defaults](../let/#defaults) apply only to missing members.
 
 ## Missing Values in Results
 

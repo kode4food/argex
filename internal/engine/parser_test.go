@@ -149,6 +149,10 @@ func FuzzExpression(f *testing.F) {
 		`join(split("a,b", ","), " / ")`,
 		`sum(["1", "2"] | map x: number(x))`,
 		`keys({a: string(round(1.5))})`,
+		"let {x = 1, y = x + 1} = {}: y",
+		"let {items: [x = 2] = []} = {}: x",
+		"[{}, {x: null}] | map {x = 1}: x",
+		"case [{x: 1}] { [0] | map {x: 1}: true, false }",
 	} {
 		f.Add(source)
 	}

@@ -82,7 +82,7 @@
     {"name":"unknown skipped and","expression":"false&&unknown()","error":"function","phase":"compile"},
     {"name":"unknown skipped or","expression":"true||unknown()","error":"function","phase":"compile"},
     {"name":"unknown skipped coalesce","expression":"1??unknown()","error":"function","phase":"compile"},
-    {"name":"unknown skipped index","expression":"null?.[unknown()]","error":"function","phase":"compile"},
+    {"name":"unknown skipped index","expression":"absent?.[unknown()]","error":"function","phase":"compile"},
     {"name":"unknown empty map","expression":"[] | map item:unknown()","error":"function","phase":"compile"},
     {"name":"unknown empty filter","expression":"[] | filter item:unknown()","error":"function","phase":"compile"},
     {"name":"invalid arity in skipped branch","expression":"case{false:abs(),1}","error":"function","phase":"compile"}

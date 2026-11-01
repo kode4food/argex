@@ -59,7 +59,8 @@ func (p *parser) collection(receiver *node, chained bool) (*node, error) {
 		return nil, syntax(operation.pos, "unknown collection operation")
 	}
 	stage := &node{kind: kind, chained: chained}
-	if err := p.stageBinding(stage); err != nil {
+	pattern, err := p.stageBinding(stage)
+	if err != nil {
 		return nil, err
 	}
 	body, err := p.expression(precedenceOr)
@@ -67,45 +68,37 @@ func (p *parser) collection(receiver *node, chained bool) (*node, error) {
 		return nil, err
 	}
 	stage.children = []*node{receiver, body}
+	if pattern != nil {
+		stage.children = append(stage.children, pattern)
+	}
 	return stage, nil
 }
 
-func (p *parser) stageBinding(stage *node) error {
+func (p *parser) stageBinding(stage *node) (*node, error) {
 	if !p.hasBinding() {
-		return nil
+		return nil, nil
 	}
-	first, err := p.bindingName()
+	pattern, err := p.bindingTarget(stage)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !p.take(kindComma) {
-		stage.valueBinding = first
-		return p.expect(kindColon)
+		return pattern, p.expect(kindColon)
 	}
-	stage.keyBinding = first
-	stage.valueBinding, err = p.bindingName()
+	stage.keyBinding = stage.valueBinding
+	stage.valueBinding = ""
+	pattern, err = p.bindingTarget(stage)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return p.expect(kindColon)
+	return pattern, p.expect(kindColon)
 }
 
-// hasBinding looks for "name:" or "name, name:". Neither can begin an
-// expression, so anything else is a body without bindings
+// hasBinding checks the delimiter after a complete target, so array and object
+// expressions without a following colon remain ordinary stage bodies
 func (p *parser) hasBinding() bool {
-	if p.peek(0).kind != kindName {
-		return false
-	}
-	switch p.peek(1).kind {
-	case kindColon:
-		return true
-
-	case kindComma:
-		return p.peek(2).kind == kindName && p.peek(3).kind == kindColon
-
-	default:
-		return false
-	}
+	end := p.bindingColon(p.pos)
+	return end >= 0 && end != p.conditionEnd
 }
 
 // bindingName returns "" for a discard, which binds no name

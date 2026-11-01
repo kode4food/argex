@@ -27,9 +27,11 @@ type (
 	nodeKind int
 
 	parser struct {
-		tokens []token
-		pos    int
-		depth  int
+		tokens       []token
+		pos          int
+		depth        int
+		conditionEnd int
+		caseRetries  int
 	}
 )
 
@@ -54,6 +56,7 @@ const (
 	nodeFilter
 	nodeAny
 	nodeAll
+	nodeDefault
 )
 
 const maxDepth = 256
@@ -87,12 +90,36 @@ func (e *Env) Names(expr *Expression) []string {
 }
 
 func (n *node) clone() *node {
-	result := *n
-	result.children = make([]*node, len(n.children))
-	for i, child := range n.children {
-		result.children[i] = child.clone()
+	// Allocate the tree together instead of allocating each node separately
+	count := n.count()
+	nodes := make([]node, count)
+	children := make([]*node, count-1)
+	n.cloneInto(nodes, children)
+	return &nodes[0]
+}
+
+func (n *node) count() int {
+	count := 1
+	for _, child := range n.children {
+		count += child.count()
 	}
-	return &result
+	return count
+}
+
+func (n *node) cloneInto(nodes []node, children []*node) int {
+	result := &nodes[0]
+	*result = *n
+	count := len(n.children)
+	result.children = children[:count:count]
+	children = children[count:]
+	used := 1
+	for i, child := range n.children {
+		result.children[i] = &nodes[used]
+		copied := child.cloneInto(nodes[used:], children)
+		used += copied
+		children = children[copied-1:]
+	}
+	return used
 }
 
 func (p *parser) expect(kind tokenKind) error {
@@ -140,13 +167,28 @@ func collectNames(
 
 	case nodeMap, nodeFilter, nodeAny, nodeAll:
 		collectNames(n.children[0], bound, seen, env)
+		if pattern := n.bindingPattern(); pattern != nil {
+			inner := append(
+				bound[:len(bound):len(bound)], stageOuterNames(n)...,
+			)
+			inner = collectPatternNames(pattern, inner, seen, env)
+			collectNames(n.children[1], inner, seen, env)
+			return
+		}
 		inner := append(bound[:len(bound):len(bound)], stageNames(n)...)
 		collectNames(n.children[1], inner, seen, env)
 		return
 
 	case nodeLet:
 		collectNames(n.children[0], bound, seen, env)
-		inner := append(bound[:len(bound):len(bound)], n.valueBinding)
+		if pattern := n.bindingPattern(); pattern != nil {
+			inner := collectPatternNames(
+				pattern, bound[:len(bound):len(bound)], seen, env,
+			)
+			collectNames(n.children[1], inner, seen, env)
+			return
+		}
+		inner := n.bindingNames(bound[:len(bound):len(bound)])
 		collectNames(n.children[1], inner, seen, env)
 		return
 	}
@@ -160,10 +202,20 @@ func stageNames(n *node) []string {
 	if n.chained {
 		names = stageNames(n.children[0])
 	}
-	for _, name := range []string{n.valueBinding, n.keyBinding} {
-		if name != "" {
-			names = append(names, name)
-		}
+	names = n.bindingNames(names)
+	if n.keyBinding != "" {
+		names = append(names, n.keyBinding)
+	}
+	return names
+}
+
+func stageOuterNames(n *node) []string {
+	var names []string
+	if n.chained {
+		names = stageNames(n.children[0])
+	}
+	if n.keyBinding != "" {
+		names = append(names, n.keyBinding)
 	}
 	return names
 }

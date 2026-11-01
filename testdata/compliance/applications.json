@@ -11,6 +11,7 @@
     {"name":"null field preserved","expression":"{id:input.id,description:input?.description,active:input?.active??false}","variables":{"input":{"id":1,"description":null,"active":true}},"result":{"id":1,"description":null,"active":true}},
     {"name":"clamped adjustment","expression":"min(1,max(0,current*0.9+score*0.1))","variables":{"current":0.5,"score":0.5},"result":0.5},
     {"name":"conditional evaluation protects division","expression":"items | map item:case{item.count>0:item.total/item.count,0}","variables":{"items":[{"count":2,"total":10},{"count":0,"total":0}]},"result":[5,0]},
-    {"name":"empty optional collection default","expression":"(response?.items??[]) | map item:item.id","variables":{"response":null},"result":[]}
+    {"name":"empty optional collection default","expression":"(response?.items??[]) | map item:item.id","variables":{"response":{}},"result":[]},
+    {"name":"null response","expression":"(response?.items??[]) | map item:item.id","variables":{"response":null},"error":"missing","phase":"eval"}
   ]
 }

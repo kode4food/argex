@@ -102,15 +102,14 @@ func TestValues(t *testing.T) {
 		{source: "customer?.address?.country", want: "CH"},
 		{source: "items?.[1]", want: 5},
 		{source: `missing?.field ?? "fallback"`, want: "fallback"},
-		{source: "customer.nullable ?? 4", want: float64(4)},
-		{source: "missing ?? null ?? 4", want: float64(4)},
+		{source: "customer.nullable ?? 4", want: nil},
+		{source: "missing ?? null ?? 4", want: nil},
 		{source: "false ?? true", want: false},
 		{source: "0 ?? 4", want: float64(0)},
 		{source: `"" ?? "fallback"`, want: ""},
 		{source: "items?.[99] ?? 8", want: float64(8)},
 		{source: "items?.[-1] ?? 8", want: float64(8)},
-		{source: "null?.[1/0] ?? 8", want: float64(8)},
-		{source: "null?.name ?? 8", want: float64(8)},
+		{source: "missing?.[1/0] ?? 8", want: float64(8)},
 		{source: "customer?.absent ?? 8", want: float64(8)},
 		{source: "missing == null", want: false},
 		{source: "missing == another_missing", want: true},
@@ -172,6 +171,141 @@ func TestValues(t *testing.T) {
 	}
 }
 
+func TestMissingOnlyAccess(t *testing.T) {
+	cases := []struct {
+		name   string
+		source string
+		input  any
+		want   any
+		err    error
+	}{
+		{name: "null fallback", source: "this ?? 7"},
+		{
+			name:   "false fallback",
+			source: "this ?? 7",
+			input:  false,
+			want:   false,
+		},
+		{name: "zero fallback", source: "this ?? 7", input: 0, want: 0},
+		{name: "empty fallback", source: "this ?? 7", input: "", want: ""},
+		{
+			name:   "missing fallback",
+			source: "this ?? 7",
+			input:  argex.Missing{},
+			want:   float64(7),
+		},
+		{
+			name:   "null receiver",
+			source: "this?.field ?? 7",
+			err:    argex.ErrMissing,
+		},
+		{
+			name:   "missing receiver",
+			source: "this?.field ?? 7",
+			input:  argex.Missing{},
+			want:   float64(7),
+		},
+		{
+			name:   "null member",
+			source: "this?.field ?? 7",
+			input:  map[string]any{"field": nil},
+		},
+		{
+			name:   "null intermediate",
+			source: "this?.field?.child ?? 7",
+			input:  map[string]any{"field": nil},
+			err:    argex.ErrMissing,
+		},
+		{
+			name:   "missing member",
+			source: "this?.field ?? 7",
+			input:  map[string]any{},
+			want:   float64(7),
+		},
+		{
+			name:   "null index receiver",
+			source: "this?.[0] ?? 7",
+			err:    argex.ErrMissing,
+		},
+		{
+			name:   "null array element",
+			source: "this?.[0] ?? 7",
+			input:  []any{nil},
+		},
+		{
+			name:   "missing array position",
+			source: "this?.[0] ?? 7",
+			input:  []any{},
+			want:   float64(7),
+		},
+		{
+			name:   "wrong receiver",
+			source: "this?.field",
+			input:  false,
+			err:    argex.ErrType,
+		},
+		{
+			name:   "present null member",
+			source: "this?.field",
+			input:  map[string]any{"field": nil},
+		},
+	}
+	for i := range cases {
+		tc := &cases[i]
+		t.Run(tc.name, func(t *testing.T) {
+			value, err := argex.Eval(tc.source, tc.input)
+			assert.ErrorIs(t, err, tc.err)
+			assert.Equal(t, tc.want, value)
+		})
+	}
+}
+
+func TestMissingOnlyShortCircuit(t *testing.T) {
+	calls := 0
+	env, err := argex.DefaultEnv().Bind("key", &argex.Function{
+		Call: func(...any) (any, error) {
+			calls++
+			return float64(0), nil
+		},
+		Result: argex.TypeNumber,
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	expr, err := argex.Parse("this?.[key()]")
+	if !assert.NoError(t, err) {
+		return
+	}
+	program, err := env.Compile(expr)
+	if !assert.NoError(t, err) {
+		return
+	}
+	value, err := program.Eval(argex.Missing{})
+	assert.NoError(t, err)
+	assert.True(t, argex.IsMissing(value))
+	assert.Zero(t, calls)
+	_, err = program.Eval(nil)
+	assert.ErrorIs(t, err, argex.ErrMissing)
+	assert.Equal(t, 1, calls)
+
+	expr, err = argex.Parse("this ?? key()")
+	if !assert.NoError(t, err) {
+		return
+	}
+	program, err = env.Compile(expr)
+	if !assert.NoError(t, err) {
+		return
+	}
+	value, err = program.Eval(nil)
+	assert.NoError(t, err)
+	assert.Nil(t, value)
+	assert.Equal(t, 1, calls)
+	value, err = program.Eval(argex.Missing{})
+	assert.NoError(t, err)
+	assert.Equal(t, float64(0), value)
+	assert.Equal(t, 2, calls)
+}
+
 func TestOperators(t *testing.T) {
 	cases := []evaluationCase{
 		{source: "2 + 3 * 4", want: float64(14)},
@@ -207,7 +341,7 @@ func TestOperators(t *testing.T) {
 		{source: "1 ?? missing.field", want: float64(1)},
 		{source: "false || true", want: true},
 		{source: "true && false", want: false},
-		{source: "null ?? 2 + 3 == 5", want: true},
+		{source: "missing ?? 2 + 3 == 5", want: true},
 		{source: "false ?? true || true", want: true},
 		{source: "length([1,2])", want: float64(2)},
 		{source: "length({a: 1})", want: float64(1)},

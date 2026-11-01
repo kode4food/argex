@@ -31,10 +31,11 @@ const (
 
 	// Property and index access
 	Access         // Replace receiver with property (operand = name index)
-	OptionalAccess // Access property, allowing absent receivers and members
+	OptionalAccess // Access property, allowing missing receivers and members
 	Index          // Pop index, replace receiver with indexed value
-	OptionalIndex  // Index, allowing absent receivers and members
-	Optional       // If receiver is absent, replace with missing and jump
+	OptionalIndex  // Index, allowing missing receivers and members
+	Optional       // If receiver is missing, jump
+	AssertType     // Check value against allowed types (operand = type set)
 
 	// Boolean operations and equality
 	Not      // Negate Boolean value
@@ -43,7 +44,7 @@ const (
 	In       // Pop value and array, push membership by structural equality
 	And      // If false, jump. Otherwise pop left operand
 	Or       // If true, jump. Otherwise pop left operand
-	Coalesce // If present and non-null, jump. Otherwise pop left operand
+	Coalesce // Jump if not missing; otherwise pop
 	Boolean  // Check that the top of the stack is a Boolean
 
 	// Numeric operations

@@ -22,7 +22,7 @@ func TestStaticType(t *testing.T) {
 		},
 		"equality is always bool": {src: `str == "hello"`, want: "bool"},
 		"bare name is any":        {src: `value.status`, want: "any"},
-		"optional access adds null": {
+		"optional access adds missing": {
 			src:  `value?.status`,
 			want: "missing|any",
 		},
@@ -35,6 +35,8 @@ func TestStaticType(t *testing.T) {
 		"add two strings":          {src: `"a" + "b"`, want: "string"},
 		"add an unknown left side": {src: `value + 1`, want: "number|string"},
 		"coalesce with unknown":    {src: `a ?? "x"`, want: "string|any"},
+		"coalesce preserves null":  {src: `null ?? 1`, want: "null"},
+		"coalesce preserves type":  {src: `1 ?? "x"`, want: "number"},
 		"array literal":            {src: `[1, 2, 3]`, want: "array"},
 		"object literal":           {src: `{a: 1}`, want: "object"},
 		"map is always array": {
@@ -153,6 +155,11 @@ func TestCompileRejectsStaticMismatches(t *testing.T) {
 	t.Run("dot access on null", func(t *testing.T) {
 		assert.ErrorIs(t, compileSource(t, "null.x"), argex.ErrMissing)
 	})
+	for _, src := range []string{"null?.x", "null?.[0]"} {
+		t.Run(src, func(t *testing.T) {
+			assert.ErrorIs(t, compileSource(t, src), argex.ErrMissing)
+		})
+	}
 }
 
 func TestCompileAllowsRuntimeDependentValues(t *testing.T) {

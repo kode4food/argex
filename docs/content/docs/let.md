@@ -32,6 +32,38 @@ let total = total ?? 0: total + this.shipping
 
 `_` evaluates a value without binding it.
 
+## Destructuring
+
+Use an object or array pattern to bind several members of one value:
+
+```javascript
+let {name, age: years} = user: {name, years}
+let [first, _, third] = items: first + third
+let {address: {city}, points: [x, y]} = user: {city, x, y}
+```
+
+`age: years` binds the `age` property as `years`. Patterns can nest. Use `_` to skip a member, or leave an array position empty, as in `[first, , third]`. Skipped members are not read unless they have a default. Trailing commas are allowed; names cannot repeat within a pattern.
+
+The source is evaluated once. Members without defaults are required; a missing member or a null or missing container produces `ErrMissing`. A wrong container type produces `ErrType`. Extra members are ignored. Rest bindings and computed keys are not supported.
+
+### Defaults
+
+Add `= expression` to provide a default for a missing member:
+
+```javascript
+let {name = "anonymous", age: years = 0} = user: {name, years}
+let [first = 0, second = first + 1] = items: [first, second]
+let {address: {city = "unknown"} = {}} = user: city
+```
+
+A default is evaluated only for a missing member. It can use outer bindings and earlier names in the pattern. A default on a nested pattern supplies the missing container.
+
+Supply a fallback in the source expression when needed:
+
+```javascript
+let {name = "anonymous"} = user ?? {}: name
+```
+
 ## Scope
 
 A `let` has the same precedence as a pipeline, so its body extends to the end of the expression or the enclosing group, and it can be a whole pipeline:

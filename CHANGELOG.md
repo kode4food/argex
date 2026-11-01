@@ -2,6 +2,13 @@
 
 Notable changes to Argyll Expressions.
 
+## 0.1.8
+
+- Object and array destructuring in `let` and pipeline bindings
+- Destructuring defaults
+- Clarify missing-value handling for `?.` and `??`
+- Faster compilation with fewer allocations
+
 ## 0.1.7
 
 - Immutable environments with custom functions and global bindings

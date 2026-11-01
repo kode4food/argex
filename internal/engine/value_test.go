@@ -9,7 +9,7 @@ import (
 )
 
 func TestMissing(t *testing.T) {
-	for _, source := range []string{"absent", "null?.x", "{}?.x"} {
+	for _, source := range []string{"absent", "absent?.x", "{}?.x"} {
 		value, err := argex.Eval(source, nil)
 		assert.NoError(t, err)
 		assert.True(t, argex.IsMissing(value))

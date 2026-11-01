@@ -12,7 +12,6 @@ type operand struct {
 var (
 	numericSet    = TypeSet(TypeNumber)
 	collectionSet = TypeSet(TypeArray) | TypeSet(TypeObject)
-	nullishSet    = TypeSet(TypeNull) | TypeSet(TypeMissing)
 )
 
 func (o operand) String() string {
@@ -193,25 +192,27 @@ func checkIndex(n *node) error {
 	}
 }
 
-// effectiveReceiverType removes the nullish portion for an optional
-// access/index, since it short-circuits before the container check
+// effectiveReceiverType excludes missing for optional access/index,
+// since it short-circuits before the container check
 func effectiveReceiverType(n *node) TypeSet {
 	receiverType := n.children[0].inferred
 	if n.optional {
-		receiverType &^= nullishSet
+		receiverType &^= TypeSet(TypeMissing)
 	}
 	return receiverType
 }
 
-// checkReceiver mirrors accessChild: a receiver known to be nullish fails with
+// checkReceiver mirrors accessChild: missing or null receivers fail with
 // ErrMissing, not ErrType
 func checkReceiver(n *node, allowed TypeSet) error {
 	receiverType := effectiveReceiverType(n)
 	if !receiverType.Known() || receiverType == 0 {
 		return nil
 	}
-	if receiverType&^nullishSet == 0 {
-		return fmt.Errorf("%w: access receiver is always nullish", ErrMissing)
+	if receiverType&^(TypeSet(TypeMissing)|TypeSet(TypeNull)) == 0 {
+		return fmt.Errorf(
+			"%w: access receiver is always missing or null", ErrMissing,
+		)
 	}
 	if receiverType&allowed == 0 {
 		return fmt.Errorf("%w: access receiver must be %s, not %s",
@@ -234,10 +235,10 @@ func checkSpreads(n *node, want TypeTag) error {
 	return nil
 }
 
-// checkContainerSource mirrors vm.go's Concat/Merge: a nullish source is
-// skipped outright, so only its non-nullish portion is checked
+// checkContainerSource mirrors vm.go's Concat/Merge: missing and null sources
+// are skipped, so only the remaining types are checked
 func checkContainerSource(n *node, want TypeTag) error {
-	sourceType := n.inferred &^ nullishSet
+	sourceType := n.inferred &^ (TypeSet(TypeMissing) | TypeSet(TypeNull))
 	if !sourceType.Known() || sourceType == 0 {
 		return nil
 	}

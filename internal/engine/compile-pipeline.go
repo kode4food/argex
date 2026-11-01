@@ -40,9 +40,6 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 			counters[i] = c.allocSlot()
 		}
 		visible[i] = scopes[i]
-		if stage.chained {
-			visible[i] = slices.Concat(visible[i-1], scopes[i])
-		}
 	}
 
 	// the loop is entered at its Fetch, which sits at the bottom and jumps back
@@ -72,6 +69,18 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 		if i > 0 && len(names) > 1 && counters[i] != names[1].slot {
 			c.emit(isa.Load, isa.Operand(counters[i]))
 			c.emit(isa.Store, isa.Operand(names[1].slot))
+		}
+		if stage.chained {
+			visible[i] = slices.Concat(visible[i-1], visible[i])
+		}
+		var err error
+		if pattern := stage.bindingPattern(); pattern != nil {
+			visible[i], err = c.bindPattern(
+				pattern, names[0].slot, visible[i], depth,
+			)
+		}
+		if err != nil {
+			return err
 		}
 		if err := c.scoped(visible[i], stage.children[1], depth); err != nil {
 			return err

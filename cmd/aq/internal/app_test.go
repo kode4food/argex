@@ -58,7 +58,7 @@ func TestRun(t *testing.T) {
 		{
 			name: "no input",
 			args: []string{"-n", "this ?? 3"},
-			want: "3\n",
+			want: "null\n",
 		},
 		{
 			name:  "value stream",

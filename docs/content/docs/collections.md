@@ -45,6 +45,17 @@ items | map 0
 items | filter item: item.active | any item.price > 100
 ```
 
+The value binding can also be an object or array pattern, using the same [destructuring rules](../let/#destructuring) as `let`:
+
+```javascript
+orders | map {id, total}: {id, total}
+pairs | map index, [key, value]: {index, key, value}
+orders | filter {total}: total > 100
+orders | map {id, total = 0}: {id, total}
+```
+
+All four operations accept patterns. Destructured names are visible in later stages, and `filter` keeps the original elements. Defaults can use earlier pattern bindings, the current key or index, and bindings from earlier stages.
+
 ## Pipelines
 
 `|` is the lowest-precedence operator and chains left to right, so `a | filter x: p | map x: q` applies the `map` to the result of the `filter` and needs no parentheses.

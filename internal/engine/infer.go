@@ -92,6 +92,74 @@ func (e *Expression) resolve(env *Env) (*node, error) {
 	return root, nil
 }
 
+func (n *node) annotatePattern(
+	source *node, scope []typedName, env *Env,
+) error {
+	n.inferred = TypeSet(TypeAny)
+	if source != nil {
+		n.inferred = source.inferred
+	}
+	switch n.kind {
+	case nodeDefault:
+		fallback := n.children[1]
+		if err := annotateType(fallback, scope, env); err != nil {
+			return err
+		}
+		if n.inferred.Is(TypeMissing) {
+			source = fallback
+		}
+		target := n.children[0]
+		if err := target.annotatePattern(source, scope, env); err != nil {
+			return err
+		}
+		if !n.inferred.Known() || n.inferred.Has(TypeMissing) {
+			target.inferred = n.inferred&^TypeSet(TypeMissing) |
+				fallback.inferred
+		}
+		return nil
+
+	case nodeField:
+		return n.children[0].annotatePattern(source, scope, env)
+	}
+	if source != nil && countSpreads(source.children) > 0 {
+		source = nil
+	}
+	scope = scope[:len(scope):len(scope)]
+	for i, child := range n.children {
+		member := source.patternMember(child, i)
+		if err := child.annotatePattern(member, scope, env); err != nil {
+			return err
+		}
+		if i+1 < len(n.children) {
+			scope = patternScope(child, scope)
+		}
+	}
+	return nil
+}
+
+func (n *node) patternMember(field *node, index int) *node {
+	if n == nil {
+		return nil
+	}
+	if n.kind == nodeArray && index < len(n.children) {
+		return n.children[index]
+	}
+	if n.kind != nodeObject {
+		return nil
+	}
+	var result *node
+	for _, child := range n.children {
+		if child.kind != nodeField {
+			return nil
+		}
+		if child.text != field.text {
+			continue
+		}
+		result = child.children[0]
+	}
+	return result
+}
+
 // annotateType resolves globals, infers each node's type bottom-up, and rejects
 // any operand whose known type can never succeed
 func annotateType(n *node, scope []typedName, env *Env) error {
@@ -113,6 +181,9 @@ func annotateChildren(n *node, scope []typedName, env *Env) error {
 		if err := annotateType(n.children[0], scope, env); err != nil {
 			return err
 		}
+		if pattern := n.bindingPattern(); pattern != nil {
+			return annotateStagePattern(n, scope, env)
+		}
 		inner := scope[:len(scope):len(scope)]
 		for _, name := range stageNames(n) {
 			unknown := typedName{name: name, inferred: TypeSet(TypeAny)}
@@ -125,9 +196,19 @@ func annotateChildren(n *node, scope []typedName, env *Env) error {
 		if err := annotateType(value, scope, env); err != nil {
 			return err
 		}
-		bound := typedName{name: n.valueBinding, inferred: value.inferred}
-		inner := append(scope[:len(scope):len(scope)], bound)
-		return annotateType(n.children[1], inner, env)
+		inner := scope[:len(scope):len(scope)]
+		pattern := n.bindingPattern()
+		if pattern == nil {
+			bound := typedName{name: n.valueBinding, inferred: value.inferred}
+			return annotateType(n.children[1], append(inner, bound), env)
+		}
+		if err := checkReceiver(n, TypeSet(pattern.patternType())); err != nil {
+			return err
+		}
+		if err := pattern.annotatePattern(value, inner, env); err != nil {
+			return err
+		}
+		return annotateType(n.children[1], patternScope(pattern, inner), env)
 	}
 	for _, child := range n.children {
 		if err := annotateType(child, scope, env); err != nil {
@@ -135,6 +216,35 @@ func annotateChildren(n *node, scope []typedName, env *Env) error {
 		}
 	}
 	return nil
+}
+
+// Keep scope construction outside recursive inference so ordinary let and
+// pipeline scopes can stay on the stack
+func patternScope(pattern *node, scope []typedName) []typedName {
+	if pattern.kind == nodeDefault {
+		return patternScope(pattern.children[0], scope)
+	}
+	if pattern.kind == nodeName && pattern.text != "" {
+		bound := typedName{name: pattern.text, inferred: TypeSet(TypeAny)}
+		scope = append(scope, bound)
+	}
+	for _, child := range pattern.children {
+		scope = patternScope(child, scope)
+	}
+	return scope
+}
+
+func annotateStagePattern(n *node, scope []typedName, env *Env) error {
+	inner := scope[:len(scope):len(scope)]
+	for _, name := range stageOuterNames(n) {
+		bound := typedName{name: name, inferred: TypeSet(TypeAny)}
+		inner = append(inner, bound)
+	}
+	pattern := n.bindingPattern()
+	if err := pattern.annotatePattern(nil, inner, env); err != nil {
+		return err
+	}
+	return annotateType(n.children[1], patternScope(pattern, inner), env)
 }
 
 func computeType(n *node, scope []typedName) TypeSet {
@@ -249,7 +359,10 @@ func inferBinaryType(n *node) TypeSet {
 
 	case opCoalesce:
 		left := n.children[0].inferred
-		left &^= TypeSet(TypeNull) | TypeSet(TypeMissing)
+		if left.Known() && !left.Has(TypeMissing) {
+			return left
+		}
+		left &^= TypeSet(TypeMissing)
 		return left | n.children[1].inferred
 
 	case opAdd:

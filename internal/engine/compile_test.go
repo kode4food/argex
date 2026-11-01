@@ -18,7 +18,7 @@ const (
 func TestSkippedCompilation(t *testing.T) {
 	for _, source := range []string{
 		"case { true: 1, unknown() }",
-		"false && unknown()", "1 ?? unknown()", "null?.[unknown()]",
+		"false && unknown()", "1 ?? unknown()", "absent?.[unknown()]",
 		"[] | map x: unknown()", "[] | filter x: unknown()",
 		"[unknown()] | map x: x | filter y: y",
 		"[] | map x: x | filter y: unknown()",
@@ -80,16 +80,21 @@ func TestPreparationReuse(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		program, err := env.Compile(expr)
-		if !assert.NoError(t, err) {
-			return
-		}
-		assert.True(t, program.StaticType().Is(argex.TypeObject))
-		value, err := program.Eval(nil)
-		assert.NoError(t, err)
-		assert.Equal(t, map[string]any{"result": tc.want}, value)
-		assert.Equal(t, []string{"selector"}, base.Names(expr))
-		assert.Empty(t, env.Names(expr))
+		t.Run("compile", func(t *testing.T) {
+			t.Parallel()
+			for range reuseIterations {
+				program, err := env.Compile(expr)
+				if !assert.NoError(t, err) {
+					return
+				}
+				assert.True(t, program.StaticType().Is(argex.TypeObject))
+				value, err := program.Eval(nil)
+				assert.NoError(t, err)
+				assert.Equal(t, map[string]any{"result": tc.want}, value)
+				assert.Equal(t, []string{"selector"}, base.Names(expr))
+				assert.Empty(t, env.Names(expr))
+			}
+		})
 	}
 }
 

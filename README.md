@@ -57,7 +57,7 @@ echo '{"items":[1,20,150]}' | aq 'items | filter i: i > 10'
 - [Collections](https://kode4food.github.io/argex/docs/collections/) explains `map`, `filter`, `any`, `all`, and pipelines.
 - [Arrays and objects](https://kode4food.github.io/argex/docs/construction/) covers literals, spreads, and computed keys.
 - [Conditional selection](https://kode4food.github.io/argex/docs/case/) describes `case`, with conditions or a subject to match.
-- [Local bindings](https://kode4food.github.io/argex/docs/let/) describes `let`.
+- [Local bindings](https://kode4food.github.io/argex/docs/let/) covers `let`, destructuring, and defaults.
 - [Missing values](https://kode4food.github.io/argex/docs/missing-values/) explains optional access, `??`, and missing versus null.
 - [Operators](https://kode4food.github.io/argex/docs/operators/) lists precedence, equality, and membership rules.
 - [Functions](https://kode4food.github.io/argex/docs/functions/) documents every built-in function.
