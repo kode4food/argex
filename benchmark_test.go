@@ -1,16 +1,26 @@
 package argex_test
 
 import (
+	"encoding/json"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/kode4food/argex"
 )
 
-type benchmarkCase struct {
-	name   string
-	source string
-}
+type (
+	benchmarkCase struct {
+		name   string
+		source string
+	}
+
+	equalityCase struct {
+		name   string
+		items  []any
+		needle any
+	}
+)
 
 const benchmarkCollectionSize = 256
 
@@ -65,7 +75,7 @@ func BenchmarkCompile(b *testing.B) {
 func BenchmarkExpressions(b *testing.B) {
 	variables := map[string]any{
 		"a":     map[string]any{"b": map[string]any{"c": true}},
-		"items": []any{1, 5, 11, 101},
+		"items": []any{1.0, 5.0, 11.0, 101.0},
 	}
 	for _, source := range []string{
 		"a.b.c",
@@ -108,11 +118,11 @@ func BenchmarkExpressions(b *testing.B) {
 func BenchmarkBindingPatterns(b *testing.B) {
 	items := make([]any, benchmarkCollectionSize)
 	for i := range items {
-		items[i] = map[string]any{"x": i, "y": i + 1}
+		items[i] = map[string]any{"x": float64(i), "y": float64(i + 1)}
 	}
 	variables := map[string]any{
-		"input": map[string]any{"x": 2, "y": 3},
-		"pair":  []any{2, 3},
+		"input": map[string]any{"x": 2.0, "y": 3.0},
+		"pair":  []any{2.0, 3.0},
 		"items": items,
 		"empty": map[string]any{},
 		"none":  []any{},
@@ -184,13 +194,13 @@ func BenchmarkWorkloads(b *testing.B) {
 	}
 	variables := map[string]any{
 		"items":         items,
-		"input_tokens":  1000,
-		"output_tokens": 250,
+		"input_tokens":  1000.0,
+		"output_tokens": 250.0,
 		"input_price":   0.01,
 		"output_price":  0.03,
 		"tax":           0.2,
-		"rate":          2,
-		"offset":        3,
+		"rate":          2.0,
+		"offset":        3.0,
 		"quality":       0.95,
 	}
 	cases := []benchmarkCase{
@@ -286,11 +296,46 @@ func BenchmarkMembership(b *testing.B) {
 	}
 }
 
+func BenchmarkEquality(b *testing.B) {
+	floats := make([]any, benchmarkCollectionSize)
+	numbers := make([]any, benchmarkCollectionSize)
+	objects := make([]any, benchmarkCollectionSize)
+	for i := range benchmarkCollectionSize {
+		floats[i] = float64(i)
+		numbers[i] = json.Number(strconv.Itoa(i))
+		objects[i] = map[string]any{"id": float64(i), "tags": []any{"a"}}
+	}
+	last := benchmarkCollectionSize - 1
+	expr, err := argex.Parse("length(items | filter item: item == needle)")
+	if err != nil {
+		b.Fatal(err)
+	}
+	program, err := argex.DefaultEnv().Compile(expr)
+	if err != nil {
+		b.Fatal(err)
+	}
+	for _, tc := range []equalityCase{
+		{name: "float", items: floats, needle: float64(last)},
+		{name: "json-number", items: numbers, needle: json.Number("255")},
+		{name: "object", items: objects, needle: objects[last]},
+	} {
+		variables := map[string]any{"items": tc.items, "needle": tc.needle}
+		b.Run(tc.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				if _, err := program.Eval(variables); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
 func BenchmarkFunctions(b *testing.B) {
 	variables := map[string]any{
 		"status": " APPROVED ",
 		"cost":   "0.025",
-		"object": map[string]any{"b": 2, "a": 1},
+		"object": map[string]any{"b": 2.0, "a": 1.0},
 		"prices": []any{3.0, 1.0, 2.0},
 	}
 	for _, source := range []string{

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"reflect"
 )
 
 type (
@@ -59,6 +58,18 @@ func operandError(operation string) error {
 }
 
 func structuralEqual(left, right any) bool {
+	switch left.(type) {
+	case []any, map[string]any:
+		return containerEqual(left, right)
+
+	default:
+		return scalarEqual(left, right)
+	}
+}
+
+// containerEqual walks arrays and objects with an explicit stack, so only
+// container comparisons pay for setting one up
+func containerEqual(left, right any) bool {
 	var pairs [inlineValues]operands
 	pairs[0] = operands{left: left, right: right}
 	pending := pairs[:1]
@@ -68,24 +79,6 @@ func structuralEqual(left, right any) bool {
 		pair := pending[last]
 		pending = pending[:last]
 		switch left := pair.left.(type) {
-		case nil:
-			matched = pair.right == nil
-
-		case Missing:
-			matched = IsMissing(pair.right)
-
-		case bool:
-			right, ok := pair.right.(bool)
-			matched = ok && left == right
-
-		case string:
-			right, ok := pair.right.(string)
-			matched = ok && left == right
-
-		case *Function:
-			right, ok := pair.right.(*Function)
-			matched = ok && left == right
-
 		case []any:
 			right, ok := pair.right.([]any)
 			if !ok || len(left) != len(right) {
@@ -118,14 +111,37 @@ func structuralEqual(left, right any) bool {
 			}
 
 		default:
-			a := number(pair.left)
-			b := number(pair.right)
-			if a-a == 0 {
-				matched = b-b == 0 && a == b
-				continue
-			}
-			matched = reflect.DeepEqual(pair.left, pair.right)
+			matched = scalarEqual(pair.left, pair.right)
 		}
 	}
 	return matched
+}
+
+// scalarEqual compares values that are neither arrays nor objects
+func scalarEqual(left, right any) bool {
+	switch left := left.(type) {
+	case nil:
+		return right == nil
+
+	case Missing:
+		return IsMissing(right)
+
+	case bool:
+		right, ok := right.(bool)
+		return ok && left == right
+
+	case string:
+		right, ok := right.(string)
+		return ok && left == right
+
+	case *Function:
+		right, ok := right.(*Function)
+		return ok && left == right
+
+	case float64:
+		return left == number(right)
+
+	default:
+		return number(left) == number(right)
+	}
 }
