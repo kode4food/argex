@@ -33,13 +33,13 @@ result, err := program.Eval(map[string]any{
 // result: []any{"medium", "large"}
 ```
 
-`Parse` checks syntax and returns an immutable `*Expression`. `DefaultEnv().Compile(expression)` resolves names and checks types, returning a `*Program`. Call `program.Eval(this)` for repeated evaluation and `program.StaticType()` for the result types inferred during compilation. `DefaultEnv()` supplies the shared builtin environment, while `NewEnv()` creates an empty environment. `Eval(source, this)` combines all three operations using the default environment.
+`Parse` checks the expression's syntax. `Compile` resolves names and checks types. Call `program.Eval(input)` to reuse the compiled program, or use `argex.Eval(source, input)` for a single evaluation. `program.StaticType()` reports the possible result types.
 
-Compiled programs are safe for concurrent use. Callers must not mutate bound values while they are in use or concurrently mutate input maps or arrays. Custom functions must also be safe for concurrent calls.
+Programs support concurrent evaluation. Do not mutate bound values while in use or input maps and arrays during evaluation. Custom functions must be safe for concurrent calls.
 
 ## Input
 
-The input can be any JSON value, and `this` refers to it. `this` always means the input, including inside collection operation bodies:
+`this` refers to the input, even inside a collection operation:
 
 ```javascript
 this | map item: item.id
@@ -47,14 +47,16 @@ this.items[0]
 length(this)
 ```
 
-When the input is an object, its top-level properties can also be read by bare name. Names resolve to local bindings first, then environment globals, then input properties. Use `this.name` for an input property shadowed by a global, such as `this.length`. A bare name with no binding or matching input property evaluates to a missing value. `this.name` follows the ordinary access rules, so an absent property fails instead.
+For object input, `name` reads the top-level property unless a local binding or environment global has that name. Local bindings take precedence over globals. Use `this.name` to read the property directly. An unknown name returns missing, but accessing an absent property with `this.name` raises `ErrMissing`.
 
-`env.Names(expression)` returns the input properties an expression reads by bare name, sorted, so a caller can check them against a schema before evaluating. Local bindings, environment globals, and reads through `this` are excluded.
+Use `env.Names(expression)` to check bare input names against a schema. It returns sorted names, excluding local bindings, globals, and access through `this`.
 
 ## Values
 
-Values use Go's JSON representation: `map[string]any`, `[]any`, strings, booleans, `float64`, and `nil`. Go `int` and `json.Number` inputs are also accepted anywhere a number is expected, including arithmetic, comparisons, indexes, and functions. Computed numbers are always `float64`. Other Go types, such as `int64`, `float32`, `[]string`, or `map[string]string`, are rejected with `ErrType`. Numbers use finite IEEE 754 double precision. Division by zero and non-finite arithmetic results fail. Use `number(value)` and `string(value)` for explicit type conversions.
+Inputs use Go's JSON types: `map[string]any`, `[]any`, `string`, `bool`, `float64`, and `nil`. Numeric inputs may also be `int` or `json.Number`. Computed numbers are `float64`. Other Go types return `ErrType`. Use `number(value)` and `string(value)` for conversions.
 
-A bare name with no value produces `Missing{}`, which is distinct from JSON `null`. Use `IsMissing` to test for it. See [Missing Values]({{< relref "/docs/missing-values" >}}) for how missing values flow through expressions.
+Arithmetic handles decimals such as `0.1 + 0.2` as expected, returning `0.3`. Inputs and results still have [double-precision limits]({{< relref "/docs/operators" >}}).
 
-The builtin functions are pure and deterministic. Custom functions should preserve those properties and must not change or retain their argument slice.
+Use `argex.IsMissing` to distinguish `Missing{}` from JSON `null`. See [Missing Values]({{< relref "/docs/missing-values" >}}) for access and fallback rules.
+
+Custom functions should be pure and deterministic, like the builtins. They must not change or retain their argument slice.

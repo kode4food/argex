@@ -228,8 +228,8 @@ func (p *Program) Eval(this any) (any, error) {
 			if b-b != 0 {
 				return nil, operandError(expectNumber)
 			}
-			value := a + b
-			if math.IsNaN(value) || math.IsInf(value, 0) {
+			value := exactAdd(a, b)
+			if math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: +", ErrArithmetic)
 			}
 			SP--
@@ -244,8 +244,8 @@ func (p *Program) Eval(this any) (any, error) {
 			if b-b != 0 {
 				return nil, operandError(expectNumber)
 			}
-			value := a - b
-			if math.IsNaN(value) || math.IsInf(value, 0) {
+			value := exactSub(a, b)
+			if math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: -", ErrArithmetic)
 			}
 			SP--
@@ -260,8 +260,8 @@ func (p *Program) Eval(this any) (any, error) {
 			if b-b != 0 {
 				return nil, operandError(expectNumber)
 			}
-			value := a * b
-			if math.IsNaN(value) || math.IsInf(value, 0) {
+			value := exactMul(a, b)
+			if math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: *", ErrArithmetic)
 			}
 			SP--
@@ -276,8 +276,11 @@ func (p *Program) Eval(this any) (any, error) {
 			if b-b != 0 {
 				return nil, operandError(expectNumber)
 			}
-			value := a / b
-			if math.IsNaN(value) || math.IsInf(value, 0) {
+			if b == 0 {
+				return nil, fmt.Errorf("%w: /", ErrArithmetic)
+			}
+			value := exactQuo(a, b)
+			if math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: /", ErrArithmetic)
 			}
 			SP--
@@ -292,10 +295,10 @@ func (p *Program) Eval(this any) (any, error) {
 			if b-b != 0 {
 				return nil, operandError(expectNumber)
 			}
-			value := math.Mod(a, b)
-			if math.IsNaN(value) || math.IsInf(value, 0) {
+			if b == 0 {
 				return nil, fmt.Errorf("%w: %%", ErrArithmetic)
 			}
+			value := exactMod(a, b)
 			SP--
 			MEM[SP-1] = value
 

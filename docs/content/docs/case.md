@@ -13,11 +13,9 @@ case {
 }
 ```
 
-A `case` has one or more `condition: result` arms and a required final bare fallback expression. Commas separate arms, and a trailing comma is allowed. Conditions must be booleans.
+A `case` returns the result of the first true condition, or the required final fallback. Conditions must be booleans. Only the selected result is evaluated. Separate arms with commas, including an optional trailing comma.
 
-The first true condition selects its result. Later conditions and unselected results are not evaluated. The fallback is evaluated only if every condition is false.
-
-Nested cases, arrays, and objects are ordinary result expressions:
+Results can be any expression, including objects:
 
 ```javascript
 case {
@@ -28,7 +26,7 @@ case {
 
 ## Matching a Subject
 
-A subject between `case` and `{` turns each arm into a `value: result` pair. The subject is evaluated once, then compared with each value using `==`, in order. The first equal value selects its result, and the fallback is evaluated only if no value matches.
+Put an expression after `case` to match its value against the arms. It is evaluated once. The first match using `==` selects the result, or the fallback if none match.
 
 ```javascript
 case order.status {
@@ -38,9 +36,9 @@ case order.status {
 }
 ```
 
-Values are ordinary expressions, so they can read the input or compute a result. Later values and unselected results are not evaluated. Values of different types are never equal, so an arm whose value can never have the subject's type fails during compilation, as in `case 1 { "a": true, false }`.
+Arm values can be expressions. Evaluation stops at the first match. A value with an incompatible known type fails compilation, as in `case 1 { "a": true, false }`.
 
-The subject has the same precedence as an operand of `||`, so a pipeline subject needs parentheses. A subject that begins with `{` also needs parentheses, since `case {` always starts the boolean form. This selects a result from the names of the failed checks:
+Parenthesize a pipeline or object used as the subject. This example matches the names of failed checks:
 
 ```javascript
 case (checks | filter check: !check.passed | map check.name) {

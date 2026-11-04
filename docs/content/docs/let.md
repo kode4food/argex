@@ -16,9 +16,9 @@ let reason = case {
 }
 ```
 
-`let` names one or more values, then evaluates a body that can read them. A `let` is an expression, and its result is the body's result. Commas separate bindings, and a colon ends them. Each value is evaluated once, in order, before the body.
+`let` assigns names to values and returns the value of the expression after `:`. Separate bindings with commas. Each value is evaluated once, in order.
 
-A later value sees every earlier binding:
+A binding can use earlier bindings:
 
 ```javascript
 let subtotal = price * quantity, tax = subtotal * 0.08: subtotal + tax
@@ -42,9 +42,9 @@ let [first, _, third] = items: first + third
 let {address: {city}, points: [x, y]} = user: {city, x, y}
 ```
 
-`age: years` binds the `age` property as `years`. Patterns can nest. Use `_` to skip a member, or leave an array position empty, as in `[first, , third]`. Skipped members are not read unless they have a default. Trailing commas are allowed; names cannot repeat within a pattern.
+`age: years` names the `age` property `years`. Use `_` or an empty array position to skip a member. Skipped members are read only if they have a default. Patterns can nest and allow trailing commas, but names cannot repeat.
 
-The source is evaluated once. Members without defaults are required; a missing member or a null or missing container produces `ErrMissing`. A wrong container type produces `ErrType`. Extra members are ignored. Rest bindings and computed keys are not supported.
+The source is evaluated once. Missing members without defaults, and null or missing containers, raise `ErrMissing`. Wrong container types raise `ErrType`. Extra members are ignored. Rest bindings and computed keys are not supported.
 
 ### Defaults
 
@@ -56,7 +56,7 @@ let [first = 0, second = first + 1] = items: [first, second]
 let {address: {city = "unknown"} = {}} = user: city
 ```
 
-A default is evaluated only for a missing member. It can use outer bindings and earlier names in the pattern. A default on a nested pattern supplies the missing container.
+A default runs only when a member is missing, not when it is null. It can use outer bindings and earlier names in the pattern. A nested pattern's default supplies its missing container.
 
 Supply a fallback in the source expression when needed:
 
@@ -66,7 +66,7 @@ let {name = "anonymous"} = user ?? {}: name
 
 ## Scope
 
-A `let` has the same precedence as a pipeline, so its body extends to the end of the expression or the enclosing group, and it can be a whole pipeline:
+A `let` body extends to the end of the expression or enclosing group. It can contain a pipeline:
 
 ```javascript
 let limit = 100: orders | filter order: order.total > limit | map order: order.id
@@ -78,7 +78,7 @@ To bind a pipeline's result, parenthesize it:
 let paid = (orders | filter order: order.paid): length(paid)
 ```
 
-A `let` can stand anywhere a full expression can: the whole program, a parenthesized group, a `case` arm, an array element, an object field value, or a function argument. As an operand or a collection stage body, it needs parentheses:
+Parenthesize `let` when using it as an operand or collection stage body:
 
 ```javascript
 items | map item: (let cost = item.price * item.quantity: {item: item.id, cost: cost})
@@ -88,4 +88,4 @@ items | map item: (let cost = item.price * item.quantity: {item: item.id, cost: 
 
 ## Types
 
-A bound name carries the static type of its value, so [Type Checking](../static-types/) still catches mistakes in the body. `let s = "a": s - 1` fails during compilation, just as `"a" - 1` does.
+[Type checking](../static-types/) applies to bindings too. For example, `let s = "a": s - 1` fails during compilation.

@@ -259,16 +259,12 @@ func sum(args ...any) (any, error) {
 	if !ok {
 		return nil, operandError(fnSum)
 	}
-	result := 0.0
-	for _, item := range items {
-		n := number(item)
-		if n-n != 0 {
-			return nil, operandError(fnSum)
-		}
-		result += n
-		if math.IsNaN(result) || math.IsInf(result, 0) {
-			return nil, fmt.Errorf("%w: %s", ErrArithmetic, fnSum)
-		}
+	result, err := exactSum(items)
+	if err != nil {
+		return nil, err
+	}
+	if math.IsInf(result, 0) {
+		return nil, fmt.Errorf("%w: %s", ErrArithmetic, fnSum)
 	}
 	return result, nil
 }

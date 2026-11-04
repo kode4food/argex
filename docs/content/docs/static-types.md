@@ -5,7 +5,7 @@ weight: 75
 
 # Type Checking
 
-`program.StaticType()` returns the `TypeSet` inferred during compilation without evaluating the program or repeating inference. Operators and `case` arms whose result type does not depend on the input, such as literals, comparisons, arithmetic, and builtin calls, narrow exactly. Reads from input and calls without a known return type include `TypeAny`. A name bound by `let` carries its value's type, and an environment global carries the type of its bound value.
+`program.StaticType()` reports the possible result types without running the expression. Bindings keep their values' types. Unknown types, including input properties, use `TypeAny`.
 
 ```go
 expression, _ := argex.Parse(`case { str == "hello": true, -1 }`)
@@ -18,13 +18,20 @@ program, err = env.Compile(expression)
 program.StaticType().Is(argex.TypeBool) // true
 ```
 
-`TypeSet` is a bitset of `TypeTag` values: `TypeBool`, `TypeNumber`, `TypeString`, `TypeArray`, `TypeObject`, `TypeNull`, `TypeMissing`, `TypeFunction`, and `TypeAny`. `Has` tests membership, `Is` tests an exact match, `Known` reports whether the set excludes `TypeAny`, and `String` renders it as `"bool|number"`.
+`TypeSet` can contain `TypeBool`, `TypeNumber`, `TypeString`, `TypeArray`, `TypeObject`, `TypeNull`, `TypeMissing`, `TypeFunction`, and `TypeAny`.
+
+| Method | Result |
+| --- | --- |
+| `Has(type)` | Whether the set includes the type |
+| `Is(type)` | Whether the set contains only that type |
+| `Known()` | Whether the set excludes `TypeAny` |
+| `String()` | A label such as `"bool|number"` |
 
 ## Type Errors
 
-`env.Compile` rejects any operator, global call argument with a known position, or condition whose type is fully known and can never succeed, such as `length(-1)`, `true + 1`, or `false || "hello"`. `Parse` checks syntax only. Operands that read the input are checked when the expression is evaluated. Arguments after a spread are checked against function parameters at evaluation; invalid expressions within those arguments, such as `true + 1`, still fail compilation.
+`Compile` rejects known type errors such as `length(-1)` and `true + 1`, even in branches that would never run. Types that depend on input are checked during evaluation. `Parse` checks syntax only.
 
-The check covers the whole expression, including branches that would never run. `true || (1 && 2)` is a type error even though `||` would skip its right side.
+Direct global calls also check function names and fixed argument counts during compilation. Calls through other expressions check counts during evaluation. Spreads defer count checks and parameter checks for arguments after the first spread, but invalid expressions such as `true + 1` still fail compilation.
 
 ```go
 expression, _ := argex.Parse(`false || "hello"`)

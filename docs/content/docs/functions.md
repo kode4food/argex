@@ -30,7 +30,7 @@ The default environment provides these pure functions:
 | `keys(object)` | Array of property names in lexicographic order |
 | `values(object)` | Array of values in the same property name order as `keys` |
 
-Functions are ordinary values. Call them by name, bind them with `let`, select them with `case`, or read them from an array or object:
+You can call functions by name, assign them to bindings, or select them from other values:
 
 ```javascript
 let size = length: size(items)
@@ -39,9 +39,9 @@ let size = length: size(items)
 { size: length }.size(items)
 ```
 
-Names resolve to local bindings first, then environment globals, then input properties. A global such as `length` shadows an input property of the same name. Use `this.length` to read that property. Unknown names used directly as callees fail during compilation with `ErrFunction`. Calling a value known to be a nonfunction fails during compilation with `ErrType`.
+A builtin such as `length` takes precedence over an input property with that name. Use `this.length` to read the property.
 
-Calls evaluate the callee first and arguments from left to right. Direct calls to global functions check argument counts during compilation. Calls through local bindings or other expressions check them at evaluation. Incorrect counts return `ErrFunction`, and a computed callee that is not a function returns `ErrType`.
+Calls evaluate the function first, then its arguments from left to right. An unknown function or wrong argument count raises `ErrFunction`. Calling a nonfunction raises `ErrType`. See [Type Checking](../static-types/) for when these errors are detected.
 
 ```javascript
 lower(trim(payment.status)) == "approved"
@@ -51,13 +51,13 @@ ceil(number(usage.tokens) / 1000)
 keys(response) | any key: startsWith(key, "x-")
 ```
 
-Use `...` to spread an array into the arguments, as in `max(...prices)` or `max(0, ...prices)`. Spreading a missing or null value contributes no arguments, and spreading any other non-array value is an `ErrType`. Counts that depend on a spread's length are checked at evaluation and fail with `ErrFunction`, even for literal spreads such as `abs(...[1, 2])`. A direct global call with too many fixed arguments, such as `abs(1, 2, ...[])`, fails during compilation. Arguments after the first spread are checked against function parameters at evaluation; invalid expressions within those arguments still fail compilation.
+Use `...` to pass an array's elements as arguments, as in `max(0, ...prices)`. Missing and null contribute no arguments. Other non-array values raise `ErrType`.
 
-Functions compare by identity, so `length == length` is true and `length == abs` is false. They can appear in arrays and objects, but serializing a function to JSON returns `ErrType`.
+Functions compare by identity: `length == length` is true and `length == abs` is false. Functions cannot be serialized to JSON.
 
 ## Environments in Go
 
-`argex.DefaultEnv()` returns the shared environment containing the builtin functions. `argex.NewEnv()` creates an empty environment. `Bind` returns a new environment with the added or replaced binding, leaving the original unchanged:
+`argex.DefaultEnv()` provides the builtins. `argex.NewEnv()` creates an empty environment. `Bind` adds or replaces a binding in a new environment without changing the original:
 
 ```go
 env, err := argex.DefaultEnv().Bind("limit", 10)
@@ -71,26 +71,35 @@ if err != nil {
 program, err := env.Compile(expression)
 ```
 
-Bind a `*argex.Function` to add a custom function. Set `Call` to the callback and `Arity` to the required argument count. With `Variadic: true`, `Arity` is the minimum count. Optional `Params` entries describe argument types for static checking, with the last entry repeated for later arguments. `Result` describes the return type, with zero meaning unknown. The callback must validate runtime argument types, propagate errors, and avoid changing or retaining its argument slice.
+Bind a `*argex.Function` to add a custom function:
 
-Bindings are immutable, and environments can be shared across compilation calls. Bound values are shared with programs. Do not mutate them while they are in use, and make custom callbacks safe for concurrent evaluation. Calling `Compile` on a nil environment returns `ErrFunction` for a valid expression.
+| Field | Purpose |
+| --- | --- |
+| `Call` | Go callback |
+| `Arity` | Required argument count, or minimum count when `Variadic` is true |
+| `Params` | Optional argument types for compile-time checks. The last type applies to remaining arguments |
+| `Result` | Return type, or zero if unknown |
+
+Callbacks must validate argument types and propagate errors. They must not modify or retain the argument slice. Make callbacks safe for concurrent use, and do not mutate bound values while programs use them.
 
 ## Strings
 
-String tests are case-sensitive and accept empty search strings. `includes` tests string substrings. Use `in` for array membership. Case conversion uses locale-independent Unicode character mappings.
+String tests are case-sensitive and accept empty search strings. Use `includes` for substrings and `in` for array membership. Case conversion follows Unicode rules without locale-specific mappings.
 
-Splitting preserves empty fields. An empty separator splits into Unicode code points, with an empty input producing an empty array. Joining requires every element to be a string and returns an empty string for an empty array.
+`split` preserves empty fields. With an empty separator it splits into Unicode code points, returning an empty array for empty input. `join` requires string elements and returns `""` for an empty array.
 
 ## Numbers
 
-`round` rounds halfway values away from zero: `round(-1.5)` returns `-2` and `round(1.5)` returns `2`. `sum` requires finite numeric elements and returns `ErrArithmetic` if the running total overflows.
+`round` rounds halfway values away from zero: `round(-1.5)` returns `-2` and `round(1.5)` returns `2`.
+
+`sum([0.1, 0.2, 0.3])` returns `0.6`. It adds decimals without rounding intermediate totals, then returns a `float64`. Elements must be finite numbers. Only overflow of the final total raises `ErrArithmetic`.
 
 ## Conversions
 
-Conversions are explicit. `number` trims surrounding whitespace and requires the entire remaining string to be a valid JSON number. Empty strings, hexadecimal notation, leading zeros such as `"01"`, booleans, null, and non-finite results are rejected.
+`number` accepts a finite number or a string containing a JSON number, with optional surrounding whitespace. It returns a `float64`. Empty strings, hexadecimal notation, leading zeros such as `"01"`, booleans, and null are rejected.
 
-`string` preserves strings, formats finite numbers without unnecessary decimal digits, and converts booleans and null to `"true"`, `"false"`, and `"null"`. It rejects missing values, arrays, and objects. Invalid types or conversions return `ErrType`.
+`string` accepts strings, finite numbers, booleans, and null. Numbers omit unnecessary decimal digits. Invalid conversions return `ErrType`.
 
 ## Objects
 
-Object inspection uses lexicographic property name order even for numeric-looking names. `keys({"2": 2, "10": 10})` returns `["10", "2"]`.
+`keys` sorts names as strings, so `keys({"2": 2, "10": 10})` returns `["10", "2"]`. `values` uses the same order.

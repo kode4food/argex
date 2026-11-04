@@ -2,6 +2,10 @@
 
 Notable changes to Argyll Expressions.
 
+## 0.1.9
+
+- Decimal arithmetic so `0.1 + 0.2` returns `0.3`, with `sum` avoiding intermediate rounding
+
 ## 0.1.8
 
 - Object and array destructuring in `let` and pipeline bindings

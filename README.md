@@ -2,7 +2,7 @@
 
 <img src="./docs/img/argex-logo.png" align="right" height="100"/> ![Build Status](https://github.com/kode4food/argex/actions/workflows/build.yml/badge.svg) [![Code Coverage](https://qlty.sh/gh/kode4food/projects/argex/coverage.svg)](https://qlty.sh/gh/kode4food/projects/argex) [![Maintainability](https://qlty.sh/gh/kode4food/projects/argex/maintainability.svg)](https://qlty.sh/gh/kode4food/projects/argex) [![GitHub](https://img.shields.io/github/license/kode4food/argex)](https://github.com/kode4food/argex/blob/main/LICENSE)
 
-Argyll Expressions is a small, pure expression language for JSON values with familiar JavaScript-style operators and access syntax. An expression reads its input as `this`, and the top-level properties of an object input by name. Expressions support arithmetic, comparisons, optional access, object and array construction, conditional selection, and explicit collection operations.
+Argyll Expressions is a language for querying and transforming JSON with JavaScript-style syntax. Use `this` to refer to the input. If the input is an object, you can also refer to its properties by name.
 
 ```javascript
 customer?.address?.country ?? "CH"
@@ -39,9 +39,7 @@ result, err := program.Eval(map[string]any{
 // result: []any{"medium", "large"}
 ```
 
-`Parse` checks syntax and returns an immutable `*Expression`. `DefaultEnv().Compile(expression)` resolves names, checks types, and returns a reusable `*Program` that is safe for concurrent use. `program.Eval(this)` evaluates it, and `program.StaticType()` returns the result types inferred during compilation. `DefaultEnv()` provides the shared builtin environment, while `NewEnv()` creates an empty environment. `Eval(source, this)` combines parsing, compilation, and evaluation against the default environment.
-
-Environments have immutable bindings. `env, err := argex.DefaultEnv().Bind("limit", 10)` returns a new environment without changing the default. Names resolve to local bindings first, then environment globals, then input properties. Use `this.name` to read input shadowed by a global. Functions are ordinary values that can be bound locally, selected, and called.
+Compile once and call `program.Eval(input)` repeatedly or concurrently. For a single evaluation, use `argex.Eval(source, input)`. See [Getting started](https://kode4food.github.io/argex/docs/getting-started/) for input types and concurrency requirements.
 
 ## Command Line
 
@@ -75,4 +73,4 @@ go test -run '^$' -bench . -benchmem
 
 The grammar is in [grammar.ebnf](docs/grammar.ebnf).
 
-The compliance corpus is in [testdata/compliance](testdata/compliance). Each JSON case specifies an expression, an input, and an expected result, missing value, or error phase. `go test ./...` runs the corpus through both `Eval` and compiled programs, checks repeated execution, and verifies that inputs are unchanged.
+Add language behavior tests to [testdata/compliance](testdata/compliance). Each JSON case specifies an expression, input, and expected result or error. Run them with `go test ./...`.

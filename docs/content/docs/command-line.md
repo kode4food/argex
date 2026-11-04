@@ -15,7 +15,7 @@ go install github.com/kode4food/argex/cmd/aq@latest
 aq [-c] [-r] [-n] expression [file ...]
 ```
 
-Each JSON value read from the named files, or from standard input when none are given, becomes `this` for one evaluation. Results print as indented JSON.
+`aq` evaluates the expression once per JSON value in the files, or standard input if no files are given. Each value becomes `this`. Results print as indented JSON.
 
 ```sh
 echo '{"items":[{"id":1,"price":12},{"id":2,"price":4}]}' |
@@ -28,4 +28,4 @@ echo '{"items":[{"id":1,"price":12},{"id":2,"price":4}]}' |
 | `-r` | Print string results without quotes |
 | `-n` | Evaluate once without reading input |
 
-A missing result prints nothing. Numbers keep their original text when they pass through unchanged, so `1.10` and large integers are not reformatted. Errors are reported on standard error with exit status 1.
+Missing results print nothing. Numbers that pass through unchanged keep their original text, including `1.10` and large integers. `aq` reports errors on standard error and exits with status 1.

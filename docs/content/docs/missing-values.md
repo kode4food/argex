@@ -5,11 +5,11 @@ weight: 50
 
 # Missing Values
 
-A bare name with no local or environment binding and no matching input property produces `Missing{}`, distinguishable from explicit JSON `null` using `IsMissing`. Missing equals missing and differs from null.
+An unknown name returns `Missing{}`. Use `argex.IsMissing` in Go to test for it. Missing equals missing, but differs from null.
 
 ## Ordinary Access
 
-Reading a missing property, a missing intermediate value, or an out-of-range index through ordinary access fails with `ErrMissing`. Negative indexes are always out of range. A present property whose value is null returns null.
+Ordinary access raises `ErrMissing` for absent properties, missing intermediate values, and out-of-range indexes. Negative indexes are out of range. A property containing null returns null.
 
 ```javascript
 customer.address.country
@@ -17,7 +17,7 @@ customer.address.country
 
 ## Optional Access
 
-`?.name` and `?.[index]` return missing for a missing receiver or an absent member. A null receiver produces `ErrMissing`. A wrong receiver type or an invalid index type produces `ErrType`. A present member containing null returns null.
+`?.name` and `?.[index]` return missing if the value being accessed or its member is absent. Access on null still raises `ErrMissing`. Invalid container or index types raise `ErrType`. A member containing null returns null.
 
 ```javascript
 customer?.address?.country
@@ -25,7 +25,7 @@ response.choices?.[0]?.message?.content ?? ""
 items?.[index] ?? 0
 ```
 
-Optionality applies to each marked access: use `a?.b?.c` when both accesses may be absent. Optional indexing skips evaluation of the index only when the receiver is missing.
+Use `a?.b?.c` when either property may be absent. Optional indexing skips the index expression only when the container is missing.
 
 ## Fallbacks
 
@@ -35,7 +35,7 @@ Optionality applies to each marked access: use `a?.b?.c` when both accesses may 
 
 ## Missing Values in Results
 
-Object construction omits fields whose value is missing. Arrays retain missing elements. A missing value cannot be JSON-encoded: explicitly use `?? null` or another fallback where a serializable value is required.
+Objects omit missing fields, but arrays keep missing elements. Missing cannot be encoded as JSON. Use `?? null` or another fallback before encoding:
 
 ```javascript
 records | map record: record?.email ?? null

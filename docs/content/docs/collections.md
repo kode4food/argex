@@ -7,25 +7,25 @@ weight: 20
 
 ## Map and Filter
 
-`| map` and `| filter` bind each element of their receiver to a name. The expression after `:` is evaluated in that scope. It can read outer bindings, the input as `this`, and the input's properties by name. An inner binding with the same name shadows the outer one.
+`map` transforms each element. `filter` keeps elements that match a condition. Name the element before `:` and write the expression after it:
 
 ```javascript
 orders | map order: order.total
 orders | filter order: order.status == "paid"
 ```
 
-`| map` preserves order. `| filter` requires a boolean predicate and preserves the relative order of retained elements. Both produce an array, including for empty inputs.
+Both return arrays and preserve element order. A `filter` condition must return a boolean.
 
 ## Keys and Indexes
 
-A binding may name two identifiers, `key, value`, to also bind each element's position: the numeric index for an array receiver, or the property name for an object receiver. Object properties are visited in sorted key order. Both forms accept arrays and objects. Any other receiver, including null or a missing value, raises `ErrType`.
+Use `key, value` to access an array index or object property name. Objects are visited in sorted key order. Collection operations accept arrays and objects. Other inputs, including null and missing, raise `ErrType`.
 
 ```javascript
 items | map index, item: {position: index, value: item}
 totals | filter key, amount: amount > 100
 ```
 
-In a later stage of a pipeline, the index is the position in the array that the previous stage produced, so `items | filter x: x.active | map i, x: i` numbers only the retained elements.
+Indexes refer to the previous stage's output. For example, `items | filter x: x.active | map i, x: i` numbers the retained elements from zero.
 
 ## Binding Forms
 
@@ -54,17 +54,17 @@ orders | filter {total}: total > 100
 orders | map {id, total = 0}: {id, total}
 ```
 
-All four operations accept patterns. Destructured names are visible in later stages, and `filter` keeps the original elements. Defaults can use earlier pattern bindings, the current key or index, and bindings from earlier stages.
+Names from patterns remain available in later stages. `filter` keeps the original elements. Defaults can use earlier bindings and the current key or index.
 
 ## Pipelines
 
-`|` is the lowest-precedence operator and chains left to right, so `a | filter x: p | map x: q` applies the `map` to the result of the `filter` and needs no parentheses.
+Pipelines run from left to right. This expression keeps paid orders, then returns their IDs:
 
 ```javascript
 orders | filter order: order.status == "paid" | map order: order.id
 ```
 
-Each stage opens a nested scope. Its body sees the bindings of earlier stages in the same pipeline, and a binding with the same name shadows an earlier one:
+Each stage can use earlier bindings, outer bindings, and `this`. Reusing a name replaces the earlier binding within that stage and those that follow:
 
 ```javascript
 [1, 2] | map x: x * 10 | map x + 1     // [2, 3]: x is the original element
@@ -84,13 +84,11 @@ prices | filter name, price: price > 10
 
 Bindings inside a parenthesized pipeline stay inside it.
 
-A pipeline runs element by element: each element passes through every stage before the next element starts. Results are the same as running each stage over a complete array, but when a pipeline ends in `any` or `all`, evaluation stops as soon as the answer is known. Elements after that point never reach the earlier stages, so errors they would have raised are not reported:
+A pipeline processes one element at a time through all stages. If `any` or `all` determines the result, the entire pipeline stops. This returns `true` without evaluating `"a" + 1`:
 
 ```javascript
 [1, "a"] | map x: x + 1 | any y: y > 0
 ```
-
-This returns `true` without evaluating `"a" + 1`.
 
 The binding body after `:` stops at the next `|`. To nest a pipeline inside a body, parenthesize it:
 
@@ -112,7 +110,7 @@ Pipelines can also appear as ordinary values, such as object fields:
 
 ## Any and All
 
-`| any` tests whether at least one element satisfies a condition. `| all` tests whether every element satisfies it. Both require boolean conditions, return booleans, and stop as soon as their result is known. For an empty collection, `any` returns false and `all` returns true without evaluating the condition. The same binding and grouping rules apply as for `map` and `filter`. At the end of a pipeline, stopping early also stops the earlier stages, as described under [Pipelines](#pipelines).
+`any` returns true if at least one element matches. `all` returns true if every element matches. Conditions must return booleans. For an empty collection, `any` returns false and `all` returns true.
 
 ```javascript
 tags | any tag: startsWith(tag, "market:")
@@ -122,7 +120,7 @@ results | all result: result.status == "approved"
 
 ## Pipes, Properties, and OR
 
-`.` and `?.` access properties. `|` introduces collection operations. `response.map`, `response.filter`, and `response.any` read properties with those names. `||` means boolean OR.
+Use `|` for collection operations and `||` for boolean OR. Names such as `response.map` still refer to object properties.
 
 Use `??` to supply a fallback before mapping an optional array:
 

@@ -22,13 +22,15 @@ Highest first:
 | `\|\|` | Boolean disjunction |
 | `\|` | Collection operation (`map`, `filter`, `any`, `all`) |
 
-`%` is a truncated remainder: the result takes the sign of the dividend, so `-5 % 3` returns `-2`. Like division, a zero divisor raises `ErrArithmetic`.
+Arithmetic uses each number's shortest decimal representation: `0.1 + 0.2` returns `0.3`. Inputs and each result are limited to `float64` precision, so large values and long fractions can lose digits. Use `sum` for lists to avoid rounding intermediate totals. Division by zero and overflow raise `ErrArithmetic`.
 
-Binary operators associate left to right except `??`, which associates right to left. Ordering comparisons cannot be chained without parentheses. `|` is the lowest-precedence operator and chains left to right. A collection stage body extends up to the next `|`, so a nested pipeline must be parenthesized. A `let` shares the pipeline's level, so it too needs parentheses as an operand or stage body.
+`%` is a truncated remainder: the result takes the sign of the dividend, so `-5 % 3` returns `-2` and `1.1 % 0.1` returns `0`. Like division, a zero divisor raises `ErrArithmetic`.
+
+Binary operators group left to right, except `??`, which groups right to left. Parenthesize chained comparisons, nested pipelines, and `let` used as an operand or collection body.
 
 ## Booleans
 
-`&&`, `||`, and `!` require boolean operands, and `&&` and `||` short-circuit. Use a comparison to turn a number, string, object, or array into a condition:
+`&&`, `||`, and `!` require booleans. `&&` and `||` skip the right operand when the result is already known. Use comparisons for other values:
 
 ```javascript
 length(orders) > 0
@@ -40,7 +42,7 @@ Values of different types compare unequal, so `1 == "1"` is false. Objects and a
 
 ## Membership
 
-`in` tests array membership using the same structural equality as `==`. It returns a boolean and stops at the first match. The right operand must be an array. Objects, strings, null, and missing values produce `ErrType`. Empty arrays return false. Like ordering comparisons, `in` requires parentheses when combined with another comparison.
+`in` checks whether an array contains a value, using `==` to compare elements. It returns false for an empty array and raises `ErrType` if the right operand is not an array. Parenthesize `in` when combining it with another comparison.
 
 ```javascript
 "domain:inventory" in value.tags || "domain:orders" in value.tags

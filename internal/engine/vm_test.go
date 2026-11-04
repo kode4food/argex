@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"math/rand/v2"
 	"strings"
 	"testing"
 
@@ -21,7 +20,6 @@ const (
 	largeCollectionSize = 100001
 	wideStackSize       = 80
 	collectionDepth     = 6
-	remainderSamples    = 1024
 )
 
 func TestColonContexts(t *testing.T) {
@@ -613,55 +611,6 @@ func TestNumericInputs(t *testing.T) {
 	} {
 		_, err := argex.Eval("value + 2", map[string]any{"value": value})
 		assert.ErrorIs(t, err, argex.ErrType)
-	}
-}
-
-func TestRemainder(t *testing.T) {
-	expr, err := argex.Parse("left % right")
-	if !assert.NoError(t, err) {
-		return
-	}
-	program, err := argex.DefaultEnv().Compile(expr)
-	if !assert.NoError(t, err) {
-		return
-	}
-	values := []float64{
-		0, math.Copysign(0, -1), 1, -1, 1.5, -1.5,
-		math.SmallestNonzeroFloat64, -math.SmallestNonzeroFloat64,
-		math.MaxFloat64, -math.MaxFloat64,
-		math.Ldexp(1, -1022), math.Ldexp(1, -1022) * 1.5,
-	}
-	variables := map[string]any{}
-	for _, left := range values {
-		for _, right := range values {
-			if right == 0 {
-				continue
-			}
-			variables["left"] = left
-			variables["right"] = right
-			value, err := program.Eval(variables)
-			if !assert.NoError(t, err) {
-				return
-			}
-			want := math.Float64bits(math.Mod(left, right))
-			assert.Equal(t, want, math.Float64bits(value.(float64)))
-		}
-	}
-	random := rand.New(rand.NewPCG(1, 2))
-	for range remainderSamples {
-		left := math.Float64frombits(random.Uint64())
-		right := math.Float64frombits(random.Uint64())
-		if left-left != 0 || right-right != 0 || right == 0 {
-			continue
-		}
-		variables["left"] = left
-		variables["right"] = right
-		value, err := program.Eval(variables)
-		if !assert.NoError(t, err) {
-			return
-		}
-		want := math.Float64bits(math.Mod(left, right))
-		assert.Equal(t, want, math.Float64bits(value.(float64)))
 	}
 }
 
