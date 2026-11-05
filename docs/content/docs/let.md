@@ -24,9 +24,18 @@ let total = total ?? 0: total + this.shipping
 Use an object or array pattern to bind several members of one value:
 
 ```javascript
-let {name, age: years} = user: {name, years}
+let {name, age: years} = user: {
+    name,
+    years,
+}
+
 let [first, _, third] = items: first + third
-let {address: {city}, points: [x, y]} = user: {city, x, y}
+
+let {address: {city}, points: [x, y]} = user: {
+    city,
+    x,
+    y,
+}
 ```
 
 `age: years` names the `age` property `years`. Use `_` or an empty array position to skip a member. Skipped members are read only if they have a default. Patterns can nest and allow trailing commas, but names cannot repeat.
@@ -38,7 +47,11 @@ The source is evaluated once. Missing members without defaults, and null or miss
 Add `= expression` to provide a default for a missing member:
 
 ```javascript
-let {name = "anonymous", age: years = 0} = user: {name, years}
+let {name = "anonymous", age: years = 0} = user: {
+    name,
+    years,
+}
+
 let [first = 0, second = first + 1] = items: [first, second]
 let {address: {city = "unknown"} = {}} = user: city
 ```
@@ -68,7 +81,10 @@ let paid = (orders | filter order: order.paid): length(paid)
 Parenthesize `let` when using it as an operand or collection stage body:
 
 ```javascript
-items | map item: (let cost = item.price * item.quantity: {item: item.id, cost: cost})
+items | map item: (let cost = item.price * item.quantity: {
+    item: item.id,
+    cost: cost,
+})
 ```
 
 `let` is reserved as a binding name. It remains valid as a property name and object key, as in `this.let` and `{let: 1}`.

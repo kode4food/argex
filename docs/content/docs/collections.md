@@ -27,7 +27,11 @@ To map an array that may be absent, supply an empty array as the fallback.
 Use `key, value` to access an array index or object property name. Objects are visited in sorted key order. Collection operations accept arrays and objects. Other inputs, including null and missing, raise `ErrType`.
 
 ```javascript
-items | map index, item: {position: index, value: item}
+items | map index, item: {
+    position: index,
+    value: item,
+}
+
 totals | filter key, amount: amount > 100
 ```
 
@@ -54,10 +58,23 @@ items | filter item: item.active | any item.price > 100
 The value binding can also be an object or array pattern, using the same [destructuring rules](../let/#destructuring) as `let`:
 
 ```javascript
-orders | map {id, total}: {id, total}
-pairs | map index, [key, value]: {index, key, value}
+orders | map {id, total}: {
+    id,
+    total,
+}
+
+pairs | map index, [key, value]: {
+    index,
+    key,
+    value,
+}
+
 orders | filter {total}: total > 100
-orders | map {id, total = 0}: {id, total}
+
+orders | map {id, total = 0}: {
+    id,
+    total,
+}
 ```
 
 Names from patterns remain available in later stages. `filter` keeps the original elements. Defaults can use earlier bindings and the current key or index.
@@ -120,15 +137,24 @@ results | all result: result.status == "approved"
 `reduce` combines elements into one value. Name an accumulator and give its initial value, then bind the element as in other stages. Each result of the body becomes the accumulator for the next element:
 
 ```javascript
-orders | reduce byID = {}, order: {...byID, [order.id]: order}
+orders | reduce byID = {}, order: {
+    ...byID,
+    [order.id]: order,
+}
+
 prices | reduce names = [], name, _: [...names, name]
 ```
 
 The initial value is required and is evaluated once, before the first element. It sees outer bindings but not stage bindings. An empty collection returns the initial value. The accumulator can be a pattern, and element bindings with the same name shadow it:
 
 ```javascript
-scores | reduce {total, count} = {total: 0, count: 0}, score:
-    {total: total + score, count: count + 1}
+scores | reduce {total, count} = {
+    total: 0,
+    count: 0,
+}, score: {
+    total: total + score,
+    count: count + 1,
+}
 ```
 
 Like `any` and `all`, `reduce` ends its pipeline, so later stages don't see its bindings. For plain totals and counts, `sum` and `length` are shorter.

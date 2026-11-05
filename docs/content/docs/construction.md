@@ -27,7 +27,12 @@ Use `...` to copy array elements into an array or object entries into an object.
 
 ```javascript
 [first, ...rest, last]
-{...defaults, ...overrides, id: record.id}
+
+{
+    ...defaults,
+    ...overrides,
+    id: record.id,
+}
 ```
 
 ## Computed Keys
