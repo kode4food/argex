@@ -1,48 +1,53 @@
 ---
 title: "Argyll Expressions"
+description: "A small, pure expression language for JSON values in Go"
 ---
 
 # Argyll Expressions
 
-Argyll Expressions is a language for querying and transforming JSON with JavaScript-style syntax. Use `this` to refer to the input. If the input is an object, you can also refer to its properties by name.
+Argyll Expressions is a language for querying and transforming JSON with JavaScript-style syntax.
 
-```javascript
-customer?.address?.country ?? "CH"
-usage.input_tokens * input_price + usage.output_tokens * output_price
+Take a list of orders.
 
-items | filter item: item.price > 10 | map item: {
-    id: item.id,
-    category: case {
-        item.price > 100: "large",
-        "medium",
-    },
+```json
+{
+  "orders": [
+    {"id": "A", "paid": true,  "quantity": 3, "price": 3.95},
+    {"id": "B", "paid": false, "quantity": 1, "price": 6.50}
+  ]
 }
 ```
 
-## What It Provides
+| Expression | Result |
+| --- | --- |
+| `orders[0].id` | `"A"` |
+| `orders[0].quantity * orders[0].price` | `11.85` |
+| `orders[1].paid && orders[1].quantity > 0` | `false` |
 
-- JavaScript-style paths, arithmetic, comparisons, and boolean logic
-- Optional access and `??` fallbacks
-- Object and array construction with spreads and computed keys
-- `case` for conditional selection
-- `let` bindings with destructuring and defaults
-- `map`, `filter`, `any`, and `all` collection operations chained with `|`
-- Builtin and custom functions
-- Compile once and evaluate repeatedly or concurrently
+To get the total for **every paid order**, pipe the array through `filter` and `map`.
 
-## Quick Start
+```javascript
+orders
+    | filter order: order.paid
+    | map order: {id: order.id, total: order.quantity * order.price}
+```
+
+```json
+[{"id": "A", "total": 11.85}]
+```
+
+## Use It in Go
+
+Argyll Expressions is designed to work directly with the values Go’s `encoding/json` produces when it unmarshals JSON into an `any`.
+
+Evaluate an expression directly, or compile it once and reuse it across inputs. Compiled expressions support concurrent evaluation.
 
 ```sh
 go get github.com/kode4food/argex@latest
 ```
 
-```go
-result, err := argex.Eval(`order.total * 1.2`, map[string]any{
-    "order": map[string]any{"total": 50.0},
-})
-// result: 60.0
-```
+[Bind a Go function]({{< relref "/docs/functions#environments-in-go" >}}) to make it available inside an expression.
 
 → [Use Argyll Expressions from Go]({{< relref "/docs/getting-started" >}})
 
-→ [Filter and transform collections]({{< relref "/docs/collections" >}})
+→ [Use the command line]({{< relref "/docs/command-line" >}})

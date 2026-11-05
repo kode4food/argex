@@ -18,7 +18,7 @@ Use `errors.Is` with these sentinels:
 | `ErrArithmetic` | Division by zero and non-finite results |
 | `ErrLimit` | Parsing or compilation limits exceeded |
 
-The compiler rejects known type errors, even in unused branches. Runtime errors occur only in expressions that run. See [Type Checking]({{< relref "/docs/static-types" >}}) for the rules.
+Compilation can fail on a type error in an unused branch. See [type checking]({{< relref "/docs/static-types" >}}).
 
 ## Limits
 

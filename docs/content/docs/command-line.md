@@ -5,7 +5,7 @@ weight: 15
 
 # Command Line
 
-`aq` evaluates an expression against JSON input.
+`aq` runs Argyll Expressions against JSON from files or standard input and prints the results.
 
 ```sh
 go install github.com/kode4food/argex/cmd/aq@latest
@@ -15,7 +15,7 @@ go install github.com/kode4food/argex/cmd/aq@latest
 aq [-c] [-r] [-n] expression [file ...]
 ```
 
-`aq` evaluates the expression once per JSON value in the files, or standard input if no files are given. Each value becomes `this`. Results print as indented JSON.
+Each input value becomes `this` for one evaluation. By default, results print as indented JSON.
 
 ```sh
 echo '{"items":[{"id":1,"price":12},{"id":2,"price":4}]}' |

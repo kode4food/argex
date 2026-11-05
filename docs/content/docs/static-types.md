@@ -29,7 +29,7 @@ program.StaticType().Is(argex.TypeBool) // true
 
 ## Type Errors
 
-`Compile` rejects known type errors such as `length(-1)` and `true + 1`, even in branches that would never run. Types that depend on input are checked during evaluation. `Parse` checks syntax only.
+`Compile` rejects known type errors such as `length(-1)` and `true + 1`, even in unused branches. Input-dependent types are checked during evaluation.
 
 Direct global calls also check function names and fixed argument counts during compilation. Calls through other expressions check counts during evaluation. Spreads defer count checks and parameter checks for arguments after the first spread, but invalid expressions such as `true + 1` still fail compilation.
 

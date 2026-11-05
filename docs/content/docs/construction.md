@@ -30,8 +30,6 @@ Use `...` to copy array elements into an array or object entries into an object.
 {...defaults, ...overrides, id: record.id}
 ```
 
-Spreads leave the source unchanged. Object entries with missing values are omitted.
-
 ## Computed Keys
 
 A key in brackets uses an expression's value. It must be a string or evaluation raises `ErrType`.

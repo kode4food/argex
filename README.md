@@ -2,50 +2,60 @@
 
 <img src="./docs/img/argex-logo.png" align="right" height="100"/> ![Build Status](https://github.com/kode4food/argex/actions/workflows/build.yml/badge.svg) [![Code Coverage](https://qlty.sh/gh/kode4food/projects/argex/coverage.svg)](https://qlty.sh/gh/kode4food/projects/argex) [![Maintainability](https://qlty.sh/gh/kode4food/projects/argex/maintainability.svg)](https://qlty.sh/gh/kode4food/projects/argex) [![GitHub](https://img.shields.io/github/license/kode4food/argex)](https://github.com/kode4food/argex/blob/main/LICENSE)
 
-Argyll Expressions is a language for querying and transforming JSON with JavaScript-style syntax. Use `this` to refer to the input. If the input is an object, you can also refer to its properties by name.
+Argyll Expressions is a language for querying and transforming JSON with JavaScript-style syntax.
+
+Take a list of orders.
+
+```json
+{
+  "orders": [
+    {"id": "A", "paid": true,  "quantity": 3, "price": 3.95},
+    {"id": "B", "paid": false, "quantity": 1, "price": 6.50}
+  ]
+}
+```
+
+| Expression | Result |
+| --- | --- |
+| `orders[0].id` | `"A"` |
+| `orders[0].quantity * orders[0].price` | `11.85` |
+| `orders[1].paid && orders[1].quantity > 0` | `false` |
+
+To get the total for **every paid order**, pipe the array through `filter` and `map`.
 
 ```javascript
-customer?.address?.country ?? "CH"
-usage.input_tokens * input_price + usage.output_tokens * output_price
+orders
+    | filter order: order.paid
+    | map order: {id: order.id, total: order.quantity * order.price}
+```
 
-items | filter item: item.price > 10 | map item: {
-    id: item.id,
-    category: case {
-        item.price > 100: "large",
-        "medium",
-    },
-}
+```json
+[{"id": "A", "total": 11.85}]
 ```
 
 ## Go API
 
-```go
-expression, err := argex.Parse(`
-    items | filter item: item > 10 | map item: case {
-        item > 100: "large",
-        "medium",
-    }
-`)
-if err != nil {
-    return err
-}
-program, err := argex.DefaultEnv().Compile(expression)
-if err != nil {
-    return err
-}
-result, err := program.Eval(map[string]any{
-    "items": []any{5, 20, 150},
-})
-// result: []any{"medium", "large"}
+Argyll Expressions is designed to work directly with the values Go’s `encoding/json` produces when it unmarshals JSON into an `any`.
+
+```sh
+go get github.com/kode4food/argex@latest
 ```
 
-Compile once and call `program.Eval(input)` repeatedly or concurrently. For a single evaluation, use `argex.Eval(source, input)`. See [Getting started](https://kode4food.github.io/argex/docs/getting-started/) for input types and concurrency requirements.
+```go
+total, err := argex.Eval(`quantity * price`, map[string]any{
+    "quantity": 3, "price": 3.95,
+})
+// total: 11.85
+```
+
+[Compile and reuse a program](https://kode4food.github.io/argex/docs/getting-started/) or [bind Go functions](https://kode4food.github.io/argex/docs/functions/#environments-in-go) to make application-specific operations available to rules.
 
 ## Command Line
 
 ```sh
 go install github.com/kode4food/argex/cmd/aq@latest
-echo '{"items":[1,20,150]}' | aq 'items | filter i: i > 10'
+echo '{"quantity":3,"price":3.95}' | aq 'quantity * price'
+# 11.85
 ```
 
 ## Documentation
@@ -59,6 +69,7 @@ echo '{"items":[1,20,150]}' | aq 'items | filter i: i > 10'
 - [Missing values](https://kode4food.github.io/argex/docs/missing-values/) explains optional access, `??`, and missing versus null.
 - [Operators](https://kode4food.github.io/argex/docs/operators/) lists precedence, equality, and membership rules.
 - [Functions](https://kode4food.github.io/argex/docs/functions/) documents every built-in function.
+- [Type checking](https://kode4food.github.io/argex/docs/static-types/) covers compile-time checks and result types.
 - [Errors and limits](https://kode4food.github.io/argex/docs/errors/) lists error sentinels and evaluation limits.
 - [Grammar](https://kode4food.github.io/argex/docs/grammar/) gives the complete syntax in EBNF.
 

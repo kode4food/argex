@@ -21,11 +21,11 @@ customer.address.country
 
 ```javascript
 customer?.address?.country
-response.choices?.[0]?.message?.content ?? ""
+response?.choices?.[0]?.message?.content ?? ""
 items?.[index] ?? 0
 ```
 
-Use `a?.b?.c` when either property may be absent. Optional indexing skips the index expression only when the container is missing.
+Optional indexing skips the index expression when the container is missing.
 
 ## Fallbacks
 

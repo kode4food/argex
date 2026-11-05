@@ -16,6 +16,12 @@ orders | filter order: order.status == "paid"
 
 Both return arrays and preserve element order. A `filter` condition must return a boolean.
 
+To map an array that may be absent, supply an empty array as the fallback.
+
+```javascript
+(response?.items ?? []) | map item: item.id
+```
+
 ## Keys and Indexes
 
 Use `key, value` to access an array index or object property name. Objects are visited in sorted key order. Collection operations accept arrays and objects. Other inputs, including null and missing, raise `ErrType`.
@@ -99,15 +105,6 @@ customers | map customer: {
 }
 ```
 
-Pipelines can also appear as ordinary values, such as object fields:
-
-```javascript
-{
-    first: list1 | map item: item.name,
-    second: list2 | filter item: item.available,
-}
-```
-
 ## Any and All
 
 `any` returns true if at least one element matches. `all` returns true if every element matches. Conditions must return booleans. For an empty collection, `any` returns false and `all` returns true.
@@ -116,14 +113,4 @@ Pipelines can also appear as ordinary values, such as object fields:
 tags | any tag: startsWith(tag, "market:")
 results | all result: result.status == "approved"
 (results | any result: result.status == "approved") && enabled
-```
-
-## Pipes, Properties, and OR
-
-Use `|` for collection operations and `||` for boolean OR. Names such as `response.map` still refer to object properties.
-
-Use `??` to supply a fallback before mapping an optional array:
-
-```javascript
-(response?.items ?? []) | map item: item.id
 ```

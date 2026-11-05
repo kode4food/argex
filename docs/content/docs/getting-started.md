@@ -1,6 +1,8 @@
 ---
 title: "Getting Started"
 weight: 10
+aliases:
+  - /docs/
 ---
 
 # Getting Started
@@ -53,10 +55,8 @@ Use `env.Names(expression)` to check bare input names against a schema. It retur
 
 ## Values
 
-Inputs use Go's JSON types: `map[string]any`, `[]any`, `string`, `bool`, `float64`, and `nil`. Numeric inputs may also be `int` or `json.Number`. Computed numbers are `float64`. Other Go types return `ErrType`. Use `number(value)` and `string(value)` for conversions.
+Argyll Expressions is designed to work directly with the values Go’s `encoding/json` produces when it unmarshals JSON into an `any`. Objects become `map[string]any`, arrays become `[]any`, and JSON numbers become `float64` by default. Strings, booleans, and null become `string`, `bool`, and `nil`. Arithmetic also accepts `int` and `json.Number` and produces `float64` results.
 
-Arithmetic handles decimals such as `0.1 + 0.2` as expected, returning `0.3`. Inputs and results still have [double-precision limits]({{< relref "/docs/operators" >}}).
+See [operators]({{< relref "/docs/operators" >}}) for decimal precision and rounding.
 
 Use `argex.IsMissing` to distinguish `Missing{}` from JSON `null`. See [Missing Values]({{< relref "/docs/missing-values" >}}) for access and fallback rules.
-
-Custom functions should be pure and deterministic, like the builtins. They must not change or retain their argument slice.

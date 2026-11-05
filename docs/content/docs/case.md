@@ -15,15 +15,6 @@ case {
 
 A `case` returns the result of the first true condition, or the required final fallback. Conditions must be booleans. Only the selected result is evaluated. Separate arms with commas, including an optional trailing comma.
 
-Results can be any expression, including objects:
-
-```javascript
-case {
-    request.requires_reasoning: {model: "reasoning", max_tokens: 4000},
-    {model: "fast", max_tokens: 1000},
-}
-```
-
 ## Matching a Subject
 
 Put an expression after `case` to match its value against the arms. It is evaluated once. The first match using `==` selects the result, or the fallback if none match.
@@ -36,7 +27,7 @@ case order.status {
 }
 ```
 
-Arm values can be expressions. Evaluation stops at the first match. A value with an incompatible known type fails compilation, as in `case 1 { "a": true, false }`.
+Arm values can be expressions. A value with an incompatible known type fails compilation, as in `case 1 { "a": true, false }`.
 
 Parenthesize a pipeline or object used as the subject. This example matches the names of failed checks:
 

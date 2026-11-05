@@ -5,20 +5,7 @@ weight: 45
 
 # Local Bindings
 
-```javascript
-let reason = case {
-    age < 18: "age below minimum",
-    income < 30000: "income below minimum",
-    "all criteria met",
-}: {
-    eligible: reason == "all criteria met",
-    reason: reason,
-}
-```
-
-`let` assigns names to values and returns the value of the expression after `:`. Separate bindings with commas. Each value is evaluated once, in order.
-
-A binding can use earlier bindings:
+`let` evaluates bindings once, from left to right, then evaluates the expression after `:`. Here `tax` uses the earlier `subtotal` binding.
 
 ```javascript
 let subtotal = price * quantity, tax = subtotal * 0.08: subtotal + tax
@@ -66,7 +53,7 @@ let {name = "anonymous"} = user ?? {}: name
 
 ## Scope
 
-A `let` body extends to the end of the expression or enclosing group. It can contain a pipeline:
+A `let` body extends to the end of the expression or enclosing group.
 
 ```javascript
 let limit = 100: orders | filter order: order.total > limit | map order: order.id
@@ -85,7 +72,3 @@ items | map item: (let cost = item.price * item.quantity: {item: item.id, cost: 
 ```
 
 `let` is reserved as a binding name. It remains valid as a property name and object key, as in `this.let` and `{let: 1}`.
-
-## Types
-
-[Type checking](../static-types/) applies to bindings too. For example, `let s = "a": s - 1` fails during compilation.

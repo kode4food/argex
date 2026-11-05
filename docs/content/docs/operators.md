@@ -30,11 +30,7 @@ Binary operators group left to right, except `??`, which groups right to left. P
 
 ## Booleans
 
-`&&`, `||`, and `!` require booleans. `&&` and `||` skip the right operand when the result is already known. Use comparisons for other values:
-
-```javascript
-length(orders) > 0
-```
+`&&`, `||`, and `!` require booleans. `&&` skips the right operand when the left is false. `||` skips it when the left is true.
 
 ## Equality and Ordering
 
