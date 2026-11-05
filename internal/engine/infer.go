@@ -113,7 +113,7 @@ func annotateChildren(n *node, scope []typedName, env *Env) error {
 		if err := annotateType(n.children[0], scope, env); err != nil {
 			return err
 		}
-		if pattern := n.bindingPattern(); pattern != nil {
+		if n.bindingPattern() != nil {
 			return annotateStagePattern(n, scope, env)
 		}
 		inner := scope[:len(scope):len(scope)]
