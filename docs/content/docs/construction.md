@@ -11,9 +11,9 @@ Object keys can be identifiers or double-quoted strings, and trailing commas are
 
 ```javascript
 {
-    customer_id: customer.id,
-    country: customer?.address?.country ?? "CH",
-    channels: ["email", "sms"],
+  customer_id: customer.id,
+  country: customer?.address?.country ?? "CH",
+  channels: ["email", "sms"],
 }
 ```
 
@@ -29,9 +29,9 @@ Use `...` to copy array elements into an array or object entries into an object.
 [first, ...rest, last]
 
 {
-    ...defaults,
-    ...overrides,
-    id: record.id,
+  ...defaults,
+  ...overrides,
+  id: record.id,
 }
 ```
 

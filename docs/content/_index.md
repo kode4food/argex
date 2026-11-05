@@ -28,10 +28,10 @@ To get the total for **every paid order**, pipe the array through `filter` and `
 
 ```javascript
 orders
-    | filter order: order.paid
-    | map order: {
-        id: order.id,
-        total: order.quantity * order.price,
+  | filter order: order.paid
+  | map order: {
+      id: order.id,
+      total: order.quantity * order.price,
     }
 ```
 

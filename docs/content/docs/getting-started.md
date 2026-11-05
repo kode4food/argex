@@ -17,10 +17,12 @@ go get github.com/kode4food/argex@latest
 
 ```go
 expression, err := argex.Parse(`
-    items | filter item: item > 10 | map item: case {
-        item > 100: "large",
-        "medium",
-    }
+    items
+      | filter item: item > 10
+      | map item: case {
+          item > 100: "large",
+          "medium",
+        }
 `)
 if err != nil {
     return err

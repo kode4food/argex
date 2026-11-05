@@ -7,9 +7,9 @@ weight: 40
 
 ```javascript
 case {
-    score >= 0.9: "accept",
-    score >= 0.5: "review",
-    "reject",
+  score >= 0.9: "accept",
+  score >= 0.5: "review",
+  "reject",
 }
 ```
 
@@ -21,9 +21,9 @@ Put an expression after `case` to match its value against the arms. It is evalua
 
 ```javascript
 case order.status {
-    "paid": "ship",
-    "pending": "wait",
-    "cancelled",
+  "paid": "ship",
+  "pending": "wait",
+  "cancelled",
 }
 ```
 
@@ -33,8 +33,8 @@ Parenthesize a pipeline or object used as the subject. This example matches the 
 
 ```javascript
 case (checks | filter check: !check.passed | map check.name) {
-    []: "approved",
-    ["lint"]: "approved with warnings",
-    "rejected",
+  []: "approved",
+  ["lint"]: "approved with warnings",
+  "rejected",
 }
 ```

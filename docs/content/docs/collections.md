@@ -28,8 +28,8 @@ Use `key, value` to access an array index or object property name. Objects are v
 
 ```javascript
 items | map index, item: {
-    position: index,
-    value: item,
+  position: index,
+  value: item,
 }
 
 totals | filter key, amount: amount > 100
@@ -59,21 +59,21 @@ The value binding can also be an object or array pattern, using the same [destru
 
 ```javascript
 orders | map {id, total}: {
-    id,
-    total,
+  id,
+  total,
 }
 
 pairs | map index, [key, value]: {
-    index,
-    key,
-    value,
+  index,
+  key,
+  value,
 }
 
 orders | filter {total}: total > 100
 
 orders | map {id, total = 0}: {
-    id,
-    total,
+  id,
+  total,
 }
 ```
 
@@ -97,10 +97,11 @@ Each stage can use earlier bindings, outer bindings, and `this`. Reusing a name 
 With an object receiver:
 
 ```javascript
-prices | filter name, price: price > 10
-       | map {[name]: price}
-       | filter index, entry: entry[name] > 20 && index > 0
-       | map name
+prices
+  | filter name, price: price > 10
+  | map {[name]: price}
+  | filter index, entry: entry[name] > 20 && index > 0
+  | map name
 ```
 
 `name` and `price` are the original property name and value. `entry` is the mapped object, and `index` is its position in the second `filter`.
@@ -117,8 +118,8 @@ The binding body after `:` stops at the next `|`. To nest a pipeline inside a bo
 
 ```javascript
 customers | map customer: {
-    id: customer.id,
-    totals: (customer.orders | filter order: order.paid) | map order: order.total,
+  id: customer.id,
+  totals: (customer.orders | filter order: order.paid) | map order: order.total,
 }
 ```
 
@@ -138,8 +139,8 @@ results | all result: result.status == "approved"
 
 ```javascript
 orders | reduce byID = {}, order: {
-    ...byID,
-    [order.id]: order,
+  ...byID,
+  [order.id]: order,
 }
 
 prices | reduce names = [], name, _: [...names, name]
@@ -149,11 +150,11 @@ The initial value is required and is evaluated once, before the first element. I
 
 ```javascript
 scores | reduce {total, count} = {
-    total: 0,
-    count: 0,
+  total: 0,
+  count: 0,
 }, score: {
-    total: total + score,
-    count: count + 1,
+  total: total + score,
+  count: count + 1,
 }
 ```
 
