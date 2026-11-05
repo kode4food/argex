@@ -2,6 +2,10 @@
 
 Notable changes to Argyll Expressions.
 
+## 0.1.10
+
+- Fold collections into a single value with `reduce`
+
 ## 0.1.9
 
 - Decimal arithmetic so `0.1 + 0.2` returns `0.3`, with `sum` avoiding intermediate rounding
