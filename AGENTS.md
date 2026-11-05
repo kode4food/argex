@@ -14,7 +14,7 @@ This file defines repository-specific conventions for agents changing code and m
 - Never use bulk scripted find-and-replace, regex rewriting, or custom mass AST/source-rewriting scripts to edit code. This includes scripts intended only to reorder declarations or rewrap signatures.
 - Read each affected function and its callers before changing it. Use symbol-aware navigation when available and focused, explicit patches for edits.
 - Make small, coherent changes. Inspect the exact diff and run the relevant checks before continuing to the next structural change.
-- Standard `gofmt`, `goimports`, and `go fix` are allowed. Inspect their changes too; tool output is not automatically correct or compliant with these rules.
+- Standard `gofmt`, `goimports`, and `go fix` are allowed. Inspect their changes too. Tool output is not automatically correct or compliant with these rules.
 - If an edit damages code, stop further cleanup, restore the affected code from a verified intact version, and verify the repair before proceeding. Preserve the user's other work and all previously completed changes.
 - Never use a passing build or test run as a substitute for reviewing signatures, declarations, call sites, and behavior in the diff.
 
@@ -31,7 +31,7 @@ This file defines repository-specific conventions for agents changing code and m
 - Reuse existing mechanisms before adding new ones. Avoid generic dumping-ground packages, forwarding layers, and abstractions that do not solve an actual dependency problem.
 - Keep interfaces minimal and consumer-owned. A package boundary alone does not justify an interface.
 - Keep the exported surface small. The public API may resurface internal package identifiers through aliases, including variable aliases. Elsewhere, reference the owner directly.
-- Compilation and optimization must leave caller-owned ASTs intact. Copy the necessary data before rewriting or capturing it; do not mutate shared nodes.
+- Compilation and optimization must leave caller-owned ASTs intact. Copy the necessary data before rewriting or capturing it. Do not mutate shared nodes.
 
 ## File And Declaration Layout
 
@@ -61,11 +61,11 @@ For grouped declarations:
 
 ## Arguments, Results, And Struct Literals
 
-- Functions taking five or more arguments must use an `Args` bundle. Functions returning three or more data values must use a `Res` bundle; trailing `bool` and `error` success indicators do not count and stay outside the bundle.
-- Avoid ambiguous adjacent same-type parameters or results. Use named bundle fields or distinct named types so a positional swap cannot silently change the meaning.
-- An Args/Res bundle belongs to one function boundary and is passed by value. Declare it immediately before that function, outside its body; group Args and Res together when both exist.
+- Functions taking four or more arguments must use an `Args` bundle. A `t *testing.T` argument and a format string do not count toward that limit. Functions returning three or more data values must use a `Res` bundle. Trailing `bool` and `error` success indicators do not count and stay outside the bundle.
+- Avoid ambiguous same-type parameters or results, adjacent or not. Use named bundle fields or distinct named types so a positional swap cannot silently change the meaning. This applies below the four argument limit too. Operand pairs named `left` and `right`, or `first` and `second`, are exempt and stay positional.
+- An Args/Res bundle belongs to one function boundary and is passed by value. Declare it immediately before that function, outside its body. Group Args and Res together when both exist.
 - Do not store or forward Args/Res bundles through other functions. A value shared across boundaries needs a descriptive domain name rather than an Args/Res suffix.
-- For plain structs, use values up to 32 bytes; use values at 33–64 bytes unless they are read through three or more functions in a chain; use pointers above 64 bytes. Use pointers whenever mutation or identity requires them. A pointer does not imply a heap allocation; check escape behavior when it matters.
+- For plain structs, use values up to 32 bytes. Use values at 33 to 64 bytes unless they are read through three or more functions in a chain. Use pointers above 64 bytes. Use pointers whenever mutation or identity requires them. A pointer does not imply a heap allocation. Check escape behavior when it matters.
 - Struct fields must make sense at the call site without reading the function body. Give adjacent same-type fields distinct, descriptive meanings.
 - Use named fields in struct literals. Positional struct literals are forbidden except for a single-field wrapper whose field name adds no information.
 - Keep a struct literal on one line if it fits. When it wraps, use one field per line.
@@ -99,7 +99,7 @@ For exported receiver types:
 - Constructor names must use `New`.
 - Acronyms stay uppercase (`ID`, `URL`, `HTTP`).
 - Name locals for their semantic subject rather than restating their type. Use longer names for wider scope and public boundaries.
-- Name booleans for the condition they express. Use `Is`/`Has` only when they clarify the name; preserve standard-library naming conventions.
+- Name booleans for the condition they express. Use `Is`/`Has` only when they clarify the name. Preserve standard library naming conventions.
 - Name meaningful constants instead of scattering magic values. Group related constants and use typed constants when the type carries meaning.
 
 ## Imports
@@ -129,8 +129,8 @@ For exported receiver types:
 
 - Prefer early returns and guard clauses.
 - Use guards for real preconditions before substantial logic. For a short successful lookup or assertion, scope the value and `ok` in the `if` initializer and put the fallback afterward.
-- Avoid deep nesting; one conditional nesting level max unless duplication avoidance clearly justifies more.
-- Do not assign multiple variables from independent expressions in one statement. Write one assignment per line; receiving multiple results from a single call is allowed.
+- Avoid deep nesting. Allow one conditional nesting level at most unless duplication avoidance clearly justifies more.
+- Do not assign multiple variables from independent expressions in one statement. Write one assignment per line. Receiving multiple results from a single call is allowed.
 - Keep helpers near where they are used.
 - Do not use panic in production code paths, except in `Must`-prefixed helpers whose documented contract is to panic on failure.
 
@@ -138,11 +138,11 @@ For exported receiver types:
 
 - Mutable production package-level state is forbidden. Counters, caches, and mutable registries belong to the instance that owns their behavior.
 - Package-level variables are reserved for error sentinels, compile-time interface assertions, and genuinely immutable lookup data. An immutable binding does not make the referenced map, slice, or object immutable.
-- The public API may alias internal package variables, including error sentinels, to resurface them for consumers. Do not create variable re-exports elsewhere; import the owning package and use its identifier directly.
+- The public API may alias internal package variables, including error sentinels, to resurface them for consumers. Do not create variable re-exports elsewhere. Import the owning package and use its identifier directly.
 
 ## Comments
 
-- Document exported APIs concisely, describing behavior rather than implementation. Keep godoc to three lines when possible; sentinel messages and documented enum blocks need no redundant per-member comments.
+- Document exported APIs concisely, describing behavior rather than implementation. Keep godoc to three lines when possible. Sentinel messages and documented enum blocks need no redundant per-member comments.
 - Avoid comments on self-explanatory private helpers. Explain non-obvious behavior or the reason for a decision in at most two lines.
 - End the last sentence of godoc without a period.
 
@@ -166,7 +166,7 @@ For exported receiver types:
 
 ## Runtime Performance
 
-- Benchmark evaluator changes before and after with `-benchmem`; compare `ns/op`, `B/op`, and `allocs/op` on representative queries and documents.
+- Benchmark evaluator changes before and after with `-benchmem`. Compare `ns/op`, `B/op`, and `allocs/op` on representative queries and documents.
 - Prioritize repeated execution speed and runtime allocations. Extra compilation work is acceptable when it makes the compiled functions faster across many executions.
 - Move repeatable preparation into compilation when semantics allow it. Preserve short-circuit order, missing-vs-null behavior, and custom-function effects.
 - Profile uncertain bottlenecks instead of assuming fewer lines or calls are faster. Keep benchmark results and correctness evidence separate.
@@ -186,6 +186,6 @@ Before finishing a change:
 3. Ensure typed errors and wrapping style are correct.
 4. Ensure markdown style is respected (no hard-wrapped markdown text).
 5. Ensure tests are black-box by default.
-6. Run relevant tests (at minimum affected packages; ideally `go test ./...`).
+6. Run relevant tests. Cover at least the affected packages, and ideally run `go test ./...`.
 7. Review the complete diff for accidental edits, API changes, and unfinished requirements. Run the full suite before claiming completion.
 8. For runtime changes, report the measured performance impact. State any remaining violations or blockers explicitly.

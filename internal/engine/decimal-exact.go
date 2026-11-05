@@ -13,64 +13,69 @@ const exactIntLimit = 1 << 53
 // Arithmetic runs on the decimal each finite operand prints as, so 0.1 + 0.2
 // is 0.3. A zero result keeps the sign IEEE 754 arithmetic would give it
 
-func exactAdd(a, b float64) float64 {
-	if isExactInt(a) && isExactInt(b) {
-		return a + b
+func exactAdd(left, right float64) float64 {
+	if isExactInt(left) && isExactInt(right) {
+		return left + right
 	}
-	if r, ok := decimalAdd(a, b); ok {
-		return nonZeroOr(r, a+b)
+	if r, ok := decimalAdd(left, right); ok {
+		return nonZeroOr(nonZeroOrArgs{result: r, zero: left + right})
 	}
-	return nonZeroOr(toFloat(new(big.Rat).Add(toExact(a), toExact(b))), a+b)
+	exact := toFloat(new(big.Rat).Add(toExact(left), toExact(right)))
+	return nonZeroOr(nonZeroOrArgs{result: exact, zero: left + right})
 }
 
-func exactSub(a, b float64) float64 {
-	if isExactInt(a) && isExactInt(b) {
-		return a - b
+func exactSub(left, right float64) float64 {
+	if isExactInt(left) && isExactInt(right) {
+		return left - right
 	}
-	if r, ok := decimalAdd(a, -b); ok {
-		return nonZeroOr(r, a-b)
+	if r, ok := decimalAdd(left, -right); ok {
+		return nonZeroOr(nonZeroOrArgs{result: r, zero: left - right})
 	}
-	return nonZeroOr(toFloat(new(big.Rat).Sub(toExact(a), toExact(b))), a-b)
+	exact := toFloat(new(big.Rat).Sub(toExact(left), toExact(right)))
+	return nonZeroOr(nonZeroOrArgs{result: exact, zero: left - right})
 }
 
-func exactMul(a, b float64) float64 {
-	if isExactInt(a) && isExactInt(b) {
-		return a * b
+func exactMul(left, right float64) float64 {
+	if isExactInt(left) && isExactInt(right) {
+		return left * right
 	}
-	if r, ok := decimalMul(a, b); ok {
-		return nonZeroOr(r, a*b)
+	if r, ok := decimalMul(left, right); ok {
+		return nonZeroOr(nonZeroOrArgs{result: r, zero: left * right})
 	}
-	return nonZeroOr(toFloat(new(big.Rat).Mul(toExact(a), toExact(b))), a*b)
+	exact := toFloat(new(big.Rat).Mul(toExact(left), toExact(right)))
+	return nonZeroOr(nonZeroOrArgs{result: exact, zero: left * right})
 }
 
 // exactQuo requires a non-zero divisor. IEEE division of two exact integers
 // already rounds the exact quotient to nearest
-func exactQuo(a, b float64) float64 {
-	if isExactInt(a) && isExactInt(b) {
-		return a / b
+func exactQuo(left, right float64) float64 {
+	if isExactInt(left) && isExactInt(right) {
+		return left / right
 	}
-	if r, ok := decimalQuo(a, b); ok {
-		return nonZeroOr(r, a/b)
+	if r, ok := decimalQuo(left, right); ok {
+		return nonZeroOr(nonZeroOrArgs{result: r, zero: left / right})
 	}
-	return nonZeroOr(toFloat(new(big.Rat).Quo(toExact(a), toExact(b))), a/b)
+	exact := toFloat(new(big.Rat).Quo(toExact(left), toExact(right)))
+	return nonZeroOr(nonZeroOrArgs{result: exact, zero: left / right})
 }
 
 // exactMod truncates the quotient, so the result takes the dividend's sign as
 // math.Mod does. It requires a non-zero divisor
-func exactMod(a, b float64) float64 {
-	if isExactInt(a) && isExactInt(b) {
-		return math.Mod(a, b)
+func exactMod(left, right float64) float64 {
+	if isExactInt(left) && isExactInt(right) {
+		return math.Mod(left, right)
 	}
-	zero := math.Copysign(0, a)
-	if r, ok := decimalMod(a, b); ok {
-		return nonZeroOr(r, zero)
+	zero := math.Copysign(0, left)
+	if r, ok := decimalMod(left, right); ok {
+		return nonZeroOr(nonZeroOrArgs{result: r, zero: zero})
 	}
-	dividend := toExact(a)
-	divisor := toExact(b)
+	dividend := toExact(left)
+	divisor := toExact(right)
 	quo := new(big.Rat).Quo(dividend, divisor)
 	whole := new(big.Int).Quo(quo.Num(), quo.Denom())
 	taken := new(big.Rat).Mul(divisor, new(big.Rat).SetInt(whole))
-	return nonZeroOr(toFloat(taken.Sub(dividend, taken)), zero)
+	exact := toFloat(taken.Sub(dividend, taken))
+	return nonZeroOr(nonZeroOrArgs{result: exact, zero: zero})
 }
 
 // exactSum totals finite numbers exactly and rounds once, at one shared scale
@@ -102,11 +107,17 @@ func rationalSum(items []any, total *big.Rat) (float64, error) {
 	return toFloat(total), nil
 }
 
-func nonZeroOr(r, zero float64) float64 {
-	if r == 0 {
-		return math.Copysign(0, zero)
+type nonZeroOrArgs struct {
+	result float64
+	zero   float64
+}
+
+// nonZeroOr returns result unless it is zero, then a zero signed like zero
+func nonZeroOr(args nonZeroOrArgs) float64 {
+	if args.result == 0 {
+		return math.Copysign(0, args.zero)
 	}
-	return r
+	return args.result
 }
 
 func isExactInt(n float64) bool {

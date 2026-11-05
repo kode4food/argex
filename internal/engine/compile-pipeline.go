@@ -75,9 +75,12 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 		}
 		var err error
 		if pattern := stage.bindingPattern(); pattern != nil {
-			visible[i], err = c.bindPattern(
-				pattern, names[0].slot, visible[i], depth,
-			)
+			visible[i], err = c.bindPattern(bindPatternArgs{
+				pattern:   pattern,
+				valueSlot: names[0].slot,
+				bound:     visible[i],
+				depth:     depth,
+			})
 		}
 		if err != nil {
 			return err
@@ -140,7 +143,11 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 		c.emit(isa.Result, 0)
 	}
 	if preload {
-		c.preload(entry, next, done)
+		c.preload(preloadArgs{
+			entry: entry,
+			next:  next,
+			done:  done,
+		})
 	}
 	c.emit(isa.Label, done)
 	c.nextSlot = mark
@@ -148,11 +155,17 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 	return nil
 }
 
+type preloadArgs struct {
+	entry isa.Operand
+	next  isa.Operand
+	done  isa.Operand
+}
+
 // preload loads the names an outermost loop read into their slots, in a block
 // after the loop that its entry jump passes through on the way to Fetch
-func (c *compiler) preload(entry, next, done isa.Operand) {
-	c.emit(isa.Jump, done)
-	c.emit(isa.Label, entry)
+func (c *compiler) preload(args preloadArgs) {
+	c.emit(isa.Jump, args.done)
+	c.emit(isa.Label, args.entry)
 	for i, name := range c.hoisted {
 		c.emit(isa.Global, c.constant(name))
 		slot := isa.Operand(c.loopBase + i)
@@ -160,7 +173,7 @@ func (c *compiler) preload(entry, next, done isa.Operand) {
 	}
 	c.loopBase += len(c.hoisted)
 	c.hoisted = nil
-	c.emit(isa.Jump, next)
+	c.emit(isa.Jump, args.next)
 }
 
 // scoped compiles body seeing the enclosing scope plus names, and nothing bound

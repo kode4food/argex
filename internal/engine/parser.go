@@ -33,6 +33,12 @@ type (
 		conditionEnd int
 		caseRetries  int
 	}
+
+	// nameCollector gathers the input names an expression reads unbound
+	nameCollector struct {
+		seen map[string]bool
+		env  *Env
+	}
 )
 
 const (
@@ -84,9 +90,9 @@ func (e *Env) Names(expr *Expression) []string {
 	if expr == nil || expr.root == nil || e == nil {
 		return nil
 	}
-	seen := map[string]bool{}
-	collectNames(expr.root, nil, seen, e)
-	return slices.Sorted(maps.Keys(seen))
+	c := nameCollector{seen: map[string]bool{}, env: e}
+	c.collect(expr.root, nil)
+	return slices.Sorted(maps.Keys(c.seen))
 }
 
 func (n *node) clone() *node {
@@ -152,48 +158,44 @@ func (p *parser) error(message string) error {
 	return syntax(p.current().pos, message)
 }
 
-// collectNames scopes bindings as the compiler does: a collection's body sees
-// its own and its pipeline's bindings, its receiver only the enclosing ones
-func collectNames(
-	n *node, bound []string, seen map[string]bool, env *Env,
-) {
+// collect scopes bindings as the compiler does: a collection's body sees its
+// own and its pipeline's bindings, its receiver only the enclosing ones
+func (c nameCollector) collect(n *node, bound []string) {
 	switch n.kind {
 	case nodeName:
-		if _, ok := env.resolve(n.text); !ok &&
+		if _, ok := c.env.resolve(n.text); !ok &&
 			!slices.Contains(bound, n.text) {
-			seen[n.text] = true
+			c.seen[n.text] = true
 		}
 		return
 
 	case nodeMap, nodeFilter, nodeAny, nodeAll:
-		collectNames(n.children[0], bound, seen, env)
+		c.collect(n.children[0], bound)
 		if pattern := n.bindingPattern(); pattern != nil {
 			inner := append(
 				bound[:len(bound):len(bound)], stageOuterNames(n)...,
 			)
-			inner = collectPatternNames(pattern, inner, seen, env)
-			collectNames(n.children[1], inner, seen, env)
+			inner = c.collectPattern(pattern, inner)
+			c.collect(n.children[1], inner)
 			return
 		}
 		inner := append(bound[:len(bound):len(bound)], stageNames(n)...)
-		collectNames(n.children[1], inner, seen, env)
+		c.collect(n.children[1], inner)
 		return
 
 	case nodeLet:
-		collectNames(n.children[0], bound, seen, env)
+		c.collect(n.children[0], bound)
 		if pattern := n.bindingPattern(); pattern != nil {
-			inner := collectPatternNames(
-				pattern, bound[:len(bound):len(bound)], seen, env,
-			)
-			collectNames(n.children[1], inner, seen, env)
+			inner := c.collectPattern(pattern, bound[:len(bound):len(bound)])
+			c.collect(n.children[1], inner)
 			return
 		}
 		inner := n.bindingNames(bound[:len(bound):len(bound)])
-		collectNames(n.children[1], inner, seen, env)
+		c.collect(n.children[1], inner)
 		return
 	}
 	for _, child := range n.children {
-		collectNames(child, bound, seen, env)
+		c.collect(child, bound)
 	}
 }
 

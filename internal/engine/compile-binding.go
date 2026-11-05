@@ -2,12 +2,19 @@ package engine
 
 import "github.com/kode4food/argex/internal/isa"
 
-func (c *compiler) bindPattern(
-	pattern *node, slot int, bound []binding, depth int,
-) ([]binding, error) {
+type bindPatternArgs struct {
+	pattern   *node
+	valueSlot int
+	bound     []binding
+	depth     int
+}
+
+func (c *compiler) bindPattern(args bindPatternArgs) ([]binding, error) {
+	pattern := args.pattern
+	bound := args.bound
 	want := TypeSet(pattern.patternType())
 	if !pattern.inferred.Known() || pattern.inferred&^want != 0 {
-		c.emit(isa.Load, isa.Operand(slot))
+		c.emit(isa.Load, isa.Operand(args.valueSlot))
 		c.emit(isa.AssertType, isa.Operand(want))
 		c.emit(isa.Pop, 0)
 	}
@@ -19,7 +26,7 @@ func (c *compiler) bindPattern(
 		if target.kind == nodeName && target.text == "" {
 			continue
 		}
-		c.emit(isa.Load, isa.Operand(slot))
+		c.emit(isa.Load, isa.Operand(args.valueSlot))
 		switch pattern.kind {
 		case nodeObject:
 			op := isa.Access
@@ -40,7 +47,7 @@ func (c *compiler) bindPattern(
 			(!target.inferred.Known() || target.inferred.Has(TypeMissing)) {
 			c.emit(isa.AssertType, isa.Operand(^TypeSet(TypeMissing)))
 		}
-		target, err := c.patternDefault(target, bound, depth)
+		target, err := c.patternDefault(target, bound, args.depth)
 		if err != nil {
 			return nil, err
 		}
@@ -54,7 +61,12 @@ func (c *compiler) bindPattern(
 			bound = append(bound, binding{name: target.text, slot: next})
 			continue
 		}
-		bound, err = c.bindPattern(target, next, bound, depth+1)
+		bound, err = c.bindPattern(bindPatternArgs{
+			pattern:   target,
+			valueSlot: next,
+			bound:     bound,
+			depth:     args.depth + 1,
+		})
 		if err != nil {
 			return nil, err
 		}

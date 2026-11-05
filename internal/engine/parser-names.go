@@ -25,6 +25,20 @@ func (n *node) patternType() TypeTag {
 	return TypeObject
 }
 
+func (c nameCollector) collectPattern(pattern *node, bound []string) []string {
+	if pattern.kind == nodeDefault {
+		c.collect(pattern.children[1], bound)
+		return c.collectPattern(pattern.children[0], bound)
+	}
+	if pattern.kind == nodeName && pattern.text != "" {
+		bound = append(bound, pattern.text)
+	}
+	for _, child := range pattern.children {
+		bound = c.collectPattern(child, bound)
+	}
+	return bound
+}
+
 func patternNames(pattern *node, names []string) []string {
 	if pattern.kind == nodeDefault {
 		return patternNames(pattern.children[0], names)
@@ -36,20 +50,4 @@ func patternNames(pattern *node, names []string) []string {
 		names = patternNames(child, names)
 	}
 	return names
-}
-
-func collectPatternNames(
-	pattern *node, bound []string, seen map[string]bool, env *Env,
-) []string {
-	if pattern.kind == nodeDefault {
-		collectNames(pattern.children[1], bound, seen, env)
-		return collectPatternNames(pattern.children[0], bound, seen, env)
-	}
-	if pattern.kind == nodeName && pattern.text != "" {
-		bound = append(bound, pattern.text)
-	}
-	for _, child := range pattern.children {
-		bound = collectPatternNames(child, bound, seen, env)
-	}
-	return bound
 }

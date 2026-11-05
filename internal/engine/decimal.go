@@ -58,8 +58,8 @@ func (d decimal) rat() *big.Rat {
 	return new(big.Rat).SetFrac(big.NewInt(d.coef), &denominator)
 }
 
-func decimalAdd(a, b float64) (float64, bool) {
-	pair, ok := toDecimalPair(a, b)
+func decimalAdd(left, right float64) (float64, bool) {
+	pair, ok := toDecimalPair(left, right)
 	if !ok {
 		return 0, false
 	}
@@ -70,39 +70,40 @@ func decimalAdd(a, b float64) (float64, bool) {
 	return decimal{coef: coef, scale: pair.left.scale}.float()
 }
 
-func decimalMul(a, b float64) (float64, bool) {
-	left, ok := toDecimal(a)
+func decimalMul(left, right float64) (float64, bool) {
+	leftDecimal, ok := toDecimal(left)
 	if !ok {
 		return 0, false
 	}
-	right, ok := toDecimal(b)
+	rightDecimal, ok := toDecimal(right)
 	if !ok {
 		return 0, false
 	}
-	coef, ok := mulInt64(left.coef, right.coef)
+	coef, ok := mulInt64(leftDecimal.coef, rightDecimal.coef)
 	if !ok {
 		return 0, false
 	}
-	return decimal{coef: coef, scale: left.scale + right.scale}.float()
+	scale := leftDecimal.scale + rightDecimal.scale
+	return decimal{coef: coef, scale: scale}.float()
 }
 
 // decimalQuo divides coefficients at a shared scale, so the quotient is a ratio
 // of exact integers that IEEE division rounds once
-func decimalQuo(a, b float64) (float64, bool) {
-	pair, ok := toDecimalPair(a, b)
+func decimalQuo(left, right float64) (float64, bool) {
+	pair, ok := toDecimalPair(left, right)
 	if !ok {
 		return 0, false
 	}
-	left := pair.left.coef
-	right := pair.right.coef
-	if !isExactCoef(left) || !isExactCoef(right) {
+	dividend := pair.left.coef
+	divisor := pair.right.coef
+	if !isExactCoef(dividend) || !isExactCoef(divisor) {
 		return 0, false
 	}
-	return float64(left) / float64(right), true
+	return float64(dividend) / float64(divisor), true
 }
 
-func decimalMod(a, b float64) (float64, bool) {
-	pair, ok := toDecimalPair(a, b)
+func decimalMod(left, right float64) (float64, bool) {
+	pair, ok := toDecimalPair(left, right)
 	if !ok {
 		return 0, false
 	}
@@ -132,16 +133,16 @@ func decimalSum(items []any, total decimal) (float64, error) {
 	return toFloat(total.rat()), nil
 }
 
-func toDecimalPair(a, b float64) (decimalPair, bool) {
-	left, ok := toDecimal(a)
+func toDecimalPair(left, right float64) (decimalPair, bool) {
+	leftDecimal, ok := toDecimal(left)
 	if !ok {
 		return decimalPair{}, false
 	}
-	right, ok := toDecimal(b)
+	rightDecimal, ok := toDecimal(right)
 	if !ok {
 		return decimalPair{}, false
 	}
-	return alignDecimals(left, right)
+	return alignDecimals(leftDecimal, rightDecimal)
 }
 
 func alignDecimals(left, right decimal) (decimalPair, bool) {
@@ -216,17 +217,17 @@ func parseExponent(text []byte) int {
 	return exponent
 }
 
-func addInt64(a, b int64) (int64, bool) {
-	sum := a + b
-	return sum, (sum > a) == (b > 0)
+func addInt64(left, right int64) (int64, bool) {
+	sum := left + right
+	return sum, (sum > left) == (right > 0)
 }
 
-func mulInt64(a, b int64) (int64, bool) {
-	hi, lo := bits.Mul64(absInt64(a), absInt64(b))
+func mulInt64(left, right int64) (int64, bool) {
+	hi, lo := bits.Mul64(absInt64(left), absInt64(right))
 	if hi != 0 || lo > math.MaxInt64 {
 		return 0, false
 	}
-	if (a < 0) != (b < 0) {
+	if (left < 0) != (right < 0) {
 		return -int64(lo), true
 	}
 	return int64(lo), true

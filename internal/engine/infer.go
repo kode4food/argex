@@ -106,7 +106,7 @@ func annotateType(n *node, scope []typedName, env *Env) error {
 	return checkNode(n)
 }
 
-// annotateChildren scopes bindings as collectNames does
+// annotateChildren scopes bindings as nameCollector.collect does
 func annotateChildren(n *node, scope []typedName, env *Env) error {
 	switch n.kind {
 	case nodeMap, nodeFilter, nodeAny, nodeAll:

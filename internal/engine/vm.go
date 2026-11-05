@@ -106,7 +106,10 @@ func (p *Program) Eval(this any) (any, error) {
 			if value == nil || IsMissing(value) {
 				return nil, fmt.Errorf("%w: access %v", ErrMissing, key)
 			}
-			child, ok, err := accessChild(value, key)
+			child, ok, err := accessChild(accessChildArgs{
+				container: value,
+				key:       key,
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -124,7 +127,10 @@ func (p *Program) Eval(this any) (any, error) {
 			if value == nil {
 				return nil, fmt.Errorf("%w: access %v", ErrMissing, key)
 			}
-			child, ok, err := accessChild(value, key)
+			child, ok, err := accessChild(accessChildArgs{
+				container: value,
+				key:       key,
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -141,7 +147,10 @@ func (p *Program) Eval(this any) (any, error) {
 			if value == nil || IsMissing(value) {
 				return nil, fmt.Errorf("%w: access %v", ErrMissing, key)
 			}
-			child, ok, err := accessChild(value, key)
+			child, ok, err := accessChild(accessChildArgs{
+				container: value,
+				key:       key,
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -160,7 +169,10 @@ func (p *Program) Eval(this any) (any, error) {
 			if value == nil {
 				return nil, fmt.Errorf("%w: access %v", ErrMissing, key)
 			}
-			child, ok, err := accessChild(value, key)
+			child, ok, err := accessChild(accessChildArgs{
+				container: value,
+				key:       key,
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -211,24 +223,24 @@ func (p *Program) Eval(this any) (any, error) {
 			MEM[SP-1] = -value
 
 		case isa.Add:
-			if a, ok := MEM[SP-2].(string); ok {
-				b, ok := MEM[SP-1].(string)
+			if left, ok := MEM[SP-2].(string); ok {
+				right, ok := MEM[SP-1].(string)
 				if !ok {
 					return nil, operandError(expectString)
 				}
 				SP--
-				MEM[SP-1] = a + b
+				MEM[SP-1] = left + right
 				continue
 			}
-			a := number(MEM[SP-2])
-			if a-a != 0 {
+			left := number(MEM[SP-2])
+			if left-left != 0 {
 				return nil, operandError(expectNumberOrString)
 			}
-			b := number(MEM[SP-1])
-			if b-b != 0 {
+			right := number(MEM[SP-1])
+			if right-right != 0 {
 				return nil, operandError(expectNumber)
 			}
-			value := exactAdd(a, b)
+			value := exactAdd(left, right)
 			if math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: +", ErrArithmetic)
 			}
@@ -236,15 +248,15 @@ func (p *Program) Eval(this any) (any, error) {
 			MEM[SP-1] = value
 
 		case isa.Sub:
-			a := number(MEM[SP-2])
-			if a-a != 0 {
+			left := number(MEM[SP-2])
+			if left-left != 0 {
 				return nil, operandError(expectNumber)
 			}
-			b := number(MEM[SP-1])
-			if b-b != 0 {
+			right := number(MEM[SP-1])
+			if right-right != 0 {
 				return nil, operandError(expectNumber)
 			}
-			value := exactSub(a, b)
+			value := exactSub(left, right)
 			if math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: -", ErrArithmetic)
 			}
@@ -252,15 +264,15 @@ func (p *Program) Eval(this any) (any, error) {
 			MEM[SP-1] = value
 
 		case isa.Mul:
-			a := number(MEM[SP-2])
-			if a-a != 0 {
+			left := number(MEM[SP-2])
+			if left-left != 0 {
 				return nil, operandError(expectNumber)
 			}
-			b := number(MEM[SP-1])
-			if b-b != 0 {
+			right := number(MEM[SP-1])
+			if right-right != 0 {
 				return nil, operandError(expectNumber)
 			}
-			value := exactMul(a, b)
+			value := exactMul(left, right)
 			if math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: *", ErrArithmetic)
 			}
@@ -268,18 +280,18 @@ func (p *Program) Eval(this any) (any, error) {
 			MEM[SP-1] = value
 
 		case isa.Div:
-			a := number(MEM[SP-2])
-			if a-a != 0 {
+			left := number(MEM[SP-2])
+			if left-left != 0 {
 				return nil, operandError(expectNumber)
 			}
-			b := number(MEM[SP-1])
-			if b-b != 0 {
+			right := number(MEM[SP-1])
+			if right-right != 0 {
 				return nil, operandError(expectNumber)
 			}
-			if b == 0 {
+			if right == 0 {
 				return nil, fmt.Errorf("%w: /", ErrArithmetic)
 			}
-			value := exactQuo(a, b)
+			value := exactQuo(left, right)
 			if math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: /", ErrArithmetic)
 			}
@@ -287,18 +299,18 @@ func (p *Program) Eval(this any) (any, error) {
 			MEM[SP-1] = value
 
 		case isa.Mod:
-			a := number(MEM[SP-2])
-			if a-a != 0 {
+			left := number(MEM[SP-2])
+			if left-left != 0 {
 				return nil, operandError(expectNumber)
 			}
-			b := number(MEM[SP-1])
-			if b-b != 0 {
+			right := number(MEM[SP-1])
+			if right-right != 0 {
 				return nil, operandError(expectNumber)
 			}
-			if b == 0 {
+			if right == 0 {
 				return nil, fmt.Errorf("%w: %%", ErrArithmetic)
 			}
-			value := exactMod(a, b)
+			value := exactMod(left, right)
 			SP--
 			MEM[SP-1] = value
 
@@ -331,88 +343,88 @@ func (p *Program) Eval(this any) (any, error) {
 			MEM[SP-1] = matched
 
 		case isa.Lt:
-			if a, ok := MEM[SP-2].(string); ok {
-				b, ok := MEM[SP-1].(string)
+			if left, ok := MEM[SP-2].(string); ok {
+				right, ok := MEM[SP-1].(string)
 				if !ok {
 					return nil, operandError(expectString)
 				}
 				SP--
-				MEM[SP-1] = a < b
+				MEM[SP-1] = left < right
 				continue
 			}
-			a := number(MEM[SP-2])
-			if a-a != 0 {
+			left := number(MEM[SP-2])
+			if left-left != 0 {
 				return nil, operandError(expectNumberOrString)
 			}
-			b := number(MEM[SP-1])
-			if b-b != 0 {
+			right := number(MEM[SP-1])
+			if right-right != 0 {
 				return nil, operandError(expectNumber)
 			}
 			SP--
-			MEM[SP-1] = a < b
+			MEM[SP-1] = left < right
 
 		case isa.Lte:
-			if a, ok := MEM[SP-2].(string); ok {
-				b, ok := MEM[SP-1].(string)
+			if left, ok := MEM[SP-2].(string); ok {
+				right, ok := MEM[SP-1].(string)
 				if !ok {
 					return nil, operandError(expectString)
 				}
 				SP--
-				MEM[SP-1] = a <= b
+				MEM[SP-1] = left <= right
 				continue
 			}
-			a := number(MEM[SP-2])
-			if a-a != 0 {
+			left := number(MEM[SP-2])
+			if left-left != 0 {
 				return nil, operandError(expectNumberOrString)
 			}
-			b := number(MEM[SP-1])
-			if b-b != 0 {
+			right := number(MEM[SP-1])
+			if right-right != 0 {
 				return nil, operandError(expectNumber)
 			}
 			SP--
-			MEM[SP-1] = a <= b
+			MEM[SP-1] = left <= right
 
 		case isa.Gt:
-			if a, ok := MEM[SP-2].(string); ok {
-				b, ok := MEM[SP-1].(string)
+			if left, ok := MEM[SP-2].(string); ok {
+				right, ok := MEM[SP-1].(string)
 				if !ok {
 					return nil, operandError(expectString)
 				}
 				SP--
-				MEM[SP-1] = a > b
+				MEM[SP-1] = left > right
 				continue
 			}
-			a := number(MEM[SP-2])
-			if a-a != 0 {
+			left := number(MEM[SP-2])
+			if left-left != 0 {
 				return nil, operandError(expectNumberOrString)
 			}
-			b := number(MEM[SP-1])
-			if b-b != 0 {
+			right := number(MEM[SP-1])
+			if right-right != 0 {
 				return nil, operandError(expectNumber)
 			}
 			SP--
-			MEM[SP-1] = a > b
+			MEM[SP-1] = left > right
 
 		case isa.Gte:
-			if a, ok := MEM[SP-2].(string); ok {
-				b, ok := MEM[SP-1].(string)
+			if left, ok := MEM[SP-2].(string); ok {
+				right, ok := MEM[SP-1].(string)
 				if !ok {
 					return nil, operandError(expectString)
 				}
 				SP--
-				MEM[SP-1] = a >= b
+				MEM[SP-1] = left >= right
 				continue
 			}
-			a := number(MEM[SP-2])
-			if a-a != 0 {
+			left := number(MEM[SP-2])
+			if left-left != 0 {
 				return nil, operandError(expectNumberOrString)
 			}
-			b := number(MEM[SP-1])
-			if b-b != 0 {
+			right := number(MEM[SP-1])
+			if right-right != 0 {
 				return nil, operandError(expectNumber)
 			}
 			SP--
-			MEM[SP-1] = a >= b
+			MEM[SP-1] = left >= right
 
 		case isa.And:
 			value, ok := MEM[SP-1].(bool)
@@ -473,97 +485,97 @@ func (p *Program) Eval(this any) (any, error) {
 
 		case isa.JumpIfLt:
 			SP -= 2
-			if a, ok := MEM[SP].(string); ok {
-				b, ok := MEM[SP+1].(string)
+			if left, ok := MEM[SP].(string); ok {
+				right, ok := MEM[SP+1].(string)
 				if !ok {
 					return nil, operandError(expectString)
 				}
-				if a < b {
+				if left < right {
 					PC = op - 1
 				}
 				continue
 			}
-			a := number(MEM[SP])
-			if a-a != 0 {
+			left := number(MEM[SP])
+			if left-left != 0 {
 				return nil, operandError(expectNumberOrString)
 			}
-			b := number(MEM[SP+1])
-			if b-b != 0 {
+			right := number(MEM[SP+1])
+			if right-right != 0 {
 				return nil, operandError(expectNumber)
 			}
-			if a < b {
+			if left < right {
 				PC = op - 1
 			}
 
 		case isa.JumpIfLte:
 			SP -= 2
-			if a, ok := MEM[SP].(string); ok {
-				b, ok := MEM[SP+1].(string)
+			if left, ok := MEM[SP].(string); ok {
+				right, ok := MEM[SP+1].(string)
 				if !ok {
 					return nil, operandError(expectString)
 				}
-				if a <= b {
+				if left <= right {
 					PC = op - 1
 				}
 				continue
 			}
-			a := number(MEM[SP])
-			if a-a != 0 {
+			left := number(MEM[SP])
+			if left-left != 0 {
 				return nil, operandError(expectNumberOrString)
 			}
-			b := number(MEM[SP+1])
-			if b-b != 0 {
+			right := number(MEM[SP+1])
+			if right-right != 0 {
 				return nil, operandError(expectNumber)
 			}
-			if a <= b {
+			if left <= right {
 				PC = op - 1
 			}
 
 		case isa.JumpIfGt:
 			SP -= 2
-			if a, ok := MEM[SP].(string); ok {
-				b, ok := MEM[SP+1].(string)
+			if left, ok := MEM[SP].(string); ok {
+				right, ok := MEM[SP+1].(string)
 				if !ok {
 					return nil, operandError(expectString)
 				}
-				if a > b {
+				if left > right {
 					PC = op - 1
 				}
 				continue
 			}
-			a := number(MEM[SP])
-			if a-a != 0 {
+			left := number(MEM[SP])
+			if left-left != 0 {
 				return nil, operandError(expectNumberOrString)
 			}
-			b := number(MEM[SP+1])
-			if b-b != 0 {
+			right := number(MEM[SP+1])
+			if right-right != 0 {
 				return nil, operandError(expectNumber)
 			}
-			if a > b {
+			if left > right {
 				PC = op - 1
 			}
 
 		case isa.JumpIfGte:
 			SP -= 2
-			if a, ok := MEM[SP].(string); ok {
-				b, ok := MEM[SP+1].(string)
+			if left, ok := MEM[SP].(string); ok {
+				right, ok := MEM[SP+1].(string)
 				if !ok {
 					return nil, operandError(expectString)
 				}
-				if a >= b {
+				if left >= right {
 					PC = op - 1
 				}
 				continue
 			}
-			a := number(MEM[SP])
-			if a-a != 0 {
+			left := number(MEM[SP])
+			if left-left != 0 {
 				return nil, operandError(expectNumberOrString)
 			}
-			b := number(MEM[SP+1])
-			if b-b != 0 {
+			right := number(MEM[SP+1])
+			if right-right != 0 {
 				return nil, operandError(expectNumber)
 			}
-			if a >= b {
+			if left >= right {
 				PC = op - 1
 			}
 
@@ -738,8 +750,14 @@ func (p *Program) Eval(this any) (any, error) {
 	return MEM[0], nil
 }
 
-func accessChild(container, key any) (any, bool, error) {
-	switch c := container.(type) {
+type accessChildArgs struct {
+	container any
+	key       any
+}
+
+func accessChild(args accessChildArgs) (any, bool, error) {
+	key := args.key
+	switch c := args.container.(type) {
 	case map[string]any:
 		name, ok := key.(string)
 		if !ok {

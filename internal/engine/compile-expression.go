@@ -190,7 +190,11 @@ func (c *compiler) let(n *node, depth int) error {
 	bound := []binding{{name: n.valueBinding, slot: slot}}
 	var err error
 	if pattern := n.bindingPattern(); pattern != nil {
-		bound, err = c.bindPattern(pattern, slot, nil, depth)
+		bound, err = c.bindPattern(bindPatternArgs{
+			pattern:   pattern,
+			valueSlot: slot,
+			depth:     depth,
+		})
 	}
 	if err != nil {
 		return err

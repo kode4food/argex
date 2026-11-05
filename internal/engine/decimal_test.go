@@ -143,7 +143,11 @@ func TestRemainder(t *testing.T) {
 			if !assert.NoError(t, err) {
 				return
 			}
-			assertRemainder(t, left, right, value.(float64))
+			assertRemainder(t, assertRemainderArgs{
+				dividend:  left,
+				divisor:   right,
+				remainder: value.(float64),
+			})
 		}
 	}
 	random := rand.New(rand.NewPCG(1, 2))
@@ -159,17 +163,28 @@ func TestRemainder(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		assertRemainder(t, left, right, value.(float64))
+		assertRemainder(t, assertRemainderArgs{
+			dividend:  left,
+			divisor:   right,
+			remainder: value.(float64),
+		})
 	}
 }
 
-// A decimal remainder differs from math.Mod's binary one, so this checks only
-// what both share: finite, within the divisor, signed like the dividend
-func assertRemainder(t *testing.T, left, right, value float64) {
+type assertRemainderArgs struct {
+	dividend  float64
+	divisor   float64
+	remainder float64
+}
+
+// assertRemainder checks only what a decimal remainder shares with math.Mod's
+// binary one: finite, within the divisor, signed like the dividend
+func assertRemainder(t *testing.T, args assertRemainderArgs) {
 	t.Helper()
-	assert.False(t, math.IsInf(value, 0) || math.IsNaN(value))
-	assert.LessOrEqual(t, math.Abs(value), math.Abs(right))
-	assert.Equal(t, math.Signbit(left), math.Signbit(value))
+	remainder := args.remainder
+	assert.False(t, math.IsInf(remainder, 0) || math.IsNaN(remainder))
+	assert.LessOrEqual(t, math.Abs(remainder), math.Abs(args.divisor))
+	assert.Equal(t, math.Signbit(args.dividend), math.Signbit(remainder))
 }
 
 func TestDecimalOracle(t *testing.T) {
@@ -449,26 +464,27 @@ func randomDecimal(t *testing.T, random *rand.Rand) float64 {
 // oracle computes each operation on the decimals the operands print as, with
 // big.Rat alone
 func oracle(op string, left, right float64) float64 {
-	a := exactRat(left)
-	b := exactRat(right)
+	leftRat := exactRat(left)
+	rightRat := exactRat(right)
 	var r *big.Rat
 	switch op {
 	case "+":
-		r = new(big.Rat).Add(a, b)
+		r = new(big.Rat).Add(leftRat, rightRat)
 
 	case "-":
-		r = new(big.Rat).Sub(a, b)
+		r = new(big.Rat).Sub(leftRat, rightRat)
 
 	case "*":
-		r = new(big.Rat).Mul(a, b)
+		r = new(big.Rat).Mul(leftRat, rightRat)
 
 	case "/":
-		r = new(big.Rat).Quo(a, b)
+		r = new(big.Rat).Quo(leftRat, rightRat)
 
 	default:
-		quo := new(big.Rat).Quo(a, b)
+		quo := new(big.Rat).Quo(leftRat, rightRat)
 		whole := new(big.Int).Quo(quo.Num(), quo.Denom())
-		r = new(big.Rat).Sub(a, new(big.Rat).Mul(b, new(big.Rat).SetInt(whole)))
+		taken := new(big.Rat).Mul(rightRat, new(big.Rat).SetInt(whole))
+		r = new(big.Rat).Sub(leftRat, taken)
 	}
 	n, _ := r.Float64()
 	return n
