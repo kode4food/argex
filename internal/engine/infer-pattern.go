@@ -94,6 +94,26 @@ func annotateStagePattern(n *node, scope []typedName, env *Env) error {
 	return annotateType(n.children[1], patternScope(pattern, inner), env)
 }
 
+// annotateAccumulator types the initial value in the enclosing scope. The
+// accumulator changes per element, so its bindings are untyped
+func annotateAccumulator(n *node, scope []typedName, env *Env) error {
+	if n.kind != nodeReduce {
+		return nil
+	}
+	accumulator := n.accumulator()
+	if err := annotateType(accumulator.children[1], scope, env); err != nil {
+		return err
+	}
+	inner := scope[:len(scope):len(scope)]
+	if n.chained {
+		for _, name := range stageNames(n.children[0]) {
+			bound := typedName{name: name, inferred: TypeSet(TypeAny)}
+			inner = append(inner, bound)
+		}
+	}
+	return accumulator.children[0].annotatePattern(nil, inner, env)
+}
+
 // patternScope builds scope outside recursive inference so ordinary let and
 // pipeline scopes can stay on the stack
 func patternScope(pattern *node, scope []typedName) []typedName {

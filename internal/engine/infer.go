@@ -109,8 +109,11 @@ func annotateType(n *node, scope []typedName, env *Env) error {
 // annotateChildren scopes bindings as nameCollector.collect does
 func annotateChildren(n *node, scope []typedName, env *Env) error {
 	switch n.kind {
-	case nodeMap, nodeFilter, nodeAny, nodeAll:
+	case nodeMap, nodeFilter, nodeAny, nodeAll, nodeReduce:
 		if err := annotateType(n.children[0], scope, env); err != nil {
+			return err
+		}
+		if err := annotateAccumulator(n, scope, env); err != nil {
 			return err
 		}
 		if n.bindingPattern() != nil {
@@ -187,6 +190,9 @@ func computeType(n *node, scope []typedName) TypeSet {
 
 	case nodeAny, nodeAll:
 		return TypeSet(TypeBool)
+
+	case nodeReduce:
+		return n.accumulator().children[1].inferred | n.children[1].inferred
 
 	case nodeCase:
 		return inferCaseType(n)

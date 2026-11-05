@@ -43,6 +43,14 @@ func TestStaticType(t *testing.T) {
 			src:  `items | map v: v.x`,
 			want: "array",
 		},
+		"reduce joins init and body": {
+			src:  `items | reduce t = 0, v: [v]`,
+			want: "number|array",
+		},
+		"reduce accumulator is any": {
+			src:  `items | reduce t = 0, v: t`,
+			want: "number|any",
+		},
 		"let body type":          {src: `let x = 1: [x]`, want: "array"},
 		"let name carries type":  {src: `let s = "a": s`, want: "string"},
 		"later let sees earlier": {src: `let x = 1, y = x: y`, want: "number"},

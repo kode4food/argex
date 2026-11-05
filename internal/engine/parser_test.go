@@ -40,6 +40,20 @@ func TestNames(t *testing.T) {
 		{source: "xs | map ys", want: []string{"xs", "ys"}},
 		{source: "xs | filter x: x | any y: y > z", want: []string{"xs", "z"}},
 		{
+			source: "xs | reduce t = init, x: t + x + k",
+			want:   []string{"init", "k", "xs"},
+		},
+		{source: "xs | reduce t = t, x: t", want: []string{"t", "xs"}},
+		{source: "xs | reduce t = 0, t: t", want: []string{"xs"}},
+		{
+			source: "xs | map x: x | reduce t = x, y: t",
+			want:   []string{"x", "xs"},
+		},
+		{
+			source: "xs | map x: x | reduce {t = x + k} = {}: t",
+			want:   []string{"k", "xs"},
+		},
+		{
 			source: "xs | map x: (ys | map y: x + y + z)",
 			want:   []string{"xs", "ys", "z"},
 		},
@@ -100,6 +114,9 @@ func TestSyntax(t *testing.T) {
 		"x | map x -> x", "case { true -> 1, 2 }",
 		"x.map item: item", "x.filter item: true", "x | unknown x: x",
 		"x|", "x?.", "x | map", "x | filter",
+		"x | reduce", "x | reduce t: t", "x | reduce t = 0 x: t",
+		"x | reduce t = 0, t", "x | reduce t = : t",
+		"x | reduce true = 0: 1", "x | reduce {a, a} = {}: a",
 		"case {}", "case { 1 }", "case { true: 1 }",
 		"case { true: 1, }", "case { true: 1 false: 2, 3 }",
 		"case { true: 1, 2, false: 3 }", "case true: 1",

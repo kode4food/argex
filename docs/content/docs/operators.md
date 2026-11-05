@@ -20,7 +20,7 @@ Highest first:
 | `??` | Missing-value fallback |
 | `&&` | Boolean conjunction |
 | `\|\|` | Boolean disjunction |
-| `\|` | Collection operation (`map`, `filter`, `any`, `all`) |
+| `\|` | Collection operation (`map`, `filter`, `any`, `all`, `reduce`) |
 
 Arithmetic uses each number's shortest decimal representation: `0.1 + 0.2` returns `0.3`. Inputs and each result are limited to `float64` precision, so large values and long fractions can lose digits. Use `sum` for lists to avoid rounding intermediate totals. Division by zero and overflow raise `ErrArithmetic`.
 

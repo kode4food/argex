@@ -17,6 +17,7 @@ var collectionKinds = map[string]nodeKind{
 	"filter": nodeFilter,
 	"any":    nodeAny,
 	"all":    nodeAll,
+	"reduce": nodeReduce,
 }
 
 var collectionNames = map[nodeKind]string{
@@ -24,6 +25,7 @@ var collectionNames = map[nodeKind]string{
 	nodeFilter: "filter",
 	nodeAny:    "any",
 	nodeAll:    "all",
+	nodeReduce: "reduce",
 }
 
 // pipeline chains collection operations left to right, and a stage body stops
@@ -59,7 +61,17 @@ func (p *parser) collection(receiver *node, chained bool) (*node, error) {
 		return nil, syntax(operation.pos, "unknown collection operation")
 	}
 	stage := &node{kind: kind, chained: chained}
-	pattern, err := p.stageBinding(stage)
+	stage.children = []*node{receiver, nil}
+	var pattern *node
+	var err error
+	if kind == nodeReduce {
+		var res reduceBindingRes
+		res, err = p.reduceBinding(stage)
+		stage.children = append(stage.children, res.accumulator)
+		pattern = res.pattern
+	} else {
+		pattern, err = p.stageBinding(stage)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -67,11 +79,45 @@ func (p *parser) collection(receiver *node, chained bool) (*node, error) {
 	if err != nil {
 		return nil, err
 	}
-	stage.children = []*node{receiver, body}
+	stage.children[1] = body
 	if pattern != nil {
 		stage.children = append(stage.children, pattern)
 	}
 	return stage, nil
+}
+
+type reduceBindingRes struct {
+	accumulator *node
+	pattern     *node
+}
+
+// reduceBinding parses the required accumulator and initial value. A comma
+// introduces the element bindings, otherwise the body follows a colon
+func (p *parser) reduceBinding(stage *node) (reduceBindingRes, error) {
+	target, err := p.pattern(map[string]bool{})
+	if err != nil {
+		return reduceBindingRes{}, err
+	}
+	if err := p.expect(kindAssign); err != nil {
+		return reduceBindingRes{}, err
+	}
+	initial, err := p.expression(precedenceOr)
+	if err != nil {
+		return reduceBindingRes{}, err
+	}
+	accumulator := &node{
+		kind:     nodeDefault,
+		children: []*node{target, initial},
+	}
+	res := reduceBindingRes{accumulator: accumulator}
+	if !p.take(kindComma) {
+		return res, p.expect(kindColon)
+	}
+	if !p.hasBinding() {
+		return reduceBindingRes{}, p.error("expected a binding pattern")
+	}
+	res.pattern, err = p.stageBinding(stage)
+	return res, err
 }
 
 func (p *parser) stageBinding(stage *node) (*node, error) {

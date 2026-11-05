@@ -43,7 +43,7 @@ func (e *Env) Compile(expr *Expression) (*Program, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Reserve room for control flow; constants mostly come from leaves
+	// Reserve room for control flow. Constants mostly come from leaves
 	size := root.count()
 	c := &compiler{
 		program: &Program{
@@ -87,7 +87,7 @@ func (c *compiler) compile(n *node, depth int) error {
 	case nodeLet:
 		return c.let(n, depth)
 
-	case nodeMap, nodeFilter, nodeAny, nodeAll:
+	case nodeMap, nodeFilter, nodeAny, nodeAll, nodeReduce:
 		return c.collection(n, depth)
 
 	case nodeIndex:

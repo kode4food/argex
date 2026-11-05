@@ -35,7 +35,7 @@ Indexes refer to the previous stage's output. For example, `items | filter x: x.
 
 ## Binding Forms
 
-Every stage of `map`, `filter`, `any`, and `all` accepts the same binding forms:
+Every stage of `map`, `filter`, `any`, `all`, and `reduce` accepts the same binding forms:
 
 | Form | Binds |
 | --- | --- |
@@ -114,3 +114,21 @@ tags | any tag: startsWith(tag, "market:")
 results | all result: result.status == "approved"
 (results | any result: result.status == "approved") && enabled
 ```
+
+## Reduce
+
+`reduce` combines elements into one value. Name an accumulator and give its initial value, then bind the element as in other stages. Each result of the body becomes the accumulator for the next element:
+
+```javascript
+orders | reduce byID = {}, order: {...byID, [order.id]: order}
+prices | reduce names = [], name, _: [...names, name]
+```
+
+The initial value is required and is evaluated once, before the first element. It sees outer bindings but not stage bindings. An empty collection returns the initial value. The accumulator can be a pattern, and element bindings with the same name shadow it:
+
+```javascript
+scores | reduce {total, count} = {total: 0, count: 0}, score:
+    {total: total + score, count: count + 1}
+```
+
+Like `any` and `all`, `reduce` ends its pipeline, so later stages don't see its bindings. For plain totals and counts, `sum` and `length` are shorter.

@@ -1,8 +1,12 @@
 expression     = let | pipeline ;
 let            = "let", assignment, { ",", assignment }, ":", expression ;
 assignment     = target, "=", logicalOr ;
-pipeline       = logicalOr, { "|", operation, [ binding ], logicalOr } ;
-operation      = "map" | "filter" | "any" | "all" ;
+pipeline       = logicalOr, { "|", stage } ;
+stage          = "map", [ binding ], logicalOr
+               | "filter", [ binding ], logicalOr
+               | "any", [ binding ], logicalOr
+               | "all", [ binding ], logicalOr
+               | "reduce", assignment, (",", binding | ":"), logicalOr ;
 binding        = (target | identifier, ",", target), ":" ;
 target         = identifier | arrayPattern | objectPattern ;
 arrayPattern   = "[", [ [ patternElement ], { ",", [ patternElement ] } ], "]" ;

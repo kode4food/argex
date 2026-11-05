@@ -62,6 +62,7 @@ const (
 	nodeFilter
 	nodeAny
 	nodeAll
+	nodeReduce
 	nodeDefault
 )
 
@@ -169,8 +170,11 @@ func (c nameCollector) collect(n *node, bound []string) {
 		}
 		return
 
-	case nodeMap, nodeFilter, nodeAny, nodeAll:
+	case nodeMap, nodeFilter, nodeAny, nodeAll, nodeReduce:
 		c.collect(n.children[0], bound)
+		if n.kind == nodeReduce {
+			c.collectAccumulator(n, bound)
+		}
 		if pattern := n.bindingPattern(); pattern != nil {
 			inner := append(
 				bound[:len(bound):len(bound)], stageOuterNames(n)...,
@@ -199,11 +203,24 @@ func (c nameCollector) collect(n *node, bound []string) {
 	}
 }
 
+// collectAccumulator reads the initial value outside the loop. Pattern defaults
+// run per element, so they see the earlier stages' bindings
+func (c nameCollector) collectAccumulator(n *node, bound []string) {
+	accumulator := n.accumulator()
+	c.collect(accumulator.children[1], bound)
+	inner := bound[:len(bound):len(bound)]
+	if n.chained {
+		inner = append(inner, stageNames(n.children[0])...)
+	}
+	c.collectPattern(accumulator.children[0], inner)
+}
+
 func stageNames(n *node) []string {
 	var names []string
 	if n.chained {
 		names = stageNames(n.children[0])
 	}
+	names = accumulatorNames(n, names)
 	names = n.bindingNames(names)
 	if n.keyBinding != "" {
 		names = append(names, n.keyBinding)
@@ -216,8 +233,17 @@ func stageOuterNames(n *node) []string {
 	if n.chained {
 		names = stageNames(n.children[0])
 	}
+	names = accumulatorNames(n, names)
 	if n.keyBinding != "" {
 		names = append(names, n.keyBinding)
 	}
 	return names
+}
+
+// accumulatorNames precedes the element bindings, which shadow it
+func accumulatorNames(n *node, names []string) []string {
+	if n.kind != nodeReduce {
+		return names
+	}
+	return patternNames(n.accumulator().children[0], names)
 }

@@ -219,6 +219,7 @@ func BenchmarkWorkloads(b *testing.B) {
 		{name: "any256", source: "items | any item: item > 128"},
 		{name: "all256", source: "items | all item: item >= 0"},
 		{name: "sum256", source: "sum(items)"},
+		{name: "reduce256", source: "items | reduce t = 0, item: t + item"},
 		{
 			name:   "chain256",
 			source: "items | map x: x * 2 | filter y: y > 128 | map z: z + 1",

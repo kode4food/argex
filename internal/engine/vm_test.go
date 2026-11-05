@@ -148,6 +148,42 @@ func TestValues(t *testing.T) {
 		},
 		{source: `[] | map item: item`, want: []any{}},
 		{source: `[] | filter item: true`, want: []any{}},
+		{
+			source: "items | reduce total = 0, item: total + item",
+			want:   float64(118),
+		},
+		{source: "[] | reduce total = offset, x: total + x", want: 3},
+		{
+			source: "items | filter item: item > 10 | reduce n = 0: n + 1",
+			want:   float64(2),
+		},
+		{
+			source: "items | map item: item * 2 | reduce t = 0, d: t + d",
+			want:   float64(236),
+		},
+		{
+			source: "customer | reduce keys = [], key, _: [...keys, key]",
+			want:   []any{"address", "map", "name", "nullable"},
+		},
+		{source: "second | reduce item = 0, item: item", want: 4},
+		{source: "second | reduce _ = 0, item: item", want: 4},
+		{
+			source: "second | reduce acc = [], item: [item, ...acc] | map x: x",
+			want:   []any{4, 2},
+		},
+		{
+			source: "items | reduce t = offset, item: t + item + offset",
+			want:   float64(133),
+		},
+		{
+			source: "second | map x: (items | reduce t = x, item: t + item)",
+			want:   []any{float64(120), float64(122)},
+		},
+		{
+			source: `second | reduce t = (second | map x: x * offset),
+				x: [...t, x]`,
+			want: []any{float64(6), float64(12), 2, 4},
+		},
 		{source: "case { false: 1, true: 2, 3 }", want: float64(2)},
 		{source: "case { false: 1, 3, }", want: float64(3)},
 		{source: "case { true: 1, 1 / 0 }", want: float64(1)},

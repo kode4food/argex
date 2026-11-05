@@ -398,6 +398,32 @@ func TestPipelinePatterns(t *testing.T) {
 				| map {x}: x`,
 			want: []any{float64(2)},
 		},
+		{
+			name:   "reduce element",
+			source: "[{x: 1}, {x: 2}] | reduce t = 0, {x}: t + x",
+			want:   float64(3),
+		},
+		{
+			name: "reduce object accumulator",
+			source: `[1, 2, 3] | reduce {sum, n} = {sum: 0, n: 0}, x:
+				{sum: sum + x, n: n + 1}`,
+			want: map[string]any{"sum": float64(6), "n": float64(3)},
+		},
+		{
+			name:   "reduce array accumulator",
+			source: "[1, 2] | reduce [a, b] = [0, 0], x: [b, a + x]",
+			want:   []any{float64(1), float64(2)},
+		},
+		{
+			name:   "reduce accumulator default",
+			source: "[1, 2] | reduce {t = 10} = {}, x: {t: t + x}",
+			want:   map[string]any{"t": float64(13)},
+		},
+		{
+			name:   "reduce accumulator sees earlier stages",
+			source: "[1, 2] | map x: x | reduce {t = x} = {}: {t: t + x}",
+			want:   map[string]any{"t": float64(4)},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			value, err := argex.Eval(tc.source, nil)

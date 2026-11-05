@@ -23,9 +23,21 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 	if err := c.compile(stages[0].children[0], depth+1); err != nil {
 		return err
 	}
+	last := stages[len(stages)-1]
+	if last.kind == nodeReduce {
+		initial := last.accumulator().children[1]
+		if err := c.compile(initial, depth+1); err != nil {
+			return err
+		}
+	}
 	looping := c.looping
 	c.looping = true
 	mark := c.nextSlot
+	var accumulator int
+	if last.kind == nodeReduce {
+		accumulator = c.allocSlot()
+		c.emit(isa.Store, isa.Operand(accumulator))
+	}
 	scopes := make([][]binding, len(stages))
 	visible := make([][]binding, len(stages))
 	counters := make([]int, len(stages))
@@ -70,10 +82,22 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 			c.emit(isa.Load, isa.Operand(counters[i]))
 			c.emit(isa.Store, isa.Operand(names[1].slot))
 		}
+		var prior []binding
 		if stage.chained {
-			visible[i] = slices.Concat(visible[i-1], visible[i])
+			prior = visible[i-1]
 		}
-		var err error
+		prior, err := c.accumulatorScope(accumulatorScopeArgs{
+			stage: stage,
+			slot:  accumulator,
+			prior: prior[:len(prior):len(prior)],
+			depth: depth,
+		})
+		if err != nil {
+			return err
+		}
+		if len(prior) > 0 {
+			visible[i] = slices.Concat(prior, visible[i])
+		}
 		if pattern := stage.bindingPattern(); pattern != nil {
 			visible[i], err = c.bindPattern(bindPatternArgs{
 				pattern:   pattern,
@@ -101,7 +125,7 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 		c.emit(isa.Store, isa.Operand(scopes[i+1][0].slot))
 	}
 
-	final := stages[len(stages)-1].kind
+	final := last.kind
 	switch final {
 	case nodeMap:
 		c.emit(isa.Append, 0)
@@ -122,6 +146,9 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 		c.emit(isa.Pop, 0)
 		c.emit(isa.Const, c.constant(false))
 		c.emit(isa.Jump, done)
+
+	case nodeReduce:
+		c.emit(isa.Store, isa.Operand(accumulator))
 	}
 
 	preload := !looping && len(c.hoisted) > 0
@@ -139,6 +166,10 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 		c.emit(isa.Pop, 0)
 		c.emit(isa.Const, c.constant(true))
 
+	case nodeReduce:
+		c.emit(isa.Pop, 0)
+		c.emit(isa.Load, isa.Operand(accumulator))
+
 	default:
 		c.emit(isa.Result, 0)
 	}
@@ -153,6 +184,39 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 	c.nextSlot = mark
 	c.looping = looping
 	return nil
+}
+
+type accumulatorScopeArgs struct {
+	stage *node
+	slot  int
+	prior []binding
+	depth int
+}
+
+// accumulatorScope binds a reduce stage's accumulator after the earlier stages'
+// bindings, so its own element bindings shadow it
+func (c *compiler) accumulatorScope(
+	args accumulatorScopeArgs,
+) ([]binding, error) {
+	if args.stage.kind != nodeReduce {
+		return args.prior, nil
+	}
+	target := args.stage.accumulator().children[0]
+	if target.kind != nodeName {
+		return c.bindPattern(bindPatternArgs{
+			pattern:   target,
+			valueSlot: args.slot,
+			bound:     args.prior,
+			depth:     args.depth,
+		})
+	}
+	if target.text == "" {
+		return args.prior, nil
+	}
+	return append(args.prior, binding{
+		name: target.text,
+		slot: args.slot,
+	}), nil
 }
 
 type preloadArgs struct {
