@@ -3,8 +3,9 @@ package engine_test
 import (
 	"testing"
 
-	"github.com/kode4food/argex"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kode4food/argex"
 )
 
 func TestBindingPatterns(t *testing.T) {

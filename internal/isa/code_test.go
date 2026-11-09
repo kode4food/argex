@@ -3,8 +3,9 @@ package isa_test
 import (
 	"testing"
 
-	"github.com/kode4food/argex/internal/isa"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kode4food/argex/internal/isa"
 )
 
 func TestInstruction(t *testing.T) {

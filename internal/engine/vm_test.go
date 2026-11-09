@@ -7,8 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kode4food/argex"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kode4food/argex"
 )
 
 type evaluationCase struct {
@@ -66,7 +67,7 @@ func TestValues(t *testing.T) {
 		"key":       "name",
 		"offset":    3,
 		"trueValue": 9,
-		"世界":        "hello",
+		"世界":      "hello",
 	}
 	cases := []evaluationCase{
 		{source: "null", want: nil},

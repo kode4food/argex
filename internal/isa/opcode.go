@@ -21,6 +21,7 @@ const (
 
 const (
 	// Stack, constants, globals, and locals
+
 	Const  Opcode = iota // Push constant (operand = index)
 	Global               // Push input variable (operand = name index)
 	Load                 // Push local binding (operand = slot)
@@ -30,6 +31,7 @@ const (
 	Pop                  // Discard the top of the stack
 
 	// Property and index access
+
 	Access         // Replace receiver with property (operand = name index)
 	OptionalAccess // Access property, allowing missing receivers and members
 	Index          // Pop index, replace receiver with indexed value
@@ -38,6 +40,7 @@ const (
 	AssertType     // Check value against allowed types (operand = type set)
 
 	// Boolean operations and equality
+
 	Not      // Negate Boolean value
 	Eq       // Pop two values, push structural equality
 	Neq      // Pop two values, push structural inequality
@@ -48,6 +51,7 @@ const (
 	Boolean  // Check that the top of the stack is a Boolean
 
 	// Numeric operations
+
 	Pos // Convert operand to a number
 	Neg // Negate number
 	Add // Pop two values, push numeric sum or string concatenation
@@ -61,11 +65,13 @@ const (
 	Gte // Pop two numbers or strings, push left >= right
 
 	// Function calls
+
 	Call        // Call a resolved function (operand = call specification index)
 	CallDynamic // Pop function and N args, call it (operand = count)
 	CallWith    // Pop function and an array, call it with the array's elements
 
 	// Control flow
+
 	CondJump  // Pop condition, jump if false (operand = destination)
 	Jump      // Jump unconditionally (operand = destination)
 	JumpIf    // Pop condition, jump if true (operand = destination)
@@ -75,6 +81,7 @@ const (
 	JumpIfGte // Pop two values, jump if left >= right, comparing like Gte
 
 	// Construction and iteration
+
 	Array   // Pop values, push array (operand = count)
 	Object  // Pop values, push object (operand = property names index)
 	Push    // Pop a value, append it to the array being built
@@ -87,6 +94,7 @@ const (
 	Result  // Replace the iterator with its accumulated result
 
 	// Compilation only
+
 	Label // Mark a jump destination, removed when compiling finishes
 )
 

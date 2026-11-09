@@ -7,8 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kode4food/argex"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kode4food/argex"
 )
 
 func TestFunctionNumericInputs(t *testing.T) {

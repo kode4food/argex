@@ -1,5 +1,7 @@
 package engine
 
+import "errors"
+
 type caseBranch struct {
 	condition *node
 	value     *node
@@ -55,7 +57,7 @@ func (p *parser) caseArms() (*node, error) {
 func (p *parser) caseBranch() (caseBranch, error) {
 	start := *p
 	branch, err := p.parseCaseBranch()
-	if err == nil || err == ErrLimit {
+	if err == nil || errors.Is(err, ErrLimit) {
 		return branch, err
 	}
 	// A stage literal can resemble a pattern. Retry with the arm's colon
@@ -97,7 +99,7 @@ func (p *parser) caseBranch() (caseBranch, error) {
 				p.pos = trial.pos
 				return branch, nil
 			}
-			if trialErr == ErrLimit {
+			if errors.Is(trialErr, ErrLimit) {
 				return caseBranch{}, trialErr
 			}
 		}

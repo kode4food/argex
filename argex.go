@@ -27,15 +27,15 @@ type (
 )
 
 const (
-	TypeBool     TypeTag = engine.TypeBool
-	TypeNumber   TypeTag = engine.TypeNumber
-	TypeString   TypeTag = engine.TypeString
-	TypeArray    TypeTag = engine.TypeArray
-	TypeObject   TypeTag = engine.TypeObject
-	TypeNull     TypeTag = engine.TypeNull
-	TypeMissing  TypeTag = engine.TypeMissing
-	TypeFunction TypeTag = engine.TypeFunction
-	TypeAny      TypeTag = engine.TypeAny
+	TypeBool     = engine.TypeBool
+	TypeNumber   = engine.TypeNumber
+	TypeString   = engine.TypeString
+	TypeArray    = engine.TypeArray
+	TypeObject   = engine.TypeObject
+	TypeNull     = engine.TypeNull
+	TypeMissing  = engine.TypeMissing
+	TypeFunction = engine.TypeFunction
+	TypeAny      = engine.TypeAny
 )
 
 var (

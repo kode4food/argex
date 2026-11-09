@@ -206,7 +206,7 @@ func effectiveReceiverType(n *node) TypeSet {
 // ErrMissing, not ErrType
 func checkReceiver(n *node, allowed TypeSet) error {
 	receiverType := effectiveReceiverType(n)
-	if !receiverType.Known() || receiverType == 0 {
+	if !receiverType.Known() {
 		return nil
 	}
 	if receiverType&^(TypeSet(TypeMissing)|TypeSet(TypeNull)) == 0 {
@@ -239,7 +239,7 @@ func checkSpreads(n *node, want TypeTag) error {
 // are skipped, so only the remaining types are checked
 func checkContainerSource(n *node, want TypeTag) error {
 	sourceType := n.inferred &^ (TypeSet(TypeMissing) | TypeSet(TypeNull))
-	if !sourceType.Known() || sourceType == 0 {
+	if !sourceType.Known() {
 		return nil
 	}
 	if !sourceType.Has(want) {
