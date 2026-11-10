@@ -55,7 +55,11 @@ func TestRun(t *testing.T) {
 			input: `[1]`,
 			want:  "[1]\n",
 		},
-		{name: "no input", args: []string{"-n", "this ?? 3"}, want: "null\n"},
+		{
+			name: "no input",
+			args: []string{"-n", "this ?? 3"},
+			want: "null\n",
+		},
 		{
 			name:  "value stream",
 			args:  []string{"-c", "this.a"},
@@ -86,7 +90,12 @@ func TestRun(t *testing.T) {
 			input: `{"a":"<b>"}`,
 			want:  "\"<b>\"\n",
 		},
-		{name: "empty input", args: []string{"this"}, input: "", want: ""},
+		{
+			name:  "empty input",
+			args:  []string{"this"},
+			input: "",
+			want:  "",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -120,17 +129,37 @@ func TestRunHelp(t *testing.T) {
 
 func TestRunErrors(t *testing.T) {
 	cases := []errorCase{
-		{name: "no expression", want: app.ErrUsage},
-		{name: "unknown flag", args: []string{"-x", "this"}, want: app.ErrUsage},
-		{name: "syntax", args: []string{"1 +"}, want: argex.ErrSyntax},
-		{name: "unknown func", args: []string{"nope()"}, want: argex.ErrFunction},
+		{
+			name: "no expression",
+			want: app.ErrUsage,
+		},
+		{
+			name: "unknown flag",
+			args: []string{"-x", "this"},
+			want: app.ErrUsage,
+		},
+		{
+			name: "syntax",
+			args: []string{"1 +"},
+			want: argex.ErrSyntax,
+		},
+		{
+			name: "unknown func",
+			args: []string{"nope()"},
+			want: argex.ErrFunction,
+		},
 		{
 			name:  "runtime",
 			args:  []string{"a + 1"},
 			input: `{"a":"x"}`,
 			want:  argex.ErrType,
 		},
-		{name: "invalid json", args: []string{"this"}, input: "{", want: app.ErrInput},
+		{
+			name:  "invalid json",
+			args:  []string{"this"},
+			input: "{",
+			want:  app.ErrInput,
+		},
 		{
 			name:  "missing in json",
 			args:  []string{"[absent]"},

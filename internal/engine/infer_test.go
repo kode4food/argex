@@ -21,25 +21,58 @@ func TestStaticType(t *testing.T) {
 			src:  `case { str == "hello": true, -1 }`,
 			want: "bool|number",
 		},
-		"equality is always bool": {src: `str == "hello"`, want: "bool"},
-		"bare name is any":        {src: `value.status`, want: "any"},
+		"equality is always bool": {
+			src:  `str == "hello"`,
+			want: "bool",
+		},
+		"bare name is any": {
+			src:  `value.status`,
+			want: "any",
+		},
 		"optional access adds missing": {
 			src:  `value?.status`,
 			want: "missing|any",
 		},
-		"typed builtin result": {src: `length(value)`, want: "number"},
+		"typed builtin result": {
+			src:  `length(value)`,
+			want: "number",
+		},
 		"all is always bool": {
 			src:  `checks | all check: check.passed`,
 			want: "bool",
 		},
-		"add two numbers":          {src: `1 + 2`, want: "number"},
-		"add two strings":          {src: `"a" + "b"`, want: "string"},
-		"add an unknown left side": {src: `value + 1`, want: "number|string"},
-		"coalesce with unknown":    {src: `a ?? "x"`, want: "string|any"},
-		"coalesce preserves null":  {src: `null ?? 1`, want: "null"},
-		"coalesce preserves type":  {src: `1 ?? "x"`, want: "number"},
-		"array literal":            {src: `[1, 2, 3]`, want: "array"},
-		"object literal":           {src: `{a: 1}`, want: "object"},
+		"add two numbers": {
+			src:  `1 + 2`,
+			want: "number",
+		},
+		"add two strings": {
+			src:  `"a" + "b"`,
+			want: "string",
+		},
+		"add an unknown left side": {
+			src:  `value + 1`,
+			want: "number|string",
+		},
+		"coalesce with unknown": {
+			src:  `a ?? "x"`,
+			want: "string|any",
+		},
+		"coalesce preserves null": {
+			src:  `null ?? 1`,
+			want: "null",
+		},
+		"coalesce preserves type": {
+			src:  `1 ?? "x"`,
+			want: "number",
+		},
+		"array literal": {
+			src:  `[1, 2, 3]`,
+			want: "array",
+		},
+		"object literal": {
+			src:  `{a: 1}`,
+			want: "object",
+		},
 		"map is always array": {
 			src:  `items | map v: v.x`,
 			want: "array",
@@ -52,20 +85,38 @@ func TestStaticType(t *testing.T) {
 			src:  `items | reduce t = 0, v: t`,
 			want: "number|any",
 		},
-		"let body type":          {src: `let x = 1: [x]`, want: "array"},
-		"let name carries type":  {src: `let s = "a": s`, want: "string"},
-		"later let sees earlier": {src: `let x = 1, y = x: y`, want: "number"},
+		"let body type": {
+			src:  `let x = 1: [x]`,
+			want: "array",
+		},
+		"let name carries type": {
+			src:  `let s = "a": s`,
+			want: "string",
+		},
+		"later let sees earlier": {
+			src:  `let x = 1, y = x: y`,
+			want: "number",
+		},
 		"stage shadows let": {
 			src:  `let x = 1: (xs | map x: x)[0]`,
 			want: "any",
 		},
-		"unbound name stays any": {src: `let x = 1: y`, want: "any"},
+		"unbound name stays any": {
+			src:  `let x = 1: y`,
+			want: "any",
+		},
 		"subject case arms": {
 			src:  `case status { "a": 1, "b": "x", null }`,
 			want: "number|string|null",
 		},
-		"global function":    {src: `length`, want: "function"},
-		"let shadows global": {src: `let length = 1: length`, want: "number"},
+		"global function": {
+			src:  `length`,
+			want: "function",
+		},
+		"let shadows global": {
+			src:  `let length = 1: length`,
+			want: "number",
+		},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {

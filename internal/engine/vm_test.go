@@ -43,7 +43,9 @@ func TestColonContexts(t *testing.T) {
 			map[string]any{"value": 20, "category": map[string]any{"label": "medium"}},
 			map[string]any{"value": 150, "category": map[string]any{"label": "large"}},
 		},
-		"fallback": map[string]any{"value": float64(3)},
+		"fallback": map[string]any{
+			"value": float64(3),
+		},
 	}, result)
 }
 
@@ -64,12 +66,30 @@ func TestValues(t *testing.T) {
 		"世界":        "hello",
 	}
 	cases := []evaluationCase{
-		{source: "null", want: nil},
-		{source: "true", want: true},
-		{source: "false", want: false},
-		{source: "0", want: float64(0)},
-		{source: "-1.5e+2", want: float64(-150)},
-		{source: "2E-2", want: 0.02},
+		{
+			source: "null",
+			want:   nil,
+		},
+		{
+			source: "true",
+			want:   true,
+		},
+		{
+			source: "false",
+			want:   false,
+		},
+		{
+			source: "0",
+			want:   float64(0),
+		},
+		{
+			source: "-1.5e+2",
+			want:   float64(-150),
+		},
+		{
+			source: "2E-2",
+			want:   0.02,
+		},
 		{
 			source: `"hello\n\u263a"`,
 			want:   "hello\n☺",
@@ -90,19 +110,46 @@ func TestValues(t *testing.T) {
 			source: `""`,
 			want:   "",
 		},
-		{source: "世界", want: "hello"},
-		{source: "trueValue", want: 9},
-		{source: "customer.address.country", want: "CH"},
+		{
+			source: "世界",
+			want:   "hello",
+		},
+		{
+			source: "trueValue",
+			want:   9,
+		},
+		{
+			source: "customer.address.country",
+			want:   "CH",
+		},
 		{
 			source: `customer["address"]["country"]`,
 			want:   "CH",
 		},
-		{source: "customer[key]", want: "Ada"},
-		{source: "customer.map", want: "property"},
-		{source: "items[index]", want: 5},
-		{source: "[1, 2,][0]", want: float64(1)},
-		{source: "[]", want: []any{}},
-		{source: "{}", want: map[string]any{}},
+		{
+			source: "customer[key]",
+			want:   "Ada",
+		},
+		{
+			source: "customer.map",
+			want:   "property",
+		},
+		{
+			source: "items[index]",
+			want:   5,
+		},
+		{
+			source: "[1, 2,][0]",
+			want:   float64(1),
+		},
+		{
+			source: "[]",
+			want:   []any{},
+		},
+		{
+			source: "{}",
+			want:   map[string]any{},
+		},
 		{
 			source: `{x: 1, "y": [true, null],}`,
 			want: map[string]any{
@@ -110,35 +157,80 @@ func TestValues(t *testing.T) {
 				"y": []any{true, nil},
 			},
 		},
-		{source: "customer?.address?.country", want: "CH"},
-		{source: "items?.[1]", want: 5},
+		{
+			source: "customer?.address?.country",
+			want:   "CH",
+		},
+		{
+			source: "items?.[1]",
+			want:   5,
+		},
 		{
 			source: `missing?.field ?? "fallback"`,
 			want:   "fallback",
 		},
-		{source: "customer.nullable ?? 4", want: nil},
-		{source: "missing ?? null ?? 4", want: nil},
-		{source: "false ?? true", want: false},
-		{source: "0 ?? 4", want: float64(0)},
+		{
+			source: "customer.nullable ?? 4",
+			want:   nil,
+		},
+		{
+			source: "missing ?? null ?? 4",
+			want:   nil,
+		},
+		{
+			source: "false ?? true",
+			want:   false,
+		},
+		{
+			source: "0 ?? 4",
+			want:   float64(0),
+		},
 		{
 			source: `"" ?? "fallback"`,
 			want:   "",
 		},
-		{source: "items?.[99] ?? 8", want: float64(8)},
-		{source: "items?.[-1] ?? 8", want: float64(8)},
-		{source: "missing?.[1/0] ?? 8", want: float64(8)},
-		{source: "customer?.absent ?? 8", want: float64(8)},
-		{source: "missing == null", want: false},
-		{source: "missing == another_missing", want: true},
-		{source: "customer.nullable == null", want: true},
-		{source: "{kept: null, omitted: missing}", want: map[string]any{"kept": nil}},
+		{
+			source: "items?.[99] ?? 8",
+			want:   float64(8),
+		},
+		{
+			source: "items?.[-1] ?? 8",
+			want:   float64(8),
+		},
+		{
+			source: "missing?.[1/0] ?? 8",
+			want:   float64(8),
+		},
+		{
+			source: "customer?.absent ?? 8",
+			want:   float64(8),
+		},
+		{
+			source: "missing == null",
+			want:   false,
+		},
+		{
+			source: "missing == another_missing",
+			want:   true,
+		},
+		{
+			source: "customer.nullable == null",
+			want:   true,
+		},
+		{
+			source: "{kept: null, omitted: missing}",
+			want:   map[string]any{"kept": nil},
+		},
 		{
 			source: "items | map item: item + offset",
 			want: []any{
 				float64(4), float64(8), float64(14), float64(104),
 			},
 		},
-		{source: "items | filter item: item > 10", want: []any{11, 101}},
+		{
+			source: "items | filter item: item > 10",
+			want:   []any{11, 101},
+		},
 		{
 			source: `(items | filter item: item > 10) | map item: case {
 				item > 100: "large", "medium",
@@ -170,18 +262,42 @@ func TestValues(t *testing.T) {
 			source: `[] | filter item: true`,
 			want:   []any{},
 		},
-		{source: "items | reduce total = 0, item: total + item", want: float64(118)},
-		{source: "[] | reduce total = offset, x: total + x", want: 3},
-		{source: "items | filter item: item > 10 | reduce n = 0: n + 1", want: float64(2)},
-		{source: "items | map item: item * 2 | reduce t = 0, d: t + d", want: float64(236)},
+		{
+			source: "items | reduce total = 0, item: total + item",
+			want:   float64(118),
+		},
+		{
+			source: "[] | reduce total = offset, x: total + x",
+			want:   3,
+		},
+		{
+			source: "items | filter item: item > 10 | reduce n = 0: n + 1",
+			want:   float64(2),
+		},
+		{
+			source: "items | map item: item * 2 | reduce t = 0, d: t + d",
+			want:   float64(236),
+		},
 		{
 			source: "customer | reduce keys = [], key, _: [...keys, key]",
 			want:   []any{"address", "map", "name", "nullable"},
 		},
-		{source: "second | reduce item = 0, item: item", want: 4},
-		{source: "second | reduce _ = 0, item: item", want: 4},
-		{source: "second | reduce acc = [], item: [item, ...acc] | map x: x", want: []any{4, 2}},
-		{source: "items | reduce t = offset, item: t + item + offset", want: float64(133)},
+		{
+			source: "second | reduce item = 0, item: item",
+			want:   4,
+		},
+		{
+			source: "second | reduce _ = 0, item: item",
+			want:   4,
+		},
+		{
+			source: "second | reduce acc = [], item: [item, ...acc] | map x: x",
+			want:   []any{4, 2},
+		},
+		{
+			source: "items | reduce t = offset, item: t + item + offset",
+			want:   float64(133),
+		},
 		{
 			source: "second | map x: (items | reduce t = x, item: t + item)",
 			want:   []any{float64(120), float64(122)},
@@ -191,16 +307,34 @@ func TestValues(t *testing.T) {
 				x: [...t, x]`,
 			want: []any{float64(6), float64(12), 2, 4},
 		},
-		{source: "case {false: 1, true: 2, 3}", want: float64(2)},
-		{source: "case {false: 1, 3}", want: float64(3)},
-		{source: "case {true: 1, 1 / 0}", want: float64(1)},
-		{source: "case {false: 1 / 0, 3}", want: float64(3)},
-		{source: "case {true: 1, 1 / 0 > 2: 2, 3}", want: float64(1)},
+		{
+			source: "case {false: 1, true: 2, 3}",
+			want:   float64(2),
+		},
+		{
+			source: "case {false: 1, 3}",
+			want:   float64(3),
+		},
+		{
+			source: "case {true: 1, 1 / 0}",
+			want:   float64(1),
+		},
+		{
+			source: "case {false: 1 / 0, 3}",
+			want:   float64(3),
+		},
+		{
+			source: "case {true: 1, 1 / 0 > 2: 2, 3}",
+			want:   float64(1),
+		},
 		{
 			source: `case { false: 0, case { true: 2, 3 } }`,
 			want:   float64(2),
 		},
-		{source: "case {false: 0, -2 < 0: 4, 5}", want: float64(4)},
+		{
+			source: "case {false: 0, -2 < 0: 4, 5}",
+			want:   float64(4),
+		},
 		{
 			source: `(case { true: [1], [], }) | map x: x + 1`,
 			want:   []any{float64(2)},
@@ -223,24 +357,50 @@ func TestMissingOnlyAccess(t *testing.T) {
 		want   any
 		err    error
 	}{
-		{name: "null fallback", source: "this ?? 7"},
-		{name: "false fallback", source: "this ?? 7", input: false, want: false},
-		{name: "zero fallback", source: "this ?? 7", input: 0, want: 0},
-		{name: "empty fallback", source: "this ?? 7", input: "", want: ""},
+		{
+			name:   "null fallback",
+			source: "this ?? 7",
+		},
+		{
+			name:   "false fallback",
+			source: "this ?? 7",
+			input:  false,
+			want:   false,
+		},
+		{
+			name:   "zero fallback",
+			source: "this ?? 7",
+			input:  0,
+			want:   0,
+		},
+		{
+			name:   "empty fallback",
+			source: "this ?? 7",
+			input:  "",
+			want:   "",
+		},
 		{
 			name:   "missing fallback",
 			source: "this ?? 7",
 			input:  argex.Missing{},
 			want:   float64(7),
 		},
-		{name: "null receiver", source: "this?.field ?? 7", err: argex.ErrMissing},
+		{
+			name:   "null receiver",
+			source: "this?.field ?? 7",
+			err:    argex.ErrMissing,
+		},
 		{
 			name:   "missing receiver",
 			source: "this?.field ?? 7",
 			input:  argex.Missing{},
 			want:   float64(7),
 		},
-		{name: "null member", source: "this?.field ?? 7", input: map[string]any{"field": nil}},
+		{
+			name:   "null member",
+			source: "this?.field ?? 7",
+			input:  map[string]any{"field": nil},
+		},
 		{
 			name:   "null intermediate",
 			source: "this?.field?.child ?? 7",
@@ -253,15 +413,28 @@ func TestMissingOnlyAccess(t *testing.T) {
 			input:  map[string]any{},
 			want:   float64(7),
 		},
-		{name: "null index receiver", source: "this?.[0] ?? 7", err: argex.ErrMissing},
-		{name: "null array element", source: "this?.[0] ?? 7", input: []any{nil}},
+		{
+			name:   "null index receiver",
+			source: "this?.[0] ?? 7",
+			err:    argex.ErrMissing,
+		},
+		{
+			name:   "null array element",
+			source: "this?.[0] ?? 7",
+			input:  []any{nil},
+		},
 		{
 			name:   "missing array position",
 			source: "this?.[0] ?? 7",
 			input:  []any{},
 			want:   float64(7),
 		},
-		{name: "wrong receiver", source: "this?.field", input: false, err: argex.ErrType},
+		{
+			name:   "wrong receiver",
+			source: "this?.field",
+			input:  false,
+			err:    argex.ErrType,
+		},
 		{
 			name:   "present null member",
 			source: "this?.field",
@@ -326,20 +499,62 @@ func TestMissingOnlyShortCircuit(t *testing.T) {
 
 func TestOperators(t *testing.T) {
 	cases := []evaluationCase{
-		{source: "2 + 3 * 4", want: float64(14)},
-		{source: "(2 + 3) * 4", want: float64(20)},
-		{source: "10 - 3 - 2", want: float64(5)},
-		{source: "20 / 2 / 5", want: float64(2)},
-		{source: "17 % 5", want: float64(2)},
-		{source: "-17 % 5", want: float64(-2)},
-		{source: "+2 * -3", want: float64(-6)},
-		{source: "!false && true", want: true},
-		{source: "true || false && false", want: true},
-		{source: "2 + 3 == 5 && 1 < 2", want: true},
-		{source: "1 != 2", want: true},
-		{source: "1 <= 1", want: true},
-		{source: "2 >= 1", want: true},
-		{source: "2 > 1", want: true},
+		{
+			source: "2 + 3 * 4",
+			want:   float64(14),
+		},
+		{
+			source: "(2 + 3) * 4",
+			want:   float64(20),
+		},
+		{
+			source: "10 - 3 - 2",
+			want:   float64(5),
+		},
+		{
+			source: "20 / 2 / 5",
+			want:   float64(2),
+		},
+		{
+			source: "17 % 5",
+			want:   float64(2),
+		},
+		{
+			source: "-17 % 5",
+			want:   float64(-2),
+		},
+		{
+			source: "+2 * -3",
+			want:   float64(-6),
+		},
+		{
+			source: "!false && true",
+			want:   true,
+		},
+		{
+			source: "true || false && false",
+			want:   true,
+		},
+		{
+			source: "2 + 3 == 5 && 1 < 2",
+			want:   true,
+		},
+		{
+			source: "1 != 2",
+			want:   true,
+		},
+		{
+			source: "1 <= 1",
+			want:   true,
+		},
+		{
+			source: "2 >= 1",
+			want:   true,
+		},
+		{
+			source: "2 > 1",
+			want:   true,
+		},
 		{
 			source: `"a" + "b"`,
 			want:   "ab",
@@ -364,31 +579,94 @@ func TestOperators(t *testing.T) {
 			source: `"3" == 3`,
 			want:   false,
 		},
-		{source: "[1, {a: 2}] == [1, {a: 2}]", want: true},
-		{source: "[1] == []", want: false},
-		{source: "[1] == 1", want: false},
-		{source: "[1] == [2]", want: false},
-		{source: "{} == []", want: false},
-		{source: "{a:1} == {}", want: false},
-		{source: "{a:1} == {b:1}", want: false},
-		{source: "{a:1} == {a:2}", want: false},
-		{source: "false && (1 / 0 > 0)", want: false},
-		{source: "true || missing.field", want: true},
-		{source: "1 ?? missing.field", want: float64(1)},
-		{source: "false || true", want: true},
-		{source: "true && false", want: false},
-		{source: "missing ?? 2 + 3 == 5", want: true},
-		{source: "false ?? true || true", want: true},
-		{source: "length([1,2])", want: float64(2)},
-		{source: "length({a: 1})", want: float64(1)},
+		{
+			source: "[1, {a: 2}] == [1, {a: 2}]",
+			want:   true,
+		},
+		{
+			source: "[1] == []",
+			want:   false,
+		},
+		{
+			source: "[1] == 1",
+			want:   false,
+		},
+		{
+			source: "[1] == [2]",
+			want:   false,
+		},
+		{
+			source: "{} == []",
+			want:   false,
+		},
+		{
+			source: "{a:1} == {}",
+			want:   false,
+		},
+		{
+			source: "{a:1} == {b:1}",
+			want:   false,
+		},
+		{
+			source: "{a:1} == {a:2}",
+			want:   false,
+		},
+		{
+			source: "false && (1 / 0 > 0)",
+			want:   false,
+		},
+		{
+			source: "true || missing.field",
+			want:   true,
+		},
+		{
+			source: "1 ?? missing.field",
+			want:   float64(1),
+		},
+		{
+			source: "false || true",
+			want:   true,
+		},
+		{
+			source: "true && false",
+			want:   false,
+		},
+		{
+			source: "missing ?? 2 + 3 == 5",
+			want:   true,
+		},
+		{
+			source: "false ?? true || true",
+			want:   true,
+		},
+		{
+			source: "length([1,2])",
+			want:   float64(2),
+		},
+		{
+			source: "length({a: 1})",
+			want:   float64(1),
+		},
 		{
 			source: `length("é😀")`,
 			want:   float64(2),
 		},
-		{source: "abs(-5)", want: float64(5)},
-		{source: "min(5, 1, 4)", want: float64(1)},
-		{source: "max(5, 1, 9)", want: float64(9)},
-		{source: "min(5)", want: float64(5)},
+		{
+			source: "abs(-5)",
+			want:   float64(5),
+		},
+		{
+			source: "min(5, 1, 4)",
+			want:   float64(1),
+		},
+		{
+			source: "max(5, 1, 9)",
+			want:   float64(9),
+		},
+		{
+			source: "min(5)",
+			want:   float64(5),
+		},
 		{
 			source: `endsWith("abc", "bc")`,
 			want:   true,
@@ -413,7 +691,10 @@ func TestOperators(t *testing.T) {
 			source: `values({a: 1, b: 2})`,
 			want:   []any{float64(1), float64(2)},
 		},
-		{source: "[10, 20] | map i, v: i + v", want: []any{float64(10), float64(21)}},
+		{
+			source: "[10, 20] | map i, v: i + v",
+			want:   []any{float64(10), float64(21)},
+		},
 		{
 			source: `{a: 1, b: 2} | map k, v: k`,
 			want:   []any{"a", "b"},
@@ -460,15 +741,30 @@ func TestComparisonJumps(t *testing.T) {
 			source: `case { s >= "n": "a", "b" }`,
 			want:   "b",
 		},
-		{source: "items | filter x: x > 4", want: []any{5, 11}},
+		{
+			source: "items | filter x: x > 4",
+			want:   []any{5, 11},
+		},
 		{
 			source: "(items | filter x: x >= 5) | map x: x * 2",
 			want:   []any{float64(10), float64(22)},
 		},
-		{source: "items | any x: x > 10", want: true},
-		{source: "items | any x: x > 11", want: false},
-		{source: "items | all x: x >= 1", want: true},
-		{source: "items | all x: x < 11", want: false},
+		{
+			source: "items | any x: x > 10",
+			want:   true,
+		},
+		{
+			source: "items | any x: x > 11",
+			want:   false,
+		},
+		{
+			source: "items | all x: x >= 1",
+			want:   true,
+		},
+		{
+			source: "items | all x: x < 11",
+			want:   false,
+		},
 		{
 			source: `case { flag ?? n < 1: "a", "b" }`,
 			want:   "a",
@@ -526,16 +822,28 @@ func TestLoopNames(t *testing.T) {
 		"items": []any{1, 2},
 	}
 	cases := []evaluationCase{
-		{source: "[items | map i: i + r, r]", want: []any{[]any{float64(11), float64(12)}, 10}},
+		{
+			source: "[items | map i: i + r, r]",
+			want:   []any{[]any{float64(11), float64(12)}, 10},
+		},
 		{
 			source: "items | map i: items",
 			want: []any{
 				[]any{1, 2}, []any{1, 2},
 			},
 		},
-		{source: "[[] | map i: x, x]", want: []any{[]any{}, 1}},
-		{source: "case {t: items | map i: r, 0}", want: []any{10, 10}},
-		{source: "case {f: items | map i: r, x}", want: 1},
+		{
+			source: "[[] | map i: x, x]",
+			want:   []any{[]any{}, 1},
+		},
+		{
+			source: "case {t: items | map i: r, 0}",
+			want:   []any{10, 10},
+		},
+		{
+			source: "case {f: items | map i: r, x}",
+			want:   1,
+		},
 		{
 			source: "items | map i: (items | map j: i * r)",
 			want: []any{
@@ -543,8 +851,14 @@ func TestLoopNames(t *testing.T) {
 				[]any{float64(20), float64(20)},
 			},
 		},
-		{source: "items | map i: (let r = 2: i * r)", want: []any{float64(2), float64(4)}},
-		{source: "items | map i: case {i > 1: x, absent}", want: []any{argex.Missing{}, 1}},
+		{
+			source: "items | map i: (let r = 2: i * r)",
+			want:   []any{float64(2), float64(4)},
+		},
+		{
+			source: "items | map i: case {i > 1: x, absent}",
+			want:   []any{argex.Missing{}, 1},
+		},
 		{
 			source: "[items | map i: r, items | filter i: i < x]",
 			want:   []any{[]any{10, 10}, []any{}},

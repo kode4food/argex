@@ -16,28 +16,82 @@ func TestPatternSyntax(t *testing.T) {
 		name   string
 		source string
 	}{
-		{name: "duplicate array name", source: "let [x, x] = []: 1"},
-		{name: "duplicate alias", source: "let {x, y: x} = {}: 1"},
-		{name: "duplicate key", source: "let {x, x: y} = {}: 1"},
-		{name: "reserved array name", source: "let [true] = []: 1"},
-		{name: "reserved shorthand", source: "let {null} = {}: 1"},
+		{
+			name:   "duplicate array name",
+			source: "let [x, x] = []: 1",
+		},
+		{
+			name:   "duplicate alias",
+			source: "let {x, y: x} = {}: 1",
+		},
+		{
+			name:   "duplicate key",
+			source: "let {x, x: y} = {}: 1",
+		},
+		{
+			name:   "reserved array name",
+			source: "let [true] = []: 1",
+		},
+		{
+			name:   "reserved shorthand",
+			source: "let {null} = {}: 1",
+		},
 		{
 			name:   "string shorthand",
 			source: `let {"x"} = {}: 1`,
 		},
-		{name: "missing target", source: "let {x:} = {}: 1"},
-		{name: "missing array default", source: "let [x = ] = []: 1"},
-		{name: "array rest", source: "let [...x] = []: 1"},
-		{name: "computed key", source: "let {[x]: y} = {}: 1"},
-		{name: "unclosed array", source: "let [x = []: x"},
-		{name: "unclosed object", source: "let {x = {}: x"},
-		{name: "literal target", source: "let 1 = []: 1"},
-		{name: "duplicate stage name", source: "[] | map i, {x, x}: x"},
-		{name: "reserved stage name", source: "[] | map [x, true]: x"},
-		{name: "mismatched brackets", source: "[] | map [x, {y]]: x"},
-		{name: "missing stage target", source: "[] | map {x:}: x"},
-		{name: "missing object default", source: "let {x =} = {}: x"},
-		{name: "duplicate default name", source: "let {x = 1, x} = {}: x"},
+		{
+			name:   "missing target",
+			source: "let {x:} = {}: 1",
+		},
+		{
+			name:   "missing array default",
+			source: "let [x = ] = []: 1",
+		},
+		{
+			name:   "array rest",
+			source: "let [...x] = []: 1",
+		},
+		{
+			name:   "computed key",
+			source: "let {[x]: y} = {}: 1",
+		},
+		{
+			name:   "unclosed array",
+			source: "let [x = []: x",
+		},
+		{
+			name:   "unclosed object",
+			source: "let {x = {}: x",
+		},
+		{
+			name:   "literal target",
+			source: "let 1 = []: 1",
+		},
+		{
+			name:   "duplicate stage name",
+			source: "[] | map i, {x, x}: x",
+		},
+		{
+			name:   "reserved stage name",
+			source: "[] | map [x, true]: x",
+		},
+		{
+			name:   "mismatched brackets",
+			source: "[] | map [x, {y]]: x",
+		},
+		{
+			name:   "missing stage target",
+			source: "[] | map {x:}: x",
+		},
+		{
+			name:   "missing object default",
+			source: "let {x =} = {}: x",
+		},
+		{
+			name:   "duplicate default name",
+			source: "let {x = 1, x} = {}: x",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := argex.Parse(tc.source)
@@ -73,7 +127,11 @@ func TestPatternColonContexts(t *testing.T) {
 				"case [{x: 1}] { [0] | map {x: y}: true, false }",
 			want: true,
 		},
-		{name: "array literal", source: "case [[1]] {[0] | map [1]: true, false}", want: true},
+		{
+			name:   "array literal",
+			source: "case [[1]] {[0] | map [1]: true, false}",
+			want:   true,
+		},
 		{
 			name: "pattern shaped array literal",
 			source: "let x = 1: " +
@@ -124,9 +182,21 @@ func TestPatternNames(t *testing.T) {
 			source: "let {x, y: [z]} = source, [n] = z: x + n + extra",
 			want:   []string{"extra", "source"},
 		},
-		{name: "source scope", source: "let {x} = x: x", want: []string{"x"}},
-		{name: "discard", source: "let {x: _} = source: _", want: []string{"_", "source"}},
-		{name: "stage scope", source: "items | map {x}: x | map x", want: []string{"items"}},
+		{
+			name:   "source scope",
+			source: "let {x} = x: x",
+			want:   []string{"x"},
+		},
+		{
+			name:   "discard",
+			source: "let {x: _} = source: _",
+			want:   []string{"_", "source"},
+		},
+		{
+			name:   "stage scope",
+			source: "items | map {x}: x | map x",
+			want:   []string{"items"},
+		},
 		{
 			name:   "key scope",
 			source: "items | map key, [x]: key + x + extra",
@@ -184,15 +254,31 @@ func TestPatternTypes(t *testing.T) {
 		source string
 		want   error
 	}{
-		{name: "array source", source: "let [] = 1: 0", want: argex.ErrType},
-		{name: "object source", source: "let {} = []: 0", want: argex.ErrType},
+		{
+			name:   "array source",
+			source: "let [] = 1: 0",
+			want:   argex.ErrType,
+		},
+		{
+			name:   "object source",
+			source: "let {} = []: 0",
+			want:   argex.ErrType,
+		},
 		{
 			name:   "numeric object key",
 			source: `let [x] = {"0": 1}: x`,
 			want:   argex.ErrType,
 		},
-		{name: "null array source", source: "let [] = null: 0", want: argex.ErrMissing},
-		{name: "null object source", source: "let {} = null: 0", want: argex.ErrMissing},
+		{
+			name:   "null array source",
+			source: "let [] = null: 0",
+			want:   argex.ErrMissing,
+		},
+		{
+			name:   "null object source",
+			source: "let {} = null: 0",
+			want:   argex.ErrMissing,
+		},
 		{
 			name:   "null source with default",
 			source: "let {x = 1} = null: x",
@@ -203,7 +289,11 @@ func TestPatternTypes(t *testing.T) {
 			source: "let {x} = null ?? {x: 7}: x",
 			want:   argex.ErrMissing,
 		},
-		{name: "default type", source: "let {x = true + 1} = {x: 3}: x", want: argex.ErrType},
+		{
+			name:   "default type",
+			source: "let {x = true + 1} = {x: 3}: x",
+			want:   argex.ErrType,
+		},
 		{
 			name:   "unknown function",
 			source: "let {x = unknown()} = {x: 3}: x",
