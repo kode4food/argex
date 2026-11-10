@@ -86,7 +86,10 @@ func (c *compiler) callStatic(fn *Function, args []*node, depth int) error {
 			return err
 		}
 	}
-	spec := callSpec{call: fn.Call, arity: fixed}
+	spec := callSpec{
+		call:  fn.Call,
+		arity: fixed,
+	}
 	c.emit(isa.Call, c.constant(spec))
 	return nil
 }

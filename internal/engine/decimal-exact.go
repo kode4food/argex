@@ -18,10 +18,16 @@ func exactAdd(left, right float64) float64 {
 		return left + right
 	}
 	if r, ok := decimalAdd(left, right); ok {
-		return nonZeroOr(nonZeroOrArgs{result: r, zero: left + right})
+		return nonZeroOr(nonZeroOrArgs{
+			result: r,
+			zero:   left + right,
+		})
 	}
 	exact := toFloat(new(big.Rat).Add(toExact(left), toExact(right)))
-	return nonZeroOr(nonZeroOrArgs{result: exact, zero: left + right})
+	return nonZeroOr(nonZeroOrArgs{
+		result: exact,
+		zero:   left + right,
+	})
 }
 
 func exactSub(left, right float64) float64 {
@@ -29,10 +35,16 @@ func exactSub(left, right float64) float64 {
 		return left - right
 	}
 	if r, ok := decimalAdd(left, -right); ok {
-		return nonZeroOr(nonZeroOrArgs{result: r, zero: left - right})
+		return nonZeroOr(nonZeroOrArgs{
+			result: r,
+			zero:   left - right,
+		})
 	}
 	exact := toFloat(new(big.Rat).Sub(toExact(left), toExact(right)))
-	return nonZeroOr(nonZeroOrArgs{result: exact, zero: left - right})
+	return nonZeroOr(nonZeroOrArgs{
+		result: exact,
+		zero:   left - right,
+	})
 }
 
 func exactMul(left, right float64) float64 {
@@ -40,10 +52,16 @@ func exactMul(left, right float64) float64 {
 		return left * right
 	}
 	if r, ok := decimalMul(left, right); ok {
-		return nonZeroOr(nonZeroOrArgs{result: r, zero: left * right})
+		return nonZeroOr(nonZeroOrArgs{
+			result: r,
+			zero:   left * right,
+		})
 	}
 	exact := toFloat(new(big.Rat).Mul(toExact(left), toExact(right)))
-	return nonZeroOr(nonZeroOrArgs{result: exact, zero: left * right})
+	return nonZeroOr(nonZeroOrArgs{
+		result: exact,
+		zero:   left * right,
+	})
 }
 
 // exactQuo requires a non-zero divisor. IEEE division of two exact integers already rounds the
@@ -53,10 +71,16 @@ func exactQuo(left, right float64) float64 {
 		return left / right
 	}
 	if r, ok := decimalQuo(left, right); ok {
-		return nonZeroOr(nonZeroOrArgs{result: r, zero: left / right})
+		return nonZeroOr(nonZeroOrArgs{
+			result: r,
+			zero:   left / right,
+		})
 	}
 	exact := toFloat(new(big.Rat).Quo(toExact(left), toExact(right)))
-	return nonZeroOr(nonZeroOrArgs{result: exact, zero: left / right})
+	return nonZeroOr(nonZeroOrArgs{
+		result: exact,
+		zero:   left / right,
+	})
 }
 
 // exactMod truncates the quotient, so the result takes the dividend's sign as math.Mod does. It
@@ -67,7 +91,10 @@ func exactMod(left, right float64) float64 {
 	}
 	zero := math.Copysign(0, left)
 	if r, ok := decimalMod(left, right); ok {
-		return nonZeroOr(nonZeroOrArgs{result: r, zero: zero})
+		return nonZeroOr(nonZeroOrArgs{
+			result: r,
+			zero:   zero,
+		})
 	}
 	dividend := toExact(left)
 	divisor := toExact(right)
@@ -75,7 +102,10 @@ func exactMod(left, right float64) float64 {
 	whole := new(big.Int).Quo(quo.Num(), quo.Denom())
 	taken := new(big.Rat).Mul(divisor, new(big.Rat).SetInt(whole))
 	exact := toFloat(taken.Sub(dividend, taken))
-	return nonZeroOr(nonZeroOrArgs{result: exact, zero: zero})
+	return nonZeroOr(nonZeroOrArgs{
+		result: exact,
+		zero:   zero,
+	})
 }
 
 // exactSum totals finite numbers exactly and rounds once, at one shared scale while the total fits

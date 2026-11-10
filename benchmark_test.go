@@ -29,14 +29,8 @@ func BenchmarkCompile(b *testing.B) {
 		{name: "literal", source: "1"},
 		{name: "input", source: "this"},
 		{name: "access", source: "a?.b?.c ?? false"},
-		{
-			name:   "arithmetic",
-			source: "(input * price + output * rate) * (1 + tax)",
-		},
-		{
-			name:   "pipeline",
-			source: "items | map x: x * 2 | filter y: y > 128 | any z: z > 256",
-		},
+		{name: "arithmetic", source: "(input * price + output * rate) * (1 + tax)"},
+		{name: "pipeline", source: "items | map x: x * 2 | filter y: y > 128 | any z: z > 256"},
 		{
 			name:   "match",
 			source: `case status { "paid": "ship", "pending": "wait", "stop" }`,
@@ -50,11 +44,7 @@ func BenchmarkCompile(b *testing.B) {
 			name:   "object",
 			source: `{["name"]: user.name, active: user.active, ...defaults}`,
 		},
-		{
-			name: "array256",
-			source: "[" +
-				strings.Repeat("item,", benchmarkCollectionSize) + "]",
-		},
+		{name: "array256", source: "[" + strings.Repeat("item,", benchmarkCollectionSize) + "]"},
 	} {
 		b.Run(tc.name, func(b *testing.B) {
 			expr, err := argex.Parse(tc.source)
@@ -128,34 +118,16 @@ func BenchmarkBindingPatterns(b *testing.B) {
 		"none":  []any{},
 	}
 	for _, tc := range []benchmarkCase{
-		{
-			name:   "object/manual",
-			source: "let item = input, x = item.x, y = item.y: x + y",
-		},
+		{name: "object/manual", source: "let item = input, x = item.x, y = item.y: x + y"},
 		{name: "object/pattern", source: "let {x, y} = input: x + y"},
 		{name: "object/known", source: "let {x, y} = {x: 2, y: 3}: x + y"},
-		{
-			name:   "object/default-present",
-			source: "let {x = 2, y = 3} = input: x + y",
-		},
-		{
-			name:   "object/default-missing",
-			source: "let {x = 2, y = 3} = empty: x + y",
-		},
-		{
-			name:   "array/manual",
-			source: "let item = pair, x = item[0], y = item[1]: x + y",
-		},
+		{name: "object/default-present", source: "let {x = 2, y = 3} = input: x + y"},
+		{name: "object/default-missing", source: "let {x = 2, y = 3} = empty: x + y"},
+		{name: "array/manual", source: "let item = pair, x = item[0], y = item[1]: x + y"},
 		{name: "array/pattern", source: "let [x, y] = pair: x + y"},
 		{name: "array/known", source: "let [x, y] = [2, 3]: x + y"},
-		{
-			name:   "array/default-present",
-			source: "let [x = 2, y = 3] = pair: x + y",
-		},
-		{
-			name:   "array/default-missing",
-			source: "let [x = 2, y = 3] = none: x + y",
-		},
+		{name: "array/default-present", source: "let [x = 2, y = 3] = pair: x + y"},
+		{name: "array/default-missing", source: "let [x = 2, y = 3] = none: x + y"},
 		{name: "map256/direct", source: "items | map item: item.x + item.y"},
 		{
 			name: "map256/manual",
@@ -163,10 +135,7 @@ func BenchmarkBindingPatterns(b *testing.B) {
 				"(let x = item.x, y = item.y: x + y)",
 		},
 		{name: "map256/pattern", source: "items | map {x, y}: x + y"},
-		{
-			name:   "map256/default-present",
-			source: "items | map {x = 0, y = 0}: x + y",
-		},
+		{name: "map256/default-present", source: "items | map {x = 0, y = 0}: x + y"},
 	} {
 		b.Run(tc.name, func(b *testing.B) {
 			expr, err := argex.Parse(tc.source)
@@ -220,23 +189,11 @@ func BenchmarkWorkloads(b *testing.B) {
 		{name: "all256", source: "items | all item: item >= 0"},
 		{name: "sum256", source: "sum(items)"},
 		{name: "reduce256", source: "items | reduce t = 0, item: t + item"},
-		{
-			name:   "chain256",
-			source: "items | map x: x * 2 | filter y: y > 128 | map z: z + 1",
-		},
-		{
-			name:   "keyedFirst256",
-			source: "items | map i, x: i * x | filter y: y > 100",
-		},
-		{
-			name:   "keyedLater256",
-			source: "items | filter x: x > 64 | map i, x: i + x",
-		},
+		{name: "chain256", source: "items | map x: x * 2 | filter y: y > 128 | map z: z + 1"},
+		{name: "keyedFirst256", source: "items | map i, x: i * x | filter y: y > 100"},
+		{name: "keyedLater256", source: "items | filter x: x > 64 | map i, x: i + x"},
 		{name: "anyChain256", source: "items | map x: x * 2 | any y: y > 256"},
-		{
-			name:   "allChain256",
-			source: "items | filter x: x > 10 | all y: y >= 0",
-		},
+		{name: "allChain256", source: "items | filter x: x > 10 | all y: y >= 0"},
 		{
 			name:   "nested",
 			source: `items | map item: ([1,2,3,4] | map inner: item + inner)`,
@@ -272,10 +229,7 @@ func BenchmarkMembership(b *testing.B) {
 		variables := map[string]any{"needle": needle, "items": items}
 		for _, tc := range []benchmarkCase{
 			{name: "in", source: "needle in items"},
-			{
-				name:   "filter",
-				source: "length(items | filter item: item == needle) > 0",
-			},
+			{name: "filter", source: "length(items | filter item: item == needle) > 0"},
 		} {
 			b.Run(needle+"/"+tc.name, func(b *testing.B) {
 				expr, err := argex.Parse(tc.source)

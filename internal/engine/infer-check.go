@@ -24,7 +24,10 @@ func (o operand) String() string {
 func checkNode(n *node) error {
 	switch n.kind {
 	case nodeCall:
-		what := operand{owner: "call", role: "callee"}
+		what := operand{
+			owner: "call",
+			role:  "callee",
+		}
 		callee := n.children[0]
 		if err := requireType(callee, TypeSet(TypeFunction), what); err != nil {
 			return err
@@ -56,7 +59,10 @@ func checkNode(n *node) error {
 		return checkSpreads(n, TypeObject)
 
 	case nodeComputed:
-		what := operand{owner: "computed member", role: "key"}
+		what := operand{
+			owner: "computed member",
+			role:  "key",
+		}
 		return requireType(n.children[0], TypeSet(TypeString), what)
 
 	case nodeCase:
@@ -115,7 +121,10 @@ func requireType(n *node, allowed TypeSet, what operand) error {
 }
 
 func checkUnary(n *node) error {
-	what := operand{owner: n.text, role: "operand"}
+	what := operand{
+		owner: n.text,
+		role:  "operand",
+	}
 	if n.text == opNot {
 		return requireType(n.children[0], TypeSet(TypeBool), what)
 	}
@@ -127,7 +136,10 @@ func checkBinary(n *node) error {
 	right := n.children[1]
 	switch n.text {
 	case opAnd, opOr:
-		what := operand{owner: n.text, role: "left operand"}
+		what := operand{
+			owner: n.text,
+			role:  "left operand",
+		}
 		if err := requireType(left, TypeSet(TypeBool), what); err != nil {
 			return err
 		}
@@ -135,14 +147,20 @@ func checkBinary(n *node) error {
 		return requireType(right, TypeSet(TypeBool), what)
 
 	case opIn:
-		what := operand{owner: opIn, role: "right operand"}
+		what := operand{
+			owner: opIn,
+			role:  "right operand",
+		}
 		return requireType(right, TypeSet(TypeArray), what)
 
 	case opEq, opNeq, opCoalesce:
 		return nil // structural equality and coalesce accept any type
 
 	case opSub, opMul, opDiv, opMod:
-		what := operand{owner: n.text, role: "left operand"}
+		what := operand{
+			owner: n.text,
+			role:  "left operand",
+		}
 		if err := requireType(left, numericSet, what); err != nil {
 			return err
 		}
@@ -161,7 +179,10 @@ func checkStringOrNumber(op string, left, right *node) error {
 	if !leftType.Known() {
 		return nil
 	}
-	what := operand{owner: op, role: "right operand"}
+	what := operand{
+		owner: op,
+		role:  "right operand",
+	}
 	if leftType.Is(TypeString) {
 		return requireType(right, TypeSet(TypeString), what)
 	}
@@ -177,7 +198,10 @@ func checkIndex(n *node) error {
 		return err
 	}
 	key := n.children[1]
-	what := operand{owner: "index", role: "key"}
+	what := operand{
+		owner: "index",
+		role:  "key",
+	}
 	switch receiverType := effectiveReceiverType(n); {
 	case receiverType.Is(TypeObject):
 		return requireType(key, TypeSet(TypeString), what)
@@ -247,7 +271,10 @@ func checkContainerSource(n *node, want TypeTag) error {
 // checkCase mirrors vm.go's CondJump: every arm's condition must be boolean
 func checkCase(n *node) error {
 	last := len(n.children) - 1
-	what := operand{owner: "case", role: "condition"}
+	what := operand{
+		owner: "case",
+		role:  "condition",
+	}
 	for i := 0; i < last; i += 2 {
 		condition := n.children[i]
 		if err := requireType(condition, TypeSet(TypeBool), what); err != nil {
@@ -265,7 +292,10 @@ func checkMatch(n *node) error {
 		return nil
 	}
 	arms := n.children[1].children
-	what := operand{owner: "case", role: "value"}
+	what := operand{
+		owner: "case",
+		role:  "value",
+	}
 	for i := 0; i < len(arms)-1; i += 2 {
 		value := arms[i].children[1]
 		if err := requireType(value, subject, what); err != nil {
@@ -278,6 +308,9 @@ func checkMatch(n *node) error {
 // checkBoolBody mirrors vm.go's CondJump: any/all/filter re-check their body as a condition on
 // every iteration
 func checkBoolBody(n *node) error {
-	what := operand{owner: collectionNames[n.kind], role: "body"}
+	what := operand{
+		owner: collectionNames[n.kind],
+		role:  "body",
+	}
 	return requireType(n.children[1], TypeSet(TypeBool), what)
 }

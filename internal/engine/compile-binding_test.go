@@ -51,11 +51,7 @@ func TestBindingPatterns(t *testing.T) {
 			source: "let {x} = {x: null}, [y] = [null]: [x, y]",
 			want:   []any{nil, nil},
 		},
-		{
-			name:   "fallback source",
-			source: "let {x} = absent ?? {x: 7}: x",
-			want:   float64(7),
-		},
+		{name: "fallback source", source: "let {x} = absent ?? {x: 7}: x", want: float64(7)},
 		{name: "empty", source: "let {} = {}, [] = []: 1", want: float64(1)},
 		{
 			name: "reserved key",
@@ -90,31 +86,16 @@ func TestPatternDefaults(t *testing.T) {
 	}{
 		{name: "object", source: "let {x = 3} = {}: x", want: float64(3)},
 		{name: "array", source: "let [x = 3] = []: x", want: float64(3)},
-		{
-			name:   "coalesce preserves null",
-			source: "let {x = 3} = {x: null}: x ?? 7",
-		},
-		{
-			name:   "rename",
-			source: "let {x: renamed = 3} = {}: renamed",
-			want:   float64(3),
-		},
+		{name: "coalesce preserves null", source: "let {x = 3} = {x: null}: x ?? 7"},
+		{name: "rename", source: "let {x: renamed = 3} = {}: renamed", want: float64(3)},
 		{
 			name: "preserve array values",
 			source: `let [a = 1, b = 1, c = 1, d = 1] =
 				[null, false, 0, ""]: [a, b, c, d]`,
 			want: []any{nil, false, float64(0), ""},
 		},
-		{
-			name:   "earlier binding",
-			source: "let {x = 2, y = x + 1} = {}: y",
-			want:   float64(3),
-		},
-		{
-			name:   "outer binding",
-			source: "let x = 7, {x = x + 1} = {}: x",
-			want:   float64(8),
-		},
+		{name: "earlier binding", source: "let {x = 2, y = x + 1} = {}: y", want: float64(3)},
+		{name: "outer binding", source: "let x = 7, {x = x + 1} = {}: x", want: float64(8)},
 		{
 			name:   "future binding",
 			source: "let y = 7, [x = y, y = 1] = []: [x, y]",
@@ -125,21 +106,9 @@ func TestPatternDefaults(t *testing.T) {
 			source: "let {user: {name = 2} = {}} = {}: name",
 			want:   float64(2),
 		},
-		{
-			name:   "nested array",
-			source: "let [[x = 2] = []] = []: x",
-			want:   float64(2),
-		},
-		{
-			name:   "explicit missing",
-			source: "let {x = 2} = {x: absent}: x",
-			want:   float64(2),
-		},
-		{
-			name:   "discard default",
-			source: "let {x: _ = 2} = {}: 1",
-			want:   float64(1),
-		},
+		{name: "nested array", source: "let [[x = 2] = []] = []: x", want: float64(2)},
+		{name: "explicit missing", source: "let {x = 2} = {x: absent}: x", want: float64(2)},
+		{name: "discard default", source: "let {x: _ = 2} = {}: 1", want: float64(1)},
 		{
 			name:   "earlier function",
 			source: "let {f = abs, x = f(-3)} = {}: x",
@@ -185,16 +154,8 @@ func TestPatternDefaults(t *testing.T) {
 			source: "[{}, {x: 2}] | filter {x = 0}: x > 1",
 			want:   []any{map[string]any{"x": float64(2)}},
 		},
-		{
-			name:   "any default",
-			source: "[{}, {x: true}, null] | any {x = false}: x",
-			want:   true,
-		},
-		{
-			name:   "all default",
-			source: "[{}, null] | all {x = false}: x",
-			want:   false,
-		},
+		{name: "any default", source: "[{}, {x: true}, null] | any {x = false}: x", want: true},
+		{name: "all default", source: "[{}, null] | all {x = false}: x", want: false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			value, err := argex.Eval(tc.source, nil)
@@ -235,11 +196,7 @@ func TestPatternDefaultEffects(t *testing.T) {
 			input: map[string]any{"x": nil, "y": false},
 			want:  []any{nil, false},
 		},
-		{
-			name:  "zero and empty",
-			input: map[string]any{"x": 0, "y": ""},
-			want:  []any{0, ""},
-		},
+		{name: "zero and empty", input: map[string]any{"x": 0, "y": ""}, want: []any{0, ""}},
 		{
 			name:  "both missing",
 			input: map[string]any{},
@@ -268,31 +225,11 @@ func TestPatternDefaultErrors(t *testing.T) {
 		source string
 		want   error
 	}{
-		{
-			name:   "required field",
-			source: "let {x = 1, y} = {}: x",
-			want:   argex.ErrMissing,
-		},
-		{
-			name:   "required element",
-			source: "let [x = 1, y] = []: x",
-			want:   argex.ErrMissing,
-		},
-		{
-			name:   "fallback error",
-			source: "let {x = 1 / 0} = {}: x",
-			want:   argex.ErrArithmetic,
-		},
-		{
-			name:   "empty fallback",
-			source: "let {x: [y] = []} = {}: y",
-			want:   argex.ErrMissing,
-		},
-		{
-			name:   "wrong fallback type",
-			source: "let {x: [y] = 1} = {}: y",
-			want:   argex.ErrType,
-		},
+		{name: "required field", source: "let {x = 1, y} = {}: x", want: argex.ErrMissing},
+		{name: "required element", source: "let [x = 1, y] = []: x", want: argex.ErrMissing},
+		{name: "fallback error", source: "let {x = 1 / 0} = {}: x", want: argex.ErrArithmetic},
+		{name: "empty fallback", source: "let {x: [y] = []} = {}: y", want: argex.ErrMissing},
+		{name: "wrong fallback type", source: "let {x: [y] = 1} = {}: y", want: argex.ErrType},
 		{
 			name:   "null container",
 			source: "let {x: [y] = [1]} = {x: null}: y",
@@ -303,11 +240,7 @@ func TestPatternDefaultErrors(t *testing.T) {
 			source: "[null] | map {x = 1}: x",
 			want:   argex.ErrMissing,
 		},
-		{
-			name:   "wrong pipeline type",
-			source: "[1] | map {x = 1}: x",
-			want:   argex.ErrType,
-		},
+		{name: "wrong pipeline type", source: "[1] | map {x = 1}: x", want: argex.ErrType},
 		{
 			name:   "required pipeline field",
 			source: "[{}] | map {x = 1, y}: x",
@@ -377,16 +310,8 @@ func TestPipelinePatterns(t *testing.T) {
 			source: "[{x: 2}] | map {x}: ([[3]] | map [y]: x + y)",
 			want:   []any{[]any{float64(5)}},
 		},
-		{
-			name:   "any short circuit",
-			source: "[{x: true}, {}] | any {x}: x",
-			want:   true,
-		},
-		{
-			name:   "all short circuit",
-			source: "[[false], []] | all [x]: x",
-			want:   false,
-		},
+		{name: "any short circuit", source: "[{x: true}, {}] | any {x}: x", want: true},
+		{name: "all short circuit", source: "[[false], []] | all [x]: x", want: false},
 		{name: "empty collection", source: "[] | map {x}: x", want: []any{}},
 		{
 			name: "filter before destructuring",
@@ -437,71 +362,27 @@ func TestPatternErrors(t *testing.T) {
 	}{
 		{name: "field", source: "let {x} = {}: x", want: argex.ErrMissing},
 		{name: "index", source: "let [x] = []: x", want: argex.ErrMissing},
-		{
-			name:   "missing element",
-			source: "let [x] = [absent]: x",
-			want:   argex.ErrMissing,
-		},
+		{name: "missing element", source: "let [x] = [absent]: x", want: argex.ErrMissing},
 		{
 			name:   "pipeline missing element",
 			source: "[[absent]] | map [x]: x",
 			want:   argex.ErrMissing,
 		},
-		{
-			name:   "unused binding",
-			source: "let {x} = {}: 1",
-			want:   argex.ErrMissing,
-		},
-		{
-			name:   "body fallback",
-			source: "let {x} = {}: x ?? 1",
-			want:   argex.ErrMissing,
-		},
+		{name: "unused binding", source: "let {x} = {}: 1", want: argex.ErrMissing},
+		{name: "body fallback", source: "let {x} = {}: x ?? 1", want: argex.ErrMissing},
 		{
 			name:   "null nested source",
 			source: "let {x: {y}} = {x: null}: y",
 			want:   argex.ErrMissing,
 		},
-		{
-			name:   "wrong nested type",
-			source: "let {x: [y]} = {x: {}}: y",
-			want:   argex.ErrType,
-		},
-		{
-			name:   "runtime object type",
-			source: "let {} = this: 1",
-			want:   argex.ErrType,
-		},
-		{
-			name:   "runtime array type",
-			source: "let [] = this: 1",
-			want:   argex.ErrType,
-		},
-		{
-			name:   "runtime null source",
-			source: "let {} = absent: 1",
-			want:   argex.ErrMissing,
-		},
-		{
-			name:   "pipeline field",
-			source: "[{}] | map {x}: x",
-			want:   argex.ErrMissing,
-		},
-		{
-			name:   "pipeline null",
-			source: "[null] | map []: 1",
-			want:   argex.ErrMissing,
-		},
-		{
-			name:   "pipeline shape",
-			source: "[{}] | map [x]: x",
-			want:   argex.ErrType,
-		},
-		{
-			name:   "filter predicate",
-			source: "[[1]] | filter [x]: x",
-			want:   argex.ErrType,
-		},
+		{name: "wrong nested type", source: "let {x: [y]} = {x: {}}: y", want: argex.ErrType},
+		{name: "runtime object type", source: "let {} = this: 1", want: argex.ErrType},
+		{name: "runtime array type", source: "let [] = this: 1", want: argex.ErrType},
+		{name: "runtime null source", source: "let {} = absent: 1", want: argex.ErrMissing},
+		{name: "pipeline field", source: "[{}] | map {x}: x", want: argex.ErrMissing},
+		{name: "pipeline null", source: "[null] | map []: 1", want: argex.ErrMissing},
+		{name: "pipeline shape", source: "[{}] | map [x]: x", want: argex.ErrType},
+		{name: "filter predicate", source: "[[1]] | filter [x]: x", want: argex.ErrType},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			expr, err := argex.Parse(tc.source)
@@ -555,11 +436,7 @@ func TestRequiredPatternValues(t *testing.T) {
 			source: "let {x} = this: x",
 			input:  map[string]any{"x": argex.Missing{}},
 		},
-		{
-			name:   "array element",
-			source: "let [x] = this: x",
-			input:  []any{argex.Missing{}},
-		},
+		{name: "array element", source: "let [x] = this: x", input: []any{argex.Missing{}}},
 		{
 			name:   "pipeline object member",
 			source: "[this] | map {x}: x",
@@ -578,15 +455,8 @@ func TestPatternAssertionTiming(t *testing.T) {
 		name   string
 		source string
 	}{
-		{
-			name:   "mixed source types",
-			source: "let [] = case { valid: [], null }: 1",
-		},
-		{
-			name: "nested member",
-			source: "case { valid: 1, " +
-				"(let {x: [y]} = {x: null}: y) }",
-		},
+		{name: "mixed source types", source: "let [] = case {valid: [], null}: 1"},
+		{name: "nested member", source: "case {valid: 1, " + "(let {x: [y]} = {x: null}: y)}"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			expr, err := argex.Parse(tc.source)
@@ -612,14 +482,8 @@ func TestPatternSourceTypes(t *testing.T) {
 		source string
 	}{
 		{name: "spread array", source: "let [_, x] = [...[0, absent], 3]: x"},
-		{
-			name:   "spread object",
-			source: "let {x: []} = {x: [], ...{x: null}}: 1",
-		},
-		{
-			name:   "computed key",
-			source: "let {x: []} = {x: [], [key]: null}: 1",
-		},
+		{name: "spread object", source: "let {x: []} = {x: [], ...{x: null}}: 1"},
+		{name: "computed key", source: "let {x: []} = {x: [], [key]: null}: 1"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := argex.Eval(tc.source, map[string]any{"key": "x"})

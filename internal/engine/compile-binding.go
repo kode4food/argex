@@ -58,7 +58,10 @@ func (c *compiler) bindPattern(args bindPatternArgs) ([]binding, error) {
 		next := c.allocSlot()
 		c.emit(isa.Store, isa.Operand(next))
 		if target.kind == nodeName {
-			bound = append(bound, binding{name: target.text, slot: next})
+			bound = append(bound, binding{
+				name: target.text,
+				slot: next,
+			})
 			continue
 		}
 		bound, err = c.bindPattern(bindPatternArgs{

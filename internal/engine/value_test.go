@@ -49,11 +49,7 @@ func TestEquality(t *testing.T) {
 			equal: true,
 		},
 		{name: "array order", left: []any{1.0, 2.0}, right: []any{2.0, 1.0}},
-		{
-			name:  "missing key",
-			left:  map[string]any{"a": nil},
-			right: map[string]any{"b": nil},
-		},
+		{name: "missing key", left: map[string]any{"a": nil}, right: map[string]any{"b": nil}},
 		{name: "ints", left: 7, right: 7, equal: true},
 		{name: "int and float", left: 7, right: 7.0, equal: true},
 		{

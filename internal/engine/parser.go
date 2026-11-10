@@ -91,7 +91,10 @@ func (e *Env) Names(expr *Expression) []string {
 	if expr == nil || expr.root == nil || e == nil {
 		return nil
 	}
-	c := nameCollector{seen: map[string]bool{}, env: e}
+	c := nameCollector{
+		seen: map[string]bool{},
+		env:  e,
+	}
 	c.collect(expr.root, nil)
 	return slices.Sorted(maps.Keys(c.seen))
 }

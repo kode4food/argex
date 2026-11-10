@@ -88,7 +88,10 @@ func (p *parser) primary() (*node, error) {
 	p.pos++
 	switch t.kind {
 	case kindLiteral:
-		return &node{kind: nodeLiteral, value: t.value}, nil
+		return &node{
+			kind:  nodeLiteral,
+			value: t.value,
+		}, nil
 
 	case kindName:
 		return p.named(t.text)
@@ -115,7 +118,11 @@ func (p *parser) unary(op string) (*node, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &node{kind: nodeUnary, text: op, children: []*node{child}}, nil
+	return &node{
+		kind:     nodeUnary,
+		text:     op,
+		children: []*node{child},
+	}, nil
 }
 
 func (p *parser) group() (*node, error) {
@@ -132,7 +139,10 @@ func (p *parser) group() (*node, error) {
 func (p *parser) named(name string) (*node, error) {
 	switch name {
 	case kwTrue, kwFalse:
-		return &node{kind: nodeLiteral, value: name == kwTrue}, nil
+		return &node{
+			kind:  nodeLiteral,
+			value: name == kwTrue,
+		}, nil
 
 	case kwNull:
 		return &node{kind: nodeLiteral}, nil
@@ -147,6 +157,9 @@ func (p *parser) named(name string) (*node, error) {
 		return &node{kind: nodeRoot}, nil
 
 	default:
-		return &node{kind: nodeName, text: name}, nil
+		return &node{
+			kind: nodeName,
+			text: name,
+		}, nil
 	}
 }

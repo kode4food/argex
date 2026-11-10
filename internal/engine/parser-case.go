@@ -124,5 +124,8 @@ func (p *parser) parseCaseBranch() (caseBranch, error) {
 	if err := p.expect(kindComma); err != nil {
 		return caseBranch{}, err
 	}
-	return caseBranch{condition: condition, value: value}, nil
+	return caseBranch{
+		condition: condition,
+		value:     value,
+	}, nil
 }

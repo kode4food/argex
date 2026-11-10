@@ -64,7 +64,11 @@ func (p *parser) objectMember(seen map[string]bool) (*node, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &node{kind: nodeField, text: name, children: []*node{value}}, nil
+	return &node{
+		kind:     nodeField,
+		text:     name,
+		children: []*node{value},
+	}, nil
 }
 
 func (p *parser) computedMember(seen map[string]bool) (*node, error) {
@@ -85,7 +89,10 @@ func (p *parser) computedMember(seen map[string]bool) (*node, error) {
 		return nil, err
 	}
 	children := []*node{key, value}
-	result := &node{kind: nodeComputed, children: children}
+	result := &node{
+		kind:     nodeComputed,
+		children: children,
+	}
 	name, ok := key.value.(string)
 	if key.kind != nodeLiteral || !ok {
 		return result, nil
@@ -106,7 +113,10 @@ func (p *parser) spreadable() (*node, error) {
 	if !spread {
 		return expr, nil
 	}
-	return &node{kind: nodeSpread, children: []*node{expr}}, nil
+	return &node{
+		kind:     nodeSpread,
+		children: []*node{expr},
+	}, nil
 }
 
 func (p *parser) objectKey() (string, error) {
@@ -124,6 +134,13 @@ func shorthandField(key token) (*node, error) {
 	if reservedNames[key.text] {
 		return nil, syntax(key.pos, "reserved binding name")
 	}
-	value := &node{kind: nodeName, text: key.text}
-	return &node{kind: nodeField, text: key.text, children: []*node{value}}, nil
+	value := &node{
+		kind: nodeName,
+		text: key.text,
+	}
+	return &node{
+		kind:     nodeField,
+		text:     key.text,
+		children: []*node{value},
+	}, nil
 }

@@ -60,7 +60,10 @@ func (p *parser) call(receiver *node) (*node, error) {
 		return nil, err
 	}
 	children := append([]*node{receiver}, args...)
-	return &node{kind: nodeCall, children: children}, nil
+	return &node{
+		kind:     nodeCall,
+		children: children,
+	}, nil
 }
 
 func (p *parser) list(end tokenKind) ([]*node, error) {

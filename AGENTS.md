@@ -68,7 +68,7 @@ For grouped declarations:
 - For plain structs, use values up to 32 bytes. Use values at 33 to 64 bytes unless they are read through three or more functions in a chain. Use pointers above 64 bytes. Use pointers whenever mutation or identity requires them. A pointer does not imply a heap allocation. Check escape behavior when it matters.
 - Struct fields must make sense at the call site without reading the function body. Give adjacent same-type fields distinct, descriptive meanings.
 - Use named fields in struct literals. Positional struct literals are forbidden except for a single-field wrapper whose field name adds no information.
-- Keep a struct literal on one line if it fits. When it wraps, use one field per line.
+- A struct literal with two or more fields always wraps, one field per line, even when it fits. A single-field literal may stay on one line. A table row (an element of a slice, array, or map literal) may stay on one line when it fits within the line width.
 
 ## Function And Method Ordering
 

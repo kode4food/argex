@@ -41,7 +41,10 @@ func (d decimal) add(other decimal) (decimal, bool) {
 		return decimal{}, false
 	}
 	coef, ok := addInt64(pair.left.coef, pair.right.coef)
-	return decimal{coef: coef, scale: pair.left.scale}, ok
+	return decimal{
+		coef:  coef,
+		scale: pair.left.scale,
+	}, ok
 }
 
 func (d decimal) float() (float64, bool) {
@@ -66,7 +69,10 @@ func decimalAdd(left, right float64) (float64, bool) {
 	if !ok {
 		return 0, false
 	}
-	return decimal{coef: coef, scale: pair.left.scale}.float()
+	return decimal{
+		coef:  coef,
+		scale: pair.left.scale,
+	}.float()
 }
 
 func decimalMul(left, right float64) (float64, bool) {
@@ -83,7 +89,10 @@ func decimalMul(left, right float64) (float64, bool) {
 		return 0, false
 	}
 	scale := leftDecimal.scale + rightDecimal.scale
-	return decimal{coef: coef, scale: scale}.float()
+	return decimal{
+		coef:  coef,
+		scale: scale,
+	}.float()
 }
 
 // decimalQuo divides coefficients at a shared scale, so the quotient is a ratio of exact integers
@@ -107,7 +116,10 @@ func decimalMod(left, right float64) (float64, bool) {
 		return 0, false
 	}
 	coef := pair.left.coef % pair.right.coef
-	return decimal{coef: coef, scale: pair.left.scale}.float()
+	return decimal{
+		coef:  coef,
+		scale: pair.left.scale,
+	}.float()
 }
 
 func decimalSum(items []any, total decimal) (float64, error) {
@@ -150,7 +162,10 @@ func alignDecimals(left, right decimal) (decimalPair, bool) {
 		return decimalPair{}, false
 	}
 	right, ok = rescale(right, left.scale)
-	return decimalPair{left: left, right: right}, ok
+	return decimalPair{
+		left:  left,
+		right: right,
+	}, ok
 }
 
 func rescale(d decimal, scale int) (decimal, bool) {
@@ -161,7 +176,10 @@ func rescale(d decimal, scale int) (decimal, bool) {
 		return decimal{}, false
 	}
 	coef, ok := mulInt64(d.coef, intPow10[scale-d.scale])
-	return decimal{coef: coef, scale: scale}, ok
+	return decimal{
+		coef:  coef,
+		scale: scale,
+	}, ok
 }
 
 // toDecimal reads the shortest decimal a float prints as, the number a user wrote, without
@@ -176,9 +194,15 @@ func toDecimal(n float64) (decimal, bool) {
 	coef, fraction := parseMantissa(text[:mark])
 	scale := fraction - parseExponent(text[mark+1:])
 	if scale >= 0 {
-		return decimal{coef: coef, scale: scale}, true
+		return decimal{
+			coef:  coef,
+			scale: scale,
+		}, true
 	}
-	return rescale(decimal{coef: coef, scale: scale}, 0)
+	return rescale(decimal{
+		coef:  coef,
+		scale: scale,
+	}, 0)
 }
 
 // parseMantissa reads at most 17 significant digits, which fit an int64

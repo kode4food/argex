@@ -131,7 +131,10 @@ func TestFunctionEvaluationOrder(t *testing.T) {
 	}
 	factory := &argex.Function{Call: func(...any) (any, error) {
 		calls = append(calls, "callee")
-		return &argex.Function{Call: echo, Variadic: true}, nil
+		return &argex.Function{
+			Call:     echo,
+			Variadic: true,
+		}, nil
 	}}
 	ns, err = ns.Bind("factory", factory)
 	if !assert.NoError(t, err) {

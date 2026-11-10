@@ -56,7 +56,12 @@ func Run(args []string, stdin io.Reader, stdout io.Writer) error {
 	if !*compact {
 		encoder.SetIndent("", "  ")
 	}
-	r := &runner{program: program, encoder: encoder, out: stdout, raw: *raw}
+	r := &runner{
+		program: program,
+		encoder: encoder,
+		out:     stdout,
+		raw:     *raw,
+	}
 	if *null {
 		return r.evaluate(nil)
 	}

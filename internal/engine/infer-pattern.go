@@ -82,7 +82,10 @@ func annotateLetPattern(n *node, scope []typedName, env *Env) error {
 func annotateStagePattern(n *node, scope []typedName, env *Env) error {
 	inner := scope[:len(scope):len(scope)]
 	for _, name := range stageOuterNames(n) {
-		bound := typedName{name: name, inferred: TypeSet(TypeAny)}
+		bound := typedName{
+			name:     name,
+			inferred: TypeSet(TypeAny),
+		}
 		inner = append(inner, bound)
 	}
 	pattern := n.bindingPattern()
@@ -105,7 +108,10 @@ func annotateAccumulator(n *node, scope []typedName, env *Env) error {
 	inner := scope[:len(scope):len(scope)]
 	if n.chained {
 		for _, name := range stageNames(n.children[0]) {
-			bound := typedName{name: name, inferred: TypeSet(TypeAny)}
+			bound := typedName{
+				name:     name,
+				inferred: TypeSet(TypeAny),
+			}
 			inner = append(inner, bound)
 		}
 	}
@@ -119,7 +125,10 @@ func patternScope(pattern *node, scope []typedName) []typedName {
 		return patternScope(pattern.children[0], scope)
 	}
 	if pattern.kind == nodeName && pattern.text != "" {
-		bound := typedName{name: pattern.text, inferred: TypeSet(TypeAny)}
+		bound := typedName{
+			name:     pattern.text,
+			inferred: TypeSet(TypeAny),
+		}
 		scope = append(scope, bound)
 	}
 	for _, child := range pattern.children {

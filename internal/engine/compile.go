@@ -169,7 +169,10 @@ func lowerNode(n *node) {
 		n.valueBinding = caseSubject
 		arms := n.children[1]
 		for i := 0; i < len(arms.children)-1; i += 2 {
-			name := &node{kind: nodeName, text: caseSubject}
+			name := &node{
+				kind: nodeName,
+				text: caseSubject,
+			}
 			arms.children[i] = &node{
 				kind:     nodeBinary,
 				text:     opEq,

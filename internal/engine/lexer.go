@@ -195,7 +195,10 @@ func lex(source string) ([]token, error) {
 		result = append(result, item)
 		s.skipIgnored()
 	}
-	return append(result, token{kind: kindEOF, pos: s.charPos}), nil
+	return append(result, token{
+		kind: kindEOF,
+		pos:  s.charPos,
+	}), nil
 }
 
 func (s *scanner) advance(size int) {
@@ -238,7 +241,11 @@ func (s *scanner) scan() (token, error) {
 			n += width
 		}
 		s.advance(n)
-		return token{kind: kindName, text: rest[:n], pos: start}, nil
+		return token{
+			kind: kindName,
+			text: rest[:n],
+			pos:  start,
+		}, nil
 	}
 	if r >= '0' && r <= '9' {
 		return s.scanNumber()
@@ -248,17 +255,26 @@ func (s *scanner) scan() (token, error) {
 	}
 	if strings.HasPrefix(rest, "...") {
 		s.advance(len("..."))
-		return token{kind: kindSpread, pos: start}, nil
+		return token{
+			kind: kindSpread,
+			pos:  start,
+		}, nil
 	}
 	if len(rest) >= pairLength {
 		if kind, ok := pairKinds[rest[:pairLength]]; ok {
 			s.advance(pairLength)
-			return token{kind: kind, pos: start}, nil
+			return token{
+				kind: kind,
+				pos:  start,
+			}, nil
 		}
 	}
 	if kind, ok := singleCharKinds[r]; ok {
 		s.advance(size)
-		return token{kind: kind, pos: start}, nil
+		return token{
+			kind: kind,
+			pos:  start,
+		}, nil
 	}
 	return token{}, syntax(start, "unexpected character")
 }
@@ -289,7 +305,11 @@ func (s *scanner) scanNumber() (token, error) {
 	if err != nil {
 		return token{}, syntax(start, "number out of range")
 	}
-	return token{kind: kindLiteral, value: value, pos: start}, nil
+	return token{
+		kind:  kindLiteral,
+		value: value,
+		pos:   start,
+	}, nil
 }
 
 // scanString skips escaped bytes. UTF-8 continuation bytes are never a quote or backslash, so
@@ -310,7 +330,11 @@ func (s *scanner) scanString() (token, error) {
 		if err != nil {
 			return token{}, syntax(start, "invalid string")
 		}
-		return token{kind: kindLiteral, value: value, pos: start}, nil
+		return token{
+			kind:  kindLiteral,
+			value: value,
+			pos:   start,
+		}, nil
 	}
 	s.advance(len(rest))
 	return token{}, syntax(start, "unterminated string")

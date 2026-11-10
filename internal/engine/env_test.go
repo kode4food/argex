@@ -58,19 +58,16 @@ func TestEnvBindings(t *testing.T) {
 
 func TestEnvValueTypes(t *testing.T) {
 	cases := map[string]envValueCase{
-		"null":    {value: nil, want: argex.TypeNull},
-		"missing": {value: argex.Missing{}, want: argex.TypeMissing},
-		"boolean": {value: true, want: argex.TypeBool},
-		"int":     {value: 1, want: argex.TypeNumber},
-		"number":  {value: json.Number("1"), want: argex.TypeNumber},
-		"string":  {value: "a", want: argex.TypeString},
-		"array":   {value: []any{1}, want: argex.TypeArray},
-		"object":  {value: map[string]any{"a": 1}, want: argex.TypeObject},
-		"function": {
-			value: &argex.Function{Call: echo},
-			want:  argex.TypeFunction,
-		},
-		"unknown": {value: int64(1), want: argex.TypeAny},
+		"null":     {value: nil, want: argex.TypeNull},
+		"missing":  {value: argex.Missing{}, want: argex.TypeMissing},
+		"boolean":  {value: true, want: argex.TypeBool},
+		"int":      {value: 1, want: argex.TypeNumber},
+		"number":   {value: json.Number("1"), want: argex.TypeNumber},
+		"string":   {value: "a", want: argex.TypeString},
+		"array":    {value: []any{1}, want: argex.TypeArray},
+		"object":   {value: map[string]any{"a": 1}, want: argex.TypeObject},
+		"function": {value: &argex.Function{Call: echo}, want: argex.TypeFunction},
+		"unknown":  {value: int64(1), want: argex.TypeAny},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -131,7 +128,10 @@ func TestEnvCompileResolution(t *testing.T) {
 	root := argex.NewEnv()
 	_, err = root.Compile(expr)
 	assert.ErrorIs(t, err, argex.ErrFunction)
-	child, err := root.Bind("custom", &argex.Function{Call: echo, Arity: 1})
+	child, err := root.Bind("custom", &argex.Function{
+		Call:  echo,
+		Arity: 1,
+	})
 	if !assert.NoError(t, err) {
 		return
 	}

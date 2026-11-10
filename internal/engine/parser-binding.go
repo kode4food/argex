@@ -29,7 +29,10 @@ func (p *parser) pattern(names map[string]bool) (*node, error) {
 			return nil, syntax(start.pos, "duplicate binding name")
 		}
 		names[name] = true
-		return &node{kind: nodeName, text: name}, nil
+		return &node{
+			kind: nodeName,
+			text: name,
+		}, nil
 
 	case kindLBrack:
 		return p.arrayPattern(names)
@@ -54,7 +57,10 @@ func (p *parser) patternElement(names map[string]bool) (*node, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &node{kind: nodeDefault, children: []*node{target, fallback}}, nil
+	return &node{
+		kind:     nodeDefault,
+		children: []*node{target, fallback},
+	}, nil
 }
 
 func (p *parser) arrayPattern(names map[string]bool) (*node, error) {
@@ -106,7 +112,11 @@ func (p *parser) objectPattern(names map[string]bool) (*node, error) {
 		if err != nil {
 			return nil, err
 		}
-		field := &node{kind: nodeField, text: name, children: []*node{child}}
+		field := &node{
+			kind:     nodeField,
+			text:     name,
+			children: []*node{child},
+		}
 		result.children = append(result.children, field)
 		if p.take(kindRBrace) {
 			return result, nil

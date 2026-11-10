@@ -44,7 +44,10 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 	for i, stage := range stages {
 		scopes[i] = []binding{{name: stage.valueBinding, slot: c.allocSlot()}}
 		if stage.keyBinding != "" {
-			key := binding{name: stage.keyBinding, slot: c.allocSlot()}
+			key := binding{
+				name: stage.keyBinding,
+				slot: c.allocSlot(),
+			}
 			scopes[i] = append(scopes[i], key)
 			counters[i] = key.slot
 		}
@@ -60,7 +63,10 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 	next := c.newLabel()
 	entry := c.newLabel()
 	done := c.newLabel()
-	spec := iterationSpec{valueSlot: scopes[0][0].slot, top: int(top)}
+	spec := iterationSpec{
+		valueSlot: scopes[0][0].slot,
+		top:       int(top),
+	}
 	if len(scopes[0]) > 1 {
 		spec.keySlot = scopes[0][1].slot
 		spec.keyed = true

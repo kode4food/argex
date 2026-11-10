@@ -121,7 +121,10 @@ func annotateChildren(n *node, scope []typedName, env *Env) error {
 		}
 		inner := scope[:len(scope):len(scope)]
 		for _, name := range stageNames(n) {
-			unknown := typedName{name: name, inferred: TypeSet(TypeAny)}
+			unknown := typedName{
+				name:     name,
+				inferred: TypeSet(TypeAny),
+			}
 			inner = append(inner, unknown)
 		}
 		return annotateType(n.children[1], inner, env)
@@ -135,7 +138,10 @@ func annotateChildren(n *node, scope []typedName, env *Env) error {
 			return annotateLetPattern(n, scope, env)
 		}
 		inner := scope[:len(scope):len(scope)]
-		bound := typedName{name: n.valueBinding, inferred: value.inferred}
+		bound := typedName{
+			name:     n.valueBinding,
+			inferred: value.inferred,
+		}
 		return annotateType(n.children[1], append(inner, bound), env)
 	}
 	for _, child := range n.children {

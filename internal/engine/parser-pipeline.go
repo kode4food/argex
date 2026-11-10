@@ -60,7 +60,10 @@ func (p *parser) collection(receiver *node, chained bool) (*node, error) {
 	if !ok {
 		return nil, syntax(operation.pos, "unknown collection operation")
 	}
-	stage := &node{kind: kind, chained: chained}
+	stage := &node{
+		kind:    kind,
+		chained: chained,
+	}
 	stage.children = []*node{receiver, nil}
 	var pattern *node
 	var err error

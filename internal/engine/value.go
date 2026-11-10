@@ -71,7 +71,10 @@ func structuralEqual(left, right any) bool {
 // for setting one up
 func containerEqual(left, right any) bool {
 	var pairs [inlineValues]operands
-	pairs[0] = operands{left: left, right: right}
+	pairs[0] = operands{
+		left:  left,
+		right: right,
+	}
 	pending := pairs[:1]
 	matched := true
 	for len(pending) > 0 && matched {
