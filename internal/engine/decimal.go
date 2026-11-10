@@ -9,8 +9,7 @@ import (
 )
 
 type (
-	// decimal is a finite number as the decimal it prints as, which is
-	// coef × 10^-scale
+	// decimal is a finite number as the decimal it prints as, which is coef × 10^-scale
 	decimal struct {
 		coef  int64
 		scale int
@@ -24,8 +23,8 @@ type (
 )
 
 const (
-	// Powers of ten up to 10^22 are exact as floats, so dividing an exact
-	// coefficient by one rounds once, to the nearest float
+	// Powers of ten up to 10^22 are exact as floats, so dividing an exact coefficient by one rounds
+	// once, to the nearest float
 	maxExactScale = 22
 
 	decimalTextSize = 32
@@ -87,8 +86,8 @@ func decimalMul(left, right float64) (float64, bool) {
 	return decimal{coef: coef, scale: scale}.float()
 }
 
-// decimalQuo divides coefficients at a shared scale, so the quotient is a ratio
-// of exact integers that IEEE division rounds once
+// decimalQuo divides coefficients at a shared scale, so the quotient is a ratio of exact integers
+// that IEEE division rounds once
 func decimalQuo(left, right float64) (float64, bool) {
 	pair, ok := toDecimalPair(left, right)
 	if !ok {
@@ -165,8 +164,8 @@ func rescale(d decimal, scale int) (decimal, bool) {
 	return decimal{coef: coef, scale: scale}, ok
 }
 
-// toDecimal reads the shortest decimal a float prints as, the number a user
-// wrote, without allocating
+// toDecimal reads the shortest decimal a float prints as, the number a user wrote, without
+// allocating
 func toDecimal(n float64) (decimal, bool) {
 	if isExactInt(n) {
 		return decimal{coef: int64(n)}, true

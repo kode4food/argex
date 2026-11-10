@@ -9,8 +9,8 @@ type labelSite struct {
 	reached bool
 }
 
-// fusedJumps replaces a comparison and the conditional jump right after it.
-// Jumping unless a comparison holds jumps if its inverse does
+// fusedJumps replaces a comparison and the conditional jump right after it. Jumping unless a
+// comparison holds jumps if its inverse does
 var fusedJumps = map[[2]isa.Opcode]isa.Opcode{
 	{isa.Lt, isa.JumpIf}:    isa.JumpIfLt,
 	{isa.Lte, isa.JumpIf}:   isa.JumpIfLte,
@@ -22,8 +22,8 @@ var fusedJumps = map[[2]isa.Opcode]isa.Opcode{
 	{isa.Gte, isa.CondJump}: isa.JumpIfLt,
 }
 
-// finalize makes the compiled code runnable, like Ale's Encoded.Runnable. It
-// places the loop slots, fuses jumps, sizes the stack, and resolves labels
+// finalize makes the compiled code runnable, like Ale's Encoded.Runnable. It places the loop slots,
+// fuses jumps, sizes the stack, and resolves labels
 func (c *compiler) finalize() {
 	p := c.program
 	for _, index := range c.loopRefs {
@@ -38,8 +38,8 @@ func (c *compiler) finalize() {
 	p.resolveLabels(labels)
 }
 
-// layout finds where each label lands and the deepest the stack gets. Jumps
-// are structured, so a label sits at the depth its jumps carry, or the current
+// layout finds where each label lands and the deepest the stack gets. Jumps are structured, so a
+// label sits at the depth its jumps carry, or the current
 func (p *Program) layout(labels []labelSite) int {
 	depth := 0
 	deepest := 0
@@ -90,8 +90,8 @@ func (p *Program) pops(inst isa.Instruction, effect isa.Effect) int {
 	}
 }
 
-// resolveLabels drops the labels and points every jump, and every loop's Fetch,
-// at the instruction its label marks
+// resolveLabels drops the labels and points every jump, and every loop's Fetch, at the instruction
+// its label marks
 func (p *Program) resolveLabels(labels []labelSite) {
 	code := p.code[:0]
 	for _, inst := range p.code {

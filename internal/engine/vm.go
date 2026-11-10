@@ -55,8 +55,8 @@ const (
 	expectFunction       = "expected function"
 )
 
-// Eval runs the program with this as its input. Bare names read the properties
-// of an object and are missing for any other value
+// Eval runs the program with this as its input. Bare names read the properties of an object and are
+// missing for any other value
 func (p *Program) Eval(this any) (any, error) {
 	variables, _ := this.(map[string]any)
 	var values [inlineValues]any
@@ -193,13 +193,9 @@ func (p *Program) Eval(this any) (any, error) {
 				continue
 			}
 			if actual.Is(TypeMissing) || actual.Is(TypeNull) {
-				return nil, fmt.Errorf(
-					"%w: value is missing or null", ErrMissing,
-				)
+				return nil, fmt.Errorf("%w: value is missing or null", ErrMissing)
 			}
-			return nil, fmt.Errorf(
-				"%w: expected %s, got %s", ErrType, TypeSet(op), actual,
-			)
+			return nil, fmt.Errorf("%w: expected %s, got %s", ErrType, TypeSet(op), actual)
 
 		case isa.Not:
 			value, ok := MEM[SP-1].(bool)
@@ -702,9 +698,7 @@ func (p *Program) Eval(this any) (any, error) {
 
 		case isa.Iterate:
 			spec := p.iterations[op]
-			keys, values, err := collectionEntries(
-				MEM[SP-1], spec.keyed,
-			)
+			keys, values, err := collectionEntries(MEM[SP-1], spec.keyed)
 			if err != nil {
 				return nil, err
 			}
@@ -781,8 +775,8 @@ func accessChild(args accessChildArgs) (any, bool, error) {
 	}
 }
 
-// collectionEntries materializes a comprehension receiver into parallel
-// key/value slices. keys is nil when the binding form doesn't need it
+// collectionEntries materializes a comprehension receiver into parallel key/value slices. keys is
+// nil when the binding form doesn't need it
 func collectionEntries(receiver any, keyed bool) ([]any, []any, error) {
 	switch c := receiver.(type) {
 	case []any:

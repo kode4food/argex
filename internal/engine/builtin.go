@@ -11,9 +11,9 @@ import (
 	"unicode/utf8"
 )
 
-// Function is a callable value. Arity is exact, or a minimum when Variadic.
-// Params gives static types, repeating the last. A zero Result is unknown.
-// Call must validate runtime types and must not change or retain its args
+// Function is a callable value. Arity is exact, or a minimum when Variadic. Params gives static
+// types, repeating the last. A zero Result is unknown. Call must validate runtime types and must
+// not change or retain its args
 type Function struct {
 	Call     func(...any) (any, error)
 	Arity    int

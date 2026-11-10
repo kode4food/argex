@@ -38,8 +38,8 @@ const (
 	oracleSamples    = 4096
 	oracleSumLength  = 8
 
-	// Operands reach past what an int64 coefficient and an exact power of ten
-	// can hold, so the big.Rat fallback is exercised too
+	// Operands reach past what an int64 coefficient and an exact power of ten can hold, so the
+	// big.Rat fallback is exercised too
 	maxOracleDigits   = 17
 	maxOracleExponent = 25
 )
@@ -178,8 +178,8 @@ type assertRemainderArgs struct {
 	remainder float64
 }
 
-// assertRemainder checks only what a decimal remainder shares with math.Mod's
-// binary one: finite, within the divisor, signed like the dividend
+// assertRemainder checks only what a decimal remainder shares with math.Mod's binary one: finite,
+// within the divisor, signed like the dividend
 func assertRemainder(t *testing.T, args assertRemainderArgs) {
 	t.Helper()
 	remainder := args.remainder
@@ -421,8 +421,8 @@ func TestDecimalSumValidation(t *testing.T) {
 	assert.Equal(t, 1.3, value)
 }
 
-// assertOracle expects an operation to match the oracle, or to fail where
-// the exact result overflows or the divisor is zero
+// assertOracle expects an operation to match the oracle, or to fail where the exact result
+// overflows or the divisor is zero
 func assertOracle(t *testing.T, op string, left, right float64) {
 	t.Helper()
 	value, err := argex.Eval("left "+op+" right", map[string]any{
@@ -462,8 +462,7 @@ func randomDecimal(t *testing.T, random *rand.Rand) float64 {
 	return n
 }
 
-// oracle computes each operation on the decimals the operands print as, with
-// big.Rat alone
+// oracle computes each operation on the decimals the operands print as, with big.Rat alone
 func oracle(op string, left, right float64) float64 {
 	leftRat := exactRat(left)
 	rightRat := exactRat(right)

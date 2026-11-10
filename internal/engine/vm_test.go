@@ -67,7 +67,7 @@ func TestValues(t *testing.T) {
 		"key":       "name",
 		"offset":    3,
 		"trueValue": 9,
-		"世界":      "hello",
+		"世界":        "hello",
 	}
 	cases := []evaluationCase{
 		{source: "null", want: nil},

@@ -158,10 +158,7 @@ func TestPatternDefaults(t *testing.T) {
 		{
 			name:   "pipeline key",
 			source: "[{}, {}] | map i, {x = i, y = x + 1}: [x, y]",
-			want: []any{
-				[]any{float64(0), float64(1)},
-				[]any{float64(1), float64(2)},
-			},
+			want:   []any{[]any{float64(0), float64(1)}, []any{float64(1), float64(2)}},
 		},
 		{
 			name:   "earlier stage",
@@ -171,9 +168,7 @@ func TestPatternDefaults(t *testing.T) {
 		{
 			name:   "pipeline inside default",
 			source: `[{}, {}] | map i, {x = ([i] | map n: n + 1)}: x`,
-			want: []any{
-				[]any{float64(1)}, []any{float64(2)},
-			},
+			want:   []any{[]any{float64(1)}, []any{float64(2)}},
 		},
 		{
 			name:   "stage shadows earlier",
@@ -662,9 +657,7 @@ func TestPatternSourceTypes(t *testing.T) {
 }
 
 func TestPatternReuse(t *testing.T) {
-	expr, err := argex.Parse(
-		"let {items: [x = offset] = []} = source: x + offset",
-	)
+	expr, err := argex.Parse("let {items: [x = offset] = []} = source: x + offset")
 	if !assert.NoError(t, err) {
 		return
 	}

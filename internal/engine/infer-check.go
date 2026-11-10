@@ -73,8 +73,8 @@ func checkNode(n *node) error {
 	return nil
 }
 
-// paramType accepts any value when types are undeclared and repeats the last
-// declared type for later arguments
+// paramType accepts any value when types are undeclared and repeats the last declared type for
+// later arguments
 func paramType(fn *Function, i int) TypeSet {
 	if len(fn.Params) == 0 {
 		return ^TypeSet(0)
@@ -85,8 +85,8 @@ func paramType(fn *Function, i int) TypeSet {
 	return fn.Params[len(fn.Params)-1]
 }
 
-// checkCallArgs checks arguments by position until the first spread, after
-// which positions are unknown, so only the spread sources are checked
+// checkCallArgs checks arguments by position until the first spread, after which positions are
+// unknown, so only the spread sources are checked
 func checkCallArgs(n *node, fn *Function) error {
 	for i, child := range n.children[1:] {
 		if child.kind == nodeSpread {
@@ -111,8 +111,7 @@ func requireType(n *node, allowed TypeSet, what operand) error {
 	if !actual.Known() || actual&allowed != 0 {
 		return nil
 	}
-	return fmt.Errorf("%w: %s must be %s, not %s",
-		ErrType, what, allowed, actual)
+	return fmt.Errorf("%w: %s must be %s, not %s", ErrType, what, allowed, actual)
 }
 
 func checkUnary(n *node) error {
@@ -155,8 +154,8 @@ func checkBinary(n *node) error {
 	}
 }
 
-// checkStringOrNumber mirrors vm.go's Add/Lt/Lte/Gt/Gte. A string left operand
-// requires a string right operand. Anything else runs both through number()
+// checkStringOrNumber mirrors vm.go's Add/Lt/Lte/Gt/Gte. A string left operand requires a string
+// right operand. Anything else runs both through number()
 func checkStringOrNumber(op string, left, right *node) error {
 	leftType := left.inferred
 	if !leftType.Known() {
@@ -168,8 +167,7 @@ func checkStringOrNumber(op string, left, right *node) error {
 	}
 	if leftType&numericSet == 0 {
 		allowed := numericSet | TypeSet(TypeString)
-		return fmt.Errorf("%w: %s left operand must be %s, not %s",
-			ErrType, op, allowed, leftType)
+		return fmt.Errorf("%w: %s left operand must be %s, not %s", ErrType, op, allowed, leftType)
 	}
 	return requireType(right, numericSet, what)
 }
@@ -192,8 +190,8 @@ func checkIndex(n *node) error {
 	}
 }
 
-// effectiveReceiverType excludes missing for optional access/index,
-// since it short-circuits before the container check
+// effectiveReceiverType excludes missing for optional access/index, since it short-circuits before
+// the container check
 func effectiveReceiverType(n *node) TypeSet {
 	receiverType := n.children[0].inferred
 	if n.optional {
@@ -202,21 +200,17 @@ func effectiveReceiverType(n *node) TypeSet {
 	return receiverType
 }
 
-// checkReceiver mirrors accessChild: missing or null receivers fail with
-// ErrMissing, not ErrType
+// checkReceiver mirrors accessChild: missing or null receivers fail with ErrMissing, not ErrType
 func checkReceiver(n *node, allowed TypeSet) error {
 	receiverType := effectiveReceiverType(n)
 	if !receiverType.Known() || receiverType == 0 {
 		return nil
 	}
 	if receiverType&^(TypeSet(TypeMissing)|TypeSet(TypeNull)) == 0 {
-		return fmt.Errorf(
-			"%w: access receiver is always missing or null", ErrMissing,
-		)
+		return fmt.Errorf("%w: access receiver is always missing or null", ErrMissing)
 	}
 	if receiverType&allowed == 0 {
-		return fmt.Errorf("%w: access receiver must be %s, not %s",
-			ErrType, allowed, receiverType)
+		return fmt.Errorf("%w: access receiver must be %s, not %s", ErrType, allowed, receiverType)
 	}
 	return nil
 }
@@ -235,8 +229,8 @@ func checkSpreads(n *node, want TypeTag) error {
 	return nil
 }
 
-// checkContainerSource mirrors vm.go's Concat/Merge: missing and null sources
-// are skipped, so only the remaining types are checked
+// checkContainerSource mirrors vm.go's Concat/Merge: missing and null sources are skipped, so only
+// the remaining types are checked
 func checkContainerSource(n *node, want TypeTag) error {
 	sourceType := n.inferred &^ (TypeSet(TypeMissing) | TypeSet(TypeNull))
 	if !sourceType.Known() || sourceType == 0 {
@@ -263,8 +257,8 @@ func checkCase(n *node) error {
 	return nil
 }
 
-// checkMatch mirrors vm.go's Eq: values of different types are never equal, so
-// an arm whose value can't share a type with the subject never matches
+// checkMatch mirrors vm.go's Eq: values of different types are never equal, so an arm whose value
+// can't share a type with the subject never matches
 func checkMatch(n *node) error {
 	subject := n.children[0].inferred
 	if !subject.Known() {
@@ -281,8 +275,8 @@ func checkMatch(n *node) error {
 	return nil
 }
 
-// checkBoolBody mirrors vm.go's CondJump: any/all/filter re-check their body as
-// a condition on every iteration
+// checkBoolBody mirrors vm.go's CondJump: any/all/filter re-check their body as a condition on
+// every iteration
 func checkBoolBody(n *node) error {
 	what := operand{owner: collectionNames[n.kind], role: "body"}
 	return requireType(n.children[1], TypeSet(TypeBool), what)

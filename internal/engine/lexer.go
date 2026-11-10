@@ -20,8 +20,8 @@ type (
 		pos   int
 	}
 
-	// scanner walks the source by byte offset and counts characters, so error
-	// positions match what the author sees
+	// scanner walks the source by byte offset and counts characters, so error positions match what
+	// the author sees
 	scanner struct {
 		source     string
 		byteOffset int
@@ -69,8 +69,8 @@ const (
 	kindCoalesce
 )
 
-// operator symbols, stored as an AST node's text so the compiler and static
-// checker can switch on them without reaching back into the token layer
+// operator symbols, stored as an AST node's text so the compiler and static checker can switch on
+// them without reaching back into the token layer
 const (
 	opAdd      = "+"
 	opSub      = "-"
@@ -97,13 +97,13 @@ const (
 	// minUnescaped is the lowest byte JSON allows unescaped in a string
 	minUnescaped = 0x20
 
-	// bytesPerToken is a low estimate of source bytes per token, so the token
-	// slice is sized once and rarely regrows
+	// bytesPerToken is a low estimate of source bytes per token, so the token slice is sized once
+	// and rarely regrows
 	bytesPerToken = 4
 )
 
-// operatorText maps an operator token back to its symbol, for storing on the
-// AST node that the parser builds from it
+// operatorText maps an operator token back to its symbol, for storing on the AST node that the
+// parser builds from it
 var operatorText = map[tokenKind]string{
 	kindIn:       opIn,
 	kindNot:      opNot,
@@ -292,8 +292,8 @@ func (s *scanner) scanNumber() (token, error) {
 	return token{kind: kindLiteral, value: value, pos: start}, nil
 }
 
-// scanString skips escaped bytes. UTF-8 continuation bytes are never a quote or
-// backslash, so skipping one byte of a multibyte escape is safe
+// scanString skips escaped bytes. UTF-8 continuation bytes are never a quote or backslash, so
+// skipping one byte of a multibyte escape is safe
 func (s *scanner) scanString() (token, error) {
 	start := s.charPos
 	rest := s.source[s.byteOffset:]
@@ -322,8 +322,8 @@ func (s *scanner) isNumber(text string) bool {
 	return err == nil
 }
 
-// unquote decodes a JSON string literal. Without escapes or control bytes, a
-// valid literal is its own text, so it is returned without copying
+// unquote decodes a JSON string literal. Without escapes or control bytes, a valid literal is its
+// own text, so it is returned without copying
 func (s *scanner) unquote(quoted string) (string, error) {
 	body := quoted[1 : len(quoted)-1]
 	if isPlain(body) && utf8.ValidString(body) {

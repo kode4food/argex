@@ -11,8 +11,7 @@ import (
 	"github.com/kode4food/argex"
 )
 
-// runner evaluates one compiled program against each input value and writes the
-// results
+// runner evaluates one compiled program against each input value and writes the results
 type runner struct {
 	program *argex.Program
 	encoder *json.Encoder
@@ -27,8 +26,8 @@ var (
 	ErrInput = errors.New("invalid JSON input")
 )
 
-// Run evaluates the expression in args against each JSON value read from the
-// named files, or from stdin when none are given, writing results to stdout
+// Run evaluates the expression in args against each JSON value read from the named files, or from
+// stdin when none are given, writing results to stdout
 func Run(args []string, stdin io.Reader, stdout io.Writer) error {
 	flags := flag.NewFlagSet("aq", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
@@ -85,8 +84,8 @@ func (r *runner) file(path string) error {
 	return r.stream(f)
 }
 
-// stream decodes each JSON value in input. Numbers stay json.Number, so values
-// that pass through unchanged keep their exact text
+// stream decodes each JSON value in input. Numbers stay json.Number, so values that pass through
+// unchanged keep their exact text
 func (r *runner) stream(input io.Reader) error {
 	decoder := json.NewDecoder(input)
 	decoder.UseNumber()

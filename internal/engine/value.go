@@ -67,8 +67,8 @@ func structuralEqual(left, right any) bool {
 	}
 }
 
-// containerEqual walks arrays and objects with an explicit stack, so only
-// container comparisons pay for setting one up
+// containerEqual walks arrays and objects with an explicit stack, so only container comparisons pay
+// for setting one up
 func containerEqual(left, right any) bool {
 	var pairs [inlineValues]operands
 	pairs[0] = operands{left: left, right: right}

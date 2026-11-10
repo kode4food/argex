@@ -74,9 +74,7 @@ func (c *compiler) bindPattern(args bindPatternArgs) ([]binding, error) {
 	return bound, nil
 }
 
-func (c *compiler) patternDefault(
-	target *node, bound []binding, depth int,
-) (*node, error) {
+func (c *compiler) patternDefault(target *node, bound []binding, depth int) (*node, error) {
 	if target.kind != nodeDefault {
 		return target, nil
 	}

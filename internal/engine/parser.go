@@ -85,8 +85,8 @@ func Parse(source string) (*Expression, error) {
 	return &Expression{root: root}, nil
 }
 
-// Names reports the input properties expr reads by bare name, sorted. Local
-// bindings, globals, and reads through this are excluded
+// Names reports the input properties expr reads by bare name, sorted. Local bindings, globals, and
+// reads through this are excluded
 func (e *Env) Names(expr *Expression) []string {
 	if expr == nil || expr.root == nil || e == nil {
 		return nil
@@ -159,8 +159,8 @@ func (p *parser) error(message string) error {
 	return syntax(p.current().pos, message)
 }
 
-// collect scopes bindings as the compiler does: a collection's body sees its
-// own and its pipeline's bindings, its receiver only the enclosing ones
+// collect scopes bindings as the compiler does: a collection's body sees its own and its pipeline's
+// bindings, its receiver only the enclosing ones
 func (c nameCollector) collect(n *node, bound []string) {
 	switch n.kind {
 	case nodeName:
@@ -176,9 +176,7 @@ func (c nameCollector) collect(n *node, bound []string) {
 			c.collectAccumulator(n, bound)
 		}
 		if pattern := n.bindingPattern(); pattern != nil {
-			inner := append(
-				bound[:len(bound):len(bound)], stageOuterNames(n)...,
-			)
+			inner := append(bound[:len(bound):len(bound)], stageOuterNames(n)...)
 			inner = c.collectPattern(pattern, inner)
 			c.collect(n.children[1], inner)
 			return
@@ -203,8 +201,8 @@ func (c nameCollector) collect(n *node, bound []string) {
 	}
 }
 
-// collectAccumulator reads the initial value outside the loop. Pattern defaults
-// run per element, so they see the earlier stages' bindings
+// collectAccumulator reads the initial value outside the loop. Pattern defaults run per element, so
+// they see the earlier stages' bindings
 func (c nameCollector) collectAccumulator(n *node, bound []string) {
 	accumulator := n.accumulator()
 	c.collect(accumulator.children[1], bound)

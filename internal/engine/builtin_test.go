@@ -27,9 +27,7 @@ func TestFunctionNumericInputs(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "2", result)
 	}
-	for _, value := range []any{
-		math.NaN(), math.Inf(1), math.Inf(-1), json.Number("bad"),
-	} {
+	for _, value := range []any{math.NaN(), math.Inf(1), math.Inf(-1), json.Number("bad")} {
 		for _, source := range []string{
 			"number(value)", "string(value)", "sum([value])",
 			"round(value)", "floor(value)", "ceil(value)",
@@ -57,9 +55,7 @@ func TestCustomFunctions(t *testing.T) {
 		"let f=echo:f(...[1,2])", "[echo][0](1,2)",
 		"[echo][0](...[1,2])", "{f:echo}.f(1,2)",
 	} {
-		assert.Equal(t,
-			[]any{float64(1), float64(2)}, envEval(t, ns, source),
-		)
+		assert.Equal(t, []any{float64(1), float64(2)}, envEval(t, ns, source))
 	}
 	expr, err := argex.Parse("echo(1,2)")
 	if !assert.NoError(t, err) {

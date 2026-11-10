@@ -92,8 +92,8 @@ func (e *Expression) resolve(env *Env) (*node, error) {
 	return root, nil
 }
 
-// annotateType resolves globals, infers each node's type bottom-up, and rejects
-// any operand whose known type can never succeed
+// annotateType resolves globals, infers each node's type bottom-up, and rejects any operand whose
+// known type can never succeed
 func annotateType(n *node, scope []typedName, env *Env) error {
 	if err := annotateChildren(n, scope, env); err != nil {
 		return err

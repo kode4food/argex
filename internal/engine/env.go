@@ -5,8 +5,8 @@ import (
 	"maps"
 )
 
-// Env holds immutable global bindings for compiling expressions. Locals shadow
-// globals, and globals shadow input properties
+// Env holds immutable global bindings for compiling expressions. Locals shadow globals, and globals
+// shadow input properties
 type Env struct {
 	entries map[string]any
 }
@@ -16,8 +16,8 @@ func NewEnv() *Env {
 	return &Env{}
 }
 
-// Bind returns an environment binding name to value, leaving e unchanged.
-// Values are shared with compiled programs and must not be mutated while in use
+// Bind returns an environment binding name to value, leaving e unchanged. Values are shared with
+// compiled programs and must not be mutated while in use
 func (e *Env) Bind(name string, value any) (*Env, error) {
 	if e == nil {
 		return nil, fmt.Errorf("%w: no environment", ErrFunction)

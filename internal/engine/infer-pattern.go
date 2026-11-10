@@ -1,8 +1,6 @@
 package engine
 
-func (n *node) annotatePattern(
-	source *node, scope []typedName, env *Env,
-) error {
+func (n *node) annotatePattern(source *node, scope []typedName, env *Env) error {
 	n.inferred = TypeSet(TypeAny)
 	if source != nil {
 		n.inferred = source.inferred
@@ -94,8 +92,8 @@ func annotateStagePattern(n *node, scope []typedName, env *Env) error {
 	return annotateType(n.children[1], patternScope(pattern, inner), env)
 }
 
-// annotateAccumulator types the initial value in the enclosing scope. The
-// accumulator changes per element, so its bindings are untyped
+// annotateAccumulator types the initial value in the enclosing scope. The accumulator changes per
+// element, so its bindings are untyped
 func annotateAccumulator(n *node, scope []typedName, env *Env) error {
 	if n.kind != nodeReduce {
 		return nil
@@ -114,8 +112,8 @@ func annotateAccumulator(n *node, scope []typedName, env *Env) error {
 	return accumulator.children[0].annotatePattern(nil, inner, env)
 }
 
-// patternScope builds scope outside recursive inference so ordinary let and
-// pipeline scopes can stay on the stack
+// patternScope builds scope outside recursive inference so ordinary let and pipeline scopes can
+// stay on the stack
 func patternScope(pattern *node, scope []typedName) []typedName {
 	if pattern.kind == nodeDefault {
 		return patternScope(pattern.children[0], scope)

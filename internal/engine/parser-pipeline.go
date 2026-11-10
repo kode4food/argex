@@ -28,8 +28,8 @@ var collectionNames = map[nodeKind]string{
 	nodeReduce: "reduce",
 }
 
-// pipeline chains collection operations left to right, and a stage body stops
-// before the next pipe. A let shares this level, so its body is a pipeline
+// pipeline chains collection operations left to right, and a stage body stops before the next pipe.
+// A let shares this level, so its body is a pipeline
 func (p *parser) pipeline() (*node, error) {
 	if p.current().kind == kindName && p.current().text == kwLet {
 		p.pos++
@@ -48,8 +48,8 @@ func (p *parser) pipeline() (*node, error) {
 	return left, nil
 }
 
-// collection parses one stage. A chained stage's body also sees the bindings
-// of the earlier stages in its pipeline
+// collection parses one stage. A chained stage's body also sees the bindings of the earlier stages
+// in its pipeline
 func (p *parser) collection(receiver *node, chained bool) (*node, error) {
 	p.pos++
 	operation := p.current()
@@ -91,8 +91,8 @@ type reduceBindingRes struct {
 	pattern     *node
 }
 
-// reduceBinding parses the required accumulator and initial value. A comma
-// introduces the element bindings, otherwise the body follows a colon
+// reduceBinding parses the required accumulator and initial value. A comma introduces the element
+// bindings, otherwise the body follows a colon
 func (p *parser) reduceBinding(stage *node) (reduceBindingRes, error) {
 	target, err := p.pattern(map[string]bool{})
 	if err != nil {
@@ -140,8 +140,8 @@ func (p *parser) stageBinding(stage *node) (*node, error) {
 	return pattern, p.expect(kindColon)
 }
 
-// hasBinding checks the delimiter after a complete target, so array and object
-// expressions without a following colon remain ordinary stage bodies
+// hasBinding checks the delimiter after a complete target, so array and object expressions without
+// a following colon remain ordinary stage bodies
 func (p *parser) hasBinding() bool {
 	end := p.bindingColon(p.pos)
 	return end >= 0 && end != p.conditionEnd

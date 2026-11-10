@@ -42,9 +42,7 @@ func (p *parser) caseArms() (*node, error) {
 			fallback = branch.value
 			break
 		}
-		result.children = append(
-			result.children, branch.condition, branch.value,
-		)
+		result.children = append(result.children, branch.condition, branch.value)
 	}
 	if len(result.children) == 0 {
 		return nil, p.error("case requires a conditional arm")
@@ -60,8 +58,8 @@ func (p *parser) caseBranch() (caseBranch, error) {
 	if err == nil || errors.Is(err, ErrLimit) {
 		return branch, err
 	}
-	// A stage literal can resemble a pattern. Retry with the arm's colon
-	// reserved, leaving binding colons inside the condition available
+	// A stage literal can resemble a pattern. Retry with the arm's colon reserved, leaving binding
+	// colons inside the condition available
 	depth := 0
 	for i := start.pos; i < len(p.tokens); i++ {
 		switch p.tokens[i].kind {

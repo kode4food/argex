@@ -6,12 +6,12 @@ import (
 	"strconv"
 )
 
-// exactIntLimit bounds the integers that are exact as floats, so IEEE
-// arithmetic on two of them already rounds the exact result to nearest
+// exactIntLimit bounds the integers that are exact as floats, so IEEE arithmetic on two of them
+// already rounds the exact result to nearest
 const exactIntLimit = 1 << 53
 
-// Arithmetic runs on the decimal each finite operand prints as, so 0.1 + 0.2
-// is 0.3. A zero result keeps the sign IEEE 754 arithmetic would give it
+// Arithmetic runs on the decimal each finite operand prints as, so 0.1 + 0.2 is 0.3. A zero result
+// keeps the sign IEEE 754 arithmetic would give it
 
 func exactAdd(left, right float64) float64 {
 	if isExactInt(left) && isExactInt(right) {
@@ -46,8 +46,8 @@ func exactMul(left, right float64) float64 {
 	return nonZeroOr(nonZeroOrArgs{result: exact, zero: left * right})
 }
 
-// exactQuo requires a non-zero divisor. IEEE division of two exact integers
-// already rounds the exact quotient to nearest
+// exactQuo requires a non-zero divisor. IEEE division of two exact integers already rounds the
+// exact quotient to nearest
 func exactQuo(left, right float64) float64 {
 	if isExactInt(left) && isExactInt(right) {
 		return left / right
@@ -59,8 +59,8 @@ func exactQuo(left, right float64) float64 {
 	return nonZeroOr(nonZeroOrArgs{result: exact, zero: left / right})
 }
 
-// exactMod truncates the quotient, so the result takes the dividend's sign as
-// math.Mod does. It requires a non-zero divisor
+// exactMod truncates the quotient, so the result takes the dividend's sign as math.Mod does. It
+// requires a non-zero divisor
 func exactMod(left, right float64) float64 {
 	if isExactInt(left) && isExactInt(right) {
 		return math.Mod(left, right)
@@ -78,8 +78,8 @@ func exactMod(left, right float64) float64 {
 	return nonZeroOr(nonZeroOrArgs{result: exact, zero: zero})
 }
 
-// exactSum totals finite numbers exactly and rounds once, at one shared scale
-// while the total fits an int64
+// exactSum totals finite numbers exactly and rounds once, at one shared scale while the total fits
+// an int64
 func exactSum(items []any) (float64, error) {
 	total := 0.0
 	for i, item := range items {
@@ -124,8 +124,7 @@ func isExactInt(n float64) bool {
 	return n == math.Trunc(n) && math.Abs(n) < exactIntLimit
 }
 
-// toExact reads the decimal a finite float prints as, which big.Rat always
-// parses
+// toExact reads the decimal a finite float prints as, which big.Rat always parses
 func toExact(n float64) *big.Rat {
 	r := new(big.Rat)
 	r.SetString(strconv.FormatFloat(n, 'g', -1, 64))

@@ -33,8 +33,7 @@ const (
 	caseSubject = "case subject"
 )
 
-// Compile resolves an expression's names, checks its types, and
-// prepares it for repeated evaluation
+// Compile resolves an expression's names, checks its types, and prepares it for repeated evaluation
 func (e *Env) Compile(expr *Expression) (*Program, error) {
 	if expr == nil || expr.root == nil {
 		return nil, fmt.Errorf("%w: empty expression", ErrSyntax)
@@ -141,16 +140,15 @@ func (c *compiler) constant(value any) isa.Operand {
 	return index
 }
 
-// newLabel allocates a label for a jump. Emitting a Label with it marks the
-// destination
+// newLabel allocates a label for a jump. Emitting a Label with it marks the destination
 func (c *compiler) newLabel() isa.Operand {
 	label := c.nextLabel
 	c.nextLabel++
 	return label
 }
 
-// loopSlot returns the slot holding the input variable name inside the
-// outermost loop being compiled, which loads it once before it starts
+// loopSlot returns the slot holding the input variable name inside the outermost loop being
+// compiled, which loads it once before it starts
 func (c *compiler) loopSlot(name string) isa.Operand {
 	i := slices.Index(c.hoisted, name)
 	if i < 0 {

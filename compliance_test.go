@@ -143,8 +143,8 @@ func runCompliance(t *testing.T, tc *complianceCase) {
 	assertCompliance(t, tc, value, err)
 }
 
-// complianceThis uses a case's this when given, otherwise its variables
-// object. A case may not specify both
+// complianceThis uses a case's this when given, otherwise its variables object. A case may not
+// specify both
 func complianceThis(t *testing.T, tc *complianceCase) bool {
 	t.Helper()
 	if len(tc.This) == 0 {

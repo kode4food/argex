@@ -6,8 +6,8 @@ import (
 	"github.com/kode4food/argex/internal/isa"
 )
 
-// collection compiles a pipeline: the outermost stage plus every map/filter
-// stage chained through its receiver run as one Iterate/Fetch loop
+// collection compiles a pipeline: the outermost stage plus every map/filter stage chained through
+// its receiver run as one Iterate/Fetch loop
 func (c *compiler) collection(n *node, depth int) error {
 	stages := []*node{n}
 	for chainable(stages[len(stages)-1].children[0]) {
@@ -17,8 +17,8 @@ func (c *compiler) collection(n *node, depth int) error {
 	return c.pipeline(stages, depth)
 }
 
-// pipeline passes each stage's output to the next through a slot. Later stages
-// count their own index and see earlier stages' bindings for the same element
+// pipeline passes each stage's output to the next through a slot. Later stages count their own
+// index and see earlier stages' bindings for the same element
 func (c *compiler) pipeline(stages []*node, depth int) error {
 	if err := c.compile(stages[0].children[0], depth+1); err != nil {
 		return err
@@ -54,8 +54,8 @@ func (c *compiler) pipeline(stages []*node, depth int) error {
 		visible[i] = scopes[i]
 	}
 
-	// the loop is entered at its Fetch, which sits at the bottom and jumps back
-	// to the top while elements remain. Skipped elements jump to it too
+	// the loop is entered at its Fetch, which sits at the bottom and jumps back to the top while
+	// elements remain. Skipped elements jump to it too
 	top := c.newLabel()
 	next := c.newLabel()
 	entry := c.newLabel()
@@ -193,11 +193,9 @@ type accumulatorScopeArgs struct {
 	depth int
 }
 
-// accumulatorScope binds a reduce stage's accumulator after the earlier stages'
-// bindings, so its own element bindings shadow it
-func (c *compiler) accumulatorScope(
-	args accumulatorScopeArgs,
-) ([]binding, error) {
+// accumulatorScope binds a reduce stage's accumulator after the earlier stages' bindings, so its
+// own element bindings shadow it
+func (c *compiler) accumulatorScope(args accumulatorScopeArgs) ([]binding, error) {
 	if args.stage.kind != nodeReduce {
 		return args.prior, nil
 	}
@@ -225,8 +223,8 @@ type preloadArgs struct {
 	done  isa.Operand
 }
 
-// preload loads the names an outermost loop read into their slots, in a block
-// after the loop that its entry jump passes through on the way to Fetch
+// preload loads the names an outermost loop read into their slots, in a block after the loop that
+// its entry jump passes through on the way to Fetch
 func (c *compiler) preload(args preloadArgs) {
 	c.emit(isa.Jump, args.done)
 	c.emit(isa.Label, args.entry)
@@ -240,8 +238,8 @@ func (c *compiler) preload(args preloadArgs) {
 	c.emit(isa.Jump, args.next)
 }
 
-// scoped compiles body seeing the enclosing scope plus names, and nothing bound
-// outside its pipeline
+// scoped compiles body seeing the enclosing scope plus names, and nothing bound outside its
+// pipeline
 func (c *compiler) scoped(names []binding, body *node, depth int) error {
 	outer := c.scope
 	c.scope = append(outer[:len(outer):len(outer)], names...)
@@ -257,8 +255,8 @@ func (c *compiler) allocSlot() int {
 	return slot
 }
 
-// chainable reports whether n can feed a later stage of the same pipeline. Any
-// and all produce booleans, so they can only end one
+// chainable reports whether n can feed a later stage of the same pipeline. Any and all produce
+// booleans, so they can only end one
 func chainable(n *node) bool {
 	return n.kind == nodeMap || n.kind == nodeFilter
 }

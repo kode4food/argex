@@ -253,9 +253,7 @@ func TestEnvNonCallableGlobals(t *testing.T) {
 			if !assert.NoError(t, err) {
 				return
 			}
-			for _, source := range []string{
-				"f()", "f(...[])", "(f)()", "false && f()",
-			} {
+			for _, source := range []string{"f()", "f(...[])", "(f)()", "false && f()"} {
 				expr, err := argex.Parse(source)
 				if !assert.NoError(t, err) {
 					return

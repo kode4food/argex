@@ -1,7 +1,7 @@
 package engine
 
-// bindingPattern is the optional child after a let or collection stage's body,
-// and after a reduce stage's accumulator
+// bindingPattern is the optional child after a let or collection stage's body, and after a reduce
+// stage's accumulator
 func (n *node) bindingPattern() *node {
 	index := 2
 	if n.kind == nodeReduce {

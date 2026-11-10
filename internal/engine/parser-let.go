@@ -1,7 +1,7 @@
 package engine
 
-// letBinding nests one node per assignment, so later values see earlier names.
-// Its depth counts toward the limit that expression enforces on the value
+// letBinding nests one node per assignment, so later values see earlier names. Its depth counts
+// toward the limit that expression enforces on the value
 func (p *parser) letBinding() (*node, error) {
 	p.depth++
 	defer func() { p.depth-- }()

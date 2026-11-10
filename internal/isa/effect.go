@@ -1,8 +1,7 @@
 package isa
 
 type (
-	// Effect describes how an instruction changes the operand stack and what
-	// its operand refers to
+	// Effect describes how an instruction changes the operand stack and what its operand refers to
 	Effect struct {
 		Operand ActOn // What the operand refers to
 		Pop     int   // Values popped

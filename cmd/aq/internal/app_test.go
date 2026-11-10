@@ -114,9 +114,7 @@ func TestRunFiles(t *testing.T) {
 	assert.NoError(t, os.WriteFile(first, []byte("1"), 0o600))
 	assert.NoError(t, os.WriteFile(second, []byte("2"), 0o600))
 	var out bytes.Buffer
-	err := app.Run(
-		[]string{"this * 10", first, second}, strings.NewReader("99"), &out,
-	)
+	err := app.Run([]string{"this * 10", first, second}, strings.NewReader("99"), &out)
 	assert.NoError(t, err)
 	assert.Equal(t, "10\n20\n", out.String())
 }

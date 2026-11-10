@@ -109,7 +109,7 @@ For exported receiver types:
 
 ## Wrapping And Formatting
 
-- Wrap Go source to 80 columns max (tabs count as 4 columns).
+- Wrap Go source to 100 columns max (tabs count as 4 columns).
 - The width limit applies to Go comments as well as code, but not Markdown prose.
 - Keep signatures and calls on one line when they fit.
 - When wrapping is required, pack as many args per line as fit before wrapping.
