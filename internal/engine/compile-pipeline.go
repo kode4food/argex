@@ -244,8 +244,7 @@ func (c *compiler) preload(args preloadArgs) {
 	c.emit(isa.Jump, args.next)
 }
 
-// scoped compiles body seeing the enclosing scope plus names, and nothing bound outside its
-// pipeline
+// scoped compiles body seeing the enclosing scope plus names, and nothing outside its pipeline
 func (c *compiler) scoped(names []binding, body *node, depth int) error {
 	outer := c.scope
 	c.scope = append(outer[:len(outer):len(outer)], names...)

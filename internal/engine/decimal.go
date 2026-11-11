@@ -182,8 +182,7 @@ func rescale(d decimal, scale int) (decimal, bool) {
 	}, ok
 }
 
-// toDecimal reads the shortest decimal a float prints as, the number a user wrote, without
-// allocating
+// toDecimal reads the shortest decimal a float prints as, the number a user wrote, allocation-free
 func toDecimal(n float64) (decimal, bool) {
 	if isExactInt(n) {
 		return decimal{coef: int64(n)}, true
