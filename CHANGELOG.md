@@ -2,6 +2,10 @@
 
 Notable changes to Argyll Expressions.
 
+## 0.1.11
+
+- `argex.Add`, `Sub`, `Mul`, `Div`, and `Mod` expose the decimal arithmetic to Go code
+
 ## 0.1.10
 
 - Fold collections into a single value with `reduce`
