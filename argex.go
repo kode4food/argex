@@ -79,3 +79,30 @@ func Eval(source string, this any) (any, error) {
 func IsMissing(value any) bool {
 	return engine.IsMissing(value)
 }
+
+// Add returns left + right as Argyll Expressions computes it, or false for a non-finite operand
+func Add(left, right float64) (float64, bool) {
+	return engine.Add(left, right)
+}
+
+// Sub returns left - right as Argyll Expressions computes it, or false for a non-finite operand
+func Sub(left, right float64) (float64, bool) {
+	return engine.Sub(left, right)
+}
+
+// Mul returns left * right as Argyll Expressions computes it, or false for a non-finite operand
+func Mul(left, right float64) (float64, bool) {
+	return engine.Mul(left, right)
+}
+
+// Div returns left / right as Argyll Expressions computes it, or false for a non-finite operand or
+// a zero divisor
+func Div(left, right float64) (float64, bool) {
+	return engine.Div(left, right)
+}
+
+// Mod returns left % right as Argyll Expressions computes it, or false for a non-finite operand or
+// a zero divisor
+func Mod(left, right float64) (float64, bool) {
+	return engine.Mod(left, right)
+}

@@ -13,6 +13,48 @@ const exactIntLimit = 1 << 53
 // Arithmetic runs on the decimal each finite operand prints as, so 0.1 + 0.2 is 0.3. A zero result
 // keeps the sign IEEE 754 arithmetic would give it
 
+// Add returns left + right as Argyll Expressions computes it, or false for a non-finite operand
+func Add(left, right float64) (float64, bool) {
+	if left-left != 0 || right-right != 0 {
+		return 0, false
+	}
+	return exactAdd(left, right), true
+}
+
+// Sub returns left - right as Argyll Expressions computes it, or false for a non-finite operand
+func Sub(left, right float64) (float64, bool) {
+	if left-left != 0 || right-right != 0 {
+		return 0, false
+	}
+	return exactSub(left, right), true
+}
+
+// Mul returns left * right as Argyll Expressions computes it, or false for a non-finite operand
+func Mul(left, right float64) (float64, bool) {
+	if left-left != 0 || right-right != 0 {
+		return 0, false
+	}
+	return exactMul(left, right), true
+}
+
+// Div returns left / right as Argyll Expressions computes it, or false for a non-finite operand or
+// a zero divisor
+func Div(left, right float64) (float64, bool) {
+	if left-left != 0 || right-right != 0 || right == 0 {
+		return 0, false
+	}
+	return exactQuo(left, right), true
+}
+
+// Mod returns left % right as Argyll Expressions computes it, or false for a non-finite operand or
+// a zero divisor
+func Mod(left, right float64) (float64, bool) {
+	if left-left != 0 || right-right != 0 || right == 0 {
+		return 0, false
+	}
+	return exactMod(left, right), true
+}
+
 func exactAdd(left, right float64) float64 {
 	if isExactInt(left) && isExactInt(right) {
 		return left + right

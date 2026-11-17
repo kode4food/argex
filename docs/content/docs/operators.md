@@ -26,6 +26,8 @@ Arithmetic uses each number's shortest decimal representation: `0.1 + 0.2` retur
 
 `%` is a truncated remainder: the result takes the sign of the dividend, so `-5 % 3` returns `-2` and `1.1 % 0.1` returns `0`. Like division, a zero divisor raises `ErrArithmetic`.
 
+Go code can use the same arithmetic through `argex.Add`, `argex.Sub`, `argex.Mul`, `argex.Div`, and `argex.Mod`, so `argex.Add(0.1, 0.2)` returns `0.3, true`. Each returns `false` instead of a result for a non-finite operand, and `Div` and `Mod` also for a zero divisor.
+
 Binary operators group left to right, except `??`, which groups right to left. Parenthesize chained comparisons, nested pipelines, and `let` used as an operand or collection body.
 
 ## Booleans

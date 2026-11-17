@@ -229,14 +229,16 @@ func (p *Program) Eval(this any) (any, error) {
 				continue
 			}
 			left := number(MEM[SP-2])
-			if left-left != 0 {
-				return nil, operandError(expectNumberOrString)
-			}
 			right := number(MEM[SP-1])
-			if right-right != 0 {
-				return nil, operandError(expectNumber)
+			value, ok := Add(left, right)
+			if !ok {
+				return nil, arithmeticError(arithmeticErrorArgs{
+					left:       left,
+					right:      right,
+					leftExpect: expectNumberOrString,
+					operator:   "+",
+				})
 			}
-			value := exactAdd(left, right)
 			if math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: +", ErrArithmetic)
 			}
@@ -245,14 +247,16 @@ func (p *Program) Eval(this any) (any, error) {
 
 		case isa.Sub:
 			left := number(MEM[SP-2])
-			if left-left != 0 {
-				return nil, operandError(expectNumber)
-			}
 			right := number(MEM[SP-1])
-			if right-right != 0 {
-				return nil, operandError(expectNumber)
+			value, ok := Sub(left, right)
+			if !ok {
+				return nil, arithmeticError(arithmeticErrorArgs{
+					left:       left,
+					right:      right,
+					leftExpect: expectNumber,
+					operator:   "-",
+				})
 			}
-			value := exactSub(left, right)
 			if math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: -", ErrArithmetic)
 			}
@@ -261,14 +265,16 @@ func (p *Program) Eval(this any) (any, error) {
 
 		case isa.Mul:
 			left := number(MEM[SP-2])
-			if left-left != 0 {
-				return nil, operandError(expectNumber)
-			}
 			right := number(MEM[SP-1])
-			if right-right != 0 {
-				return nil, operandError(expectNumber)
+			value, ok := Mul(left, right)
+			if !ok {
+				return nil, arithmeticError(arithmeticErrorArgs{
+					left:       left,
+					right:      right,
+					leftExpect: expectNumber,
+					operator:   "*",
+				})
 			}
-			value := exactMul(left, right)
 			if math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: *", ErrArithmetic)
 			}
@@ -277,17 +283,16 @@ func (p *Program) Eval(this any) (any, error) {
 
 		case isa.Div:
 			left := number(MEM[SP-2])
-			if left-left != 0 {
-				return nil, operandError(expectNumber)
-			}
 			right := number(MEM[SP-1])
-			if right-right != 0 {
-				return nil, operandError(expectNumber)
+			value, ok := Div(left, right)
+			if !ok {
+				return nil, arithmeticError(arithmeticErrorArgs{
+					left:       left,
+					right:      right,
+					leftExpect: expectNumber,
+					operator:   "/",
+				})
 			}
-			if right == 0 {
-				return nil, fmt.Errorf("%w: /", ErrArithmetic)
-			}
-			value := exactQuo(left, right)
 			if math.IsInf(value, 0) {
 				return nil, fmt.Errorf("%w: /", ErrArithmetic)
 			}
@@ -296,17 +301,16 @@ func (p *Program) Eval(this any) (any, error) {
 
 		case isa.Mod:
 			left := number(MEM[SP-2])
-			if left-left != 0 {
-				return nil, operandError(expectNumber)
-			}
 			right := number(MEM[SP-1])
-			if right-right != 0 {
-				return nil, operandError(expectNumber)
+			value, ok := Mod(left, right)
+			if !ok {
+				return nil, arithmeticError(arithmeticErrorArgs{
+					left:       left,
+					right:      right,
+					leftExpect: expectNumber,
+					operator:   "%",
+				})
 			}
-			if right == 0 {
-				return nil, fmt.Errorf("%w: %%", ErrArithmetic)
-			}
-			value := exactMod(left, right)
 			SP--
 			MEM[SP-1] = value
 
@@ -811,4 +815,22 @@ func collectionEntries(receiver any, keyed bool) ([]any, []any, error) {
 	default:
 		return nil, nil, operandError(expectCollection)
 	}
+}
+
+type arithmeticErrorArgs struct {
+	left       float64
+	right      float64
+	leftExpect string
+	operator   string
+}
+
+// arithmeticError explains why checked arithmetic refused its operands
+func arithmeticError(args arithmeticErrorArgs) error {
+	if args.left-args.left != 0 {
+		return operandError(args.leftExpect)
+	}
+	if args.right-args.right != 0 {
+		return operandError(expectNumber)
+	}
+	return fmt.Errorf("%w: %s", ErrArithmetic, args.operator)
 }
